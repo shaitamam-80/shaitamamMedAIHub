@@ -1,0 +1,35 @@
+# MedAI Hub - Backend Dependencies
+# FastAPI and ASGI Server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Supabase Client
+supabase==2.3.4
+postgrest==0.13.2
+
+# Google Gemini AI via LangChain
+langchain-google-genai==1.0.1
+langchain==0.1.6
+langchain-core==0.1.23
+
+# Pydantic for data validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# HTTP Client
+httpx==0.26.0
+aiofiles==23.2.1
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Date handling
+python-dateutil==2.8.2
+
+# CORS middleware
+fastapi-cors==0.0.6
+
+# Testing (optional but recommended)
+pytest==7.4.4
+pytest-asyncio==0.23.3
