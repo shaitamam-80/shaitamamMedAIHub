@@ -8,6 +8,9 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
 
+# Import framework schemas from centralized prompts module
+from app.core.prompts.shared import FRAMEWORK_SCHEMAS as PROMPTS_FRAMEWORK_SCHEMAS
+
 
 # ============================================================================
 # Research Framework Models (Dynamic)
@@ -88,6 +91,7 @@ class ChatRequest(BaseModel):
     project_id: UUID
     message: str
     framework_type: Optional[str] = "PICO"
+    language: Optional[str] = "en"  # "en" or "he"
 
 
 class ChatResponse(BaseModel):
@@ -227,85 +231,43 @@ class BatchAnalysisResponse(BaseModel):
 # Framework Schema Definitions
 # ============================================================================
 
-# These define the expected fields for each framework type
-FRAMEWORK_SCHEMAS = {
-    "PICO": {
-        "name": "PICO",
-        "description": "Population, Intervention, Comparison, Outcome",
-        "fields": [
-            {"key": "P", "label": "Population", "description": "Who is the patient or population?"},
-            {"key": "I", "label": "Intervention", "description": "What is the intervention?"},
-            {"key": "C", "label": "Comparison", "description": "What is the comparison?"},
-            {"key": "O", "label": "Outcome", "description": "What is the outcome?"},
-        ],
-    },
-    "CoCoPop": {
-        "name": "CoCoPop",
-        "description": "Condition, Context, Population",
-        "fields": [
-            {"key": "Condition", "label": "Condition", "description": "What is the health condition?"},
-            {"key": "Context", "label": "Context", "description": "What is the context?"},
-            {"key": "Population", "label": "Population", "description": "Who is the population?"},
-        ],
-    },
-    "PEO": {
-        "name": "PEO",
-        "description": "Population, Exposure, Outcome",
-        "fields": [
-            {"key": "P", "label": "Population", "description": "Who is the population?"},
-            {"key": "E", "label": "Exposure", "description": "What is the exposure?"},
-            {"key": "O", "label": "Outcome", "description": "What is the outcome?"},
-        ],
-    },
-    "SPIDER": {
-        "name": "SPIDER",
-        "description": "Sample, Phenomenon of Interest, Design, Evaluation, Research type",
-        "fields": [
-            {"key": "S", "label": "Sample", "description": "Who is the sample?"},
-            {"key": "PI", "label": "Phenomenon of Interest", "description": "What is being studied?"},
-            {"key": "D", "label": "Design", "description": "What is the study design?"},
-            {"key": "E", "label": "Evaluation", "description": "What is being evaluated?"},
-            {"key": "R", "label": "Research type", "description": "What type of research?"},
-        ],
-    },
-    "SPICE": {
-        "name": "SPICE",
-        "description": "Setting, Perspective, Intervention, Comparison, Evaluation",
-        "fields": [
-            {"key": "S", "label": "Setting", "description": "Where is the research conducted?"},
-            {"key": "P", "label": "Perspective", "description": "From whose perspective?"},
-            {"key": "I", "label": "Intervention", "description": "What is the intervention?"},
-            {"key": "C", "label": "Comparison", "description": "What is the comparison?"},
-            {"key": "E", "label": "Evaluation", "description": "What is being evaluated?"},
-        ],
-    },
-    "ECLIPSE": {
-        "name": "ECLIPSE",
-        "description": "Expectation, Client group, Location, Impact, Professionals, Service",
-        "fields": [
-            {"key": "E", "label": "Expectation", "description": "What information do you need?"},
-            {"key": "C", "label": "Client group", "description": "Who is the client?"},
-            {"key": "L", "label": "Location", "description": "Where is the service?"},
-            {"key": "I", "label": "Impact", "description": "What is the impact?"},
-            {"key": "P", "label": "Professionals", "description": "Who are the professionals?"},
-            {"key": "S", "label": "Service", "description": "What is the service?"},
-        ],
-    },
-    "FINER": {
-        "name": "FINER",
-        "description": "Feasible, Interesting, Novel, Ethical, Relevant",
-        "fields": [
-            {"key": "F", "label": "Feasible", "description": "Is it feasible?"},
-            {"key": "I", "label": "Interesting", "description": "Is it interesting?"},
-            {"key": "N", "label": "Novel", "description": "Is it novel?"},
-            {"key": "E", "label": "Ethical", "description": "Is it ethical?"},
-            {"key": "R", "label": "Relevant", "description": "Is it relevant?"},
-        ],
-    },
-}
+def _convert_prompts_to_api_format() -> Dict[str, Any]:
+    """
+    Convert FRAMEWORK_SCHEMAS from prompts/shared.py format to API response format.
+
+    Input format (prompts):
+        {"PICO": {"description": "...", "components": ["P","I","C","O"], "labels": {"P": "Population", ...}}}
+
+    Output format (API):
+        {"PICO": {"name": "PICO", "description": "...", "fields": [{"key": "P", "label": "Population", "description": "..."}]}}
+    """
+    api_schemas = {}
+    for name, schema in PROMPTS_FRAMEWORK_SCHEMAS.items():
+        fields = []
+        components = schema.get("components", [])
+        labels = schema.get("labels", {})
+
+        for comp in components:
+            label = labels.get(comp, comp)
+            fields.append({
+                "key": comp,
+                "label": label,
+                "description": f"What is the {label.lower()}?"
+            })
+
+        api_schemas[name] = {
+            "name": name,
+            "description": schema.get("description", ""),
+            "fields": fields
+        }
+
+    return api_schemas
+
+# Build API-formatted schemas from prompts module
+FRAMEWORK_SCHEMAS = _convert_prompts_to_api_format()
 
 
 class FrameworkSchemaResponse(BaseModel):
     """Response containing framework schema definitions"""
 
-    frameworks: Dict[str, Any] = Field(default=FRAMEWORK_SCHEMAS)
+    frameworks: Dict[str, Any] = Field(default_factory=_convert_prompts_to_api_format)

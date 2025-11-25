@@ -103,6 +103,16 @@ class DatabaseService:
         )
         return response.data or []
 
+    async def clear_conversation(self, project_id: UUID) -> bool:
+        """Clear all chat messages for a project"""
+        try:
+            self.client.table("chat_messages").delete().eq(
+                "project_id", str(project_id)
+            ).execute()
+            return True
+        except Exception:
+            return False
+
     # ========================================================================
     # Abstracts
     # ========================================================================

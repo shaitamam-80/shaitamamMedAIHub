@@ -12,14 +12,120 @@ import { Input } from "@/components/ui/input"
 import {
   Send,
   Loader2,
-  ChevronDown,
   Sparkles,
-  History,
-  Settings,
-  Search,
-  Plus
+  Download,
+  Trash2
 } from "lucide-react"
 import toast, { Toaster } from "react-hot-toast"
+
+// Helper function to parse markdown-like content into structured sections
+const parseAssistantMessage = (content: string) => {
+  // Check if it's raw JSON (error case)
+  if (content.startsWith('{"chat_response"') || content.startsWith('{\"chat_response\"')) {
+    try {
+      const parsed = JSON.parse(content)
+      return parsed.chat_response || content
+    } catch {
+      return content
+    }
+  }
+  return content
+}
+
+// Component to render formatted message with proper markdown and RTL support
+const FormattedMessage = ({ content, role }: { content: string; role: string }) => {
+  const parsedContent = role === 'assistant' ? parseAssistantMessage(content) : content
+
+  // Simple markdown renderer
+  const renderMarkdown = (text: string) => {
+    const lines = text.split('\n')
+    const elements: JSX.Element[] = []
+    let currentList: string[] = []
+    let listType: 'ul' | 'ol' | null = null
+
+    const flushList = () => {
+      if (currentList.length > 0 && listType) {
+        const ListTag = listType === 'ul' ? 'ul' : 'ol'
+        elements.push(
+          <ListTag key={elements.length} className={`my-2 ${listType === 'ul' ? 'list-disc' : 'list-decimal'} list-inside space-y-1`}>
+            {currentList.map((item, i) => (
+              <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
+            ))}
+          </ListTag>
+        )
+        currentList = []
+        listType = null
+      }
+    }
+
+    const formatInline = (line: string) => {
+      return line
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code class="bg-muted px-1 rounded text-xs">$1</code>')
+    }
+
+    lines.forEach((line, idx) => {
+      const trimmedLine = line.trim()
+
+      // Headers
+      const headerMatch = trimmedLine.match(/^(#{1,4})\s+(.+)/)
+      if (headerMatch) {
+        flushList()
+        const level = headerMatch[1].length
+        const title = formatInline(headerMatch[2])
+        const headerClasses = {
+          1: 'text-lg font-bold mt-4 mb-2 text-primary',
+          2: 'text-base font-bold mt-3 mb-2',
+          3: 'text-sm font-semibold mt-2 mb-1',
+          4: 'text-sm font-medium mt-2 mb-1 text-muted-foreground'
+        }
+        elements.push(
+          <div key={idx} className={headerClasses[level as 1|2|3|4]} dangerouslySetInnerHTML={{ __html: title }} />
+        )
+        return
+      }
+
+      // Bullet list items
+      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        if (listType !== 'ul') flushList()
+        listType = 'ul'
+        currentList.push(formatInline(trimmedLine.slice(2)))
+        return
+      }
+
+      // Numbered list items
+      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)/)
+      if (numberedMatch) {
+        if (listType !== 'ol') flushList()
+        listType = 'ol'
+        currentList.push(formatInline(numberedMatch[2]))
+        return
+      }
+
+      // Empty line
+      if (trimmedLine === '') {
+        flushList()
+        return
+      }
+
+      // Regular paragraph
+      flushList()
+      elements.push(
+        <p key={idx} className="my-1" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
+      )
+    })
+
+    flushList()
+    return elements
+  }
+
+  return (
+    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+      {renderMarkdown(parsedContent)}
+    </div>
+  )
+}
 
 export default function DefinePage() {
   // State
@@ -31,8 +137,7 @@ export default function DefinePage() {
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [frameworkData, setFrameworkData] = useState<Record<string, string>>({})
-  const [openAccordions, setOpenAccordions] = useState<Set<string>>(new Set(['P']))
-  const [frameworkSearch, setFrameworkSearch] = useState("")
+  const [preferredLanguage, setPreferredLanguage] = useState<'he' | 'en' | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Load projects and frameworks on mount
@@ -124,7 +229,7 @@ export default function DefinePage() {
     setMessages(prev => [...prev, { role: "user", content: userMessage }])
 
     try {
-      const data = await apiClient.chat(selectedProjectId, userMessage, selectedFramework)
+      const data = await apiClient.chat(selectedProjectId, userMessage, selectedFramework, preferredLanguage || 'en')
 
       // Add AI response to chat
       setMessages(prev => [...prev, { role: "assistant", content: data.message }])
@@ -132,7 +237,36 @@ export default function DefinePage() {
       // Update framework data if extracted
       if (data.extracted_fields) {
         setFrameworkData(prev => ({ ...prev, ...data.extracted_fields }))
-        toast.success("Framework fields updated from chat!")
+      }
+
+      // Auto-detect framework suggestion from AI response
+      // Look for patterns like "המסגרת המומלצת: PICo" or "Framework: PICo" or "**PICo**"
+      const frameworkNames = Object.keys(frameworks)
+      for (const fw of frameworkNames) {
+        if (fw !== selectedFramework) {
+          // Check for various patterns in both Hebrew and English
+          const patterns = [
+            `המסגרת המומלצת: ${fw}`,
+            `מסגרת **${fw}**`,
+            `מסגרת ${fw}`,
+            `Framework: ${fw}`,
+            `**${fw}**`,
+            `(${fw})`,
+          ]
+          const messageText = data.message
+          const found = patterns.some(pattern => messageText.includes(pattern))
+
+          if (found) {
+            setSelectedFramework(fw)
+            toast.success(
+              preferredLanguage === 'he'
+                ? `המסגרת שונתה ל-${fw}`
+                : `Framework switched to ${fw}`,
+              { duration: 4000, icon: '🔄' }
+            )
+            break
+          }
+        }
       }
     } catch (error: any) {
       setMessages(prev => [
@@ -152,315 +286,293 @@ export default function DefinePage() {
     }
   }
 
-  const toggleAccordion = (key: string) => {
-    setOpenAccordions(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
-  }
-
   const currentFramework = frameworks[selectedFramework]
 
-  // Calculate progress
-  const filledFields = currentFramework?.fields.filter(f => frameworkData[f.key]?.trim()).length || 0
-  const totalFields = currentFramework?.fields.length || 1
-  const progressPercent = Math.round((filledFields / totalFields) * 100)
+  const handleExportProtocol = () => {
+    const project = projects.find(p => p.id === selectedProjectId)
+    const projectName = project?.name || "research-protocol"
 
-  // Filter frameworks by search
-  const filteredFrameworks = Object.entries(frameworks).filter(([key, schema]) =>
-    schema.name.toLowerCase().includes(frameworkSearch.toLowerCase()) ||
-    schema.description.toLowerCase().includes(frameworkSearch.toLowerCase())
-  )
+    const lines = [
+      `# Research Protocol: ${projectName}`,
+      ``,
+      `## Framework: ${selectedFramework}`,
+      `Generated: ${new Date().toLocaleString()}`,
+      ``,
+      `## Research Question Components`,
+      ``,
+    ]
 
-  // Build formulated research question
-  const formulatedQuestion = currentFramework?.fields
-    .map(f => frameworkData[f.key])
-    .filter(Boolean)
-    .join(" → ") || "Your question will appear here as you fill the form..."
+    currentFramework?.fields.forEach(field => {
+      const value = frameworkData[field.key] || "(Not specified)"
+      lines.push(`### ${field.label} (${field.key})`)
+      lines.push(value)
+      lines.push(``)
+    })
 
-  const suggestedPrompts = [
-    "Suggest an outcome",
-    "Refine my intervention",
-    "Find a framework"
-  ]
+    if (messages.length > 0) {
+      lines.push(`## Conversation History`)
+      lines.push(``)
+      messages.forEach(msg => {
+        lines.push(`**${msg.role === 'user' ? 'User' : 'Assistant'}:**`)
+        lines.push(msg.content)
+        lines.push(``)
+      })
+    }
+
+    const content = lines.join('\n')
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${projectName.replace(/\s+/g, '-').toLowerCase()}-protocol.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.success("Protocol exported successfully!")
+  }
+
+  const handleClearHistory = async () => {
+    if (!selectedProjectId) return
+
+    if (!confirm("Are you sure you want to clear all chat history? This cannot be undone.")) {
+      return
+    }
+
+    try {
+      await apiClient.clearConversation(selectedProjectId)
+      setMessages([])
+      setPreferredLanguage(null)
+      toast.success("Chat history cleared")
+    } catch (error) {
+      toast.error("Failed to clear chat history")
+    }
+  }
 
   return (
     <div className="flex h-screen w-full flex-col">
       <Toaster position="top-right" />
 
-      {/* Top App Bar */}
+      {/* Top Header Bar */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm px-4 md:px-6 sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <Sparkles className="h-6 w-6 text-primary" />
           <h1 className="font-display text-xl font-bold">Define</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center justify-center rounded-full h-10 w-10 hover:bg-card transition-colors">
-            <History className="h-5 w-5" />
+          <button
+            onClick={handleExportProtocol}
+            disabled={!selectedProjectId}
+            className="flex items-center justify-center rounded-full h-10 w-10 hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export Protocol"
+          >
+            <Download className="h-5 w-5" />
           </button>
-          <button className="flex items-center justify-center rounded-full h-10 w-10 hover:bg-card transition-colors">
-            <Settings className="h-5 w-5" />
+          <button
+            onClick={handleClearHistory}
+            disabled={!selectedProjectId || messages.length === 0}
+            className="flex items-center justify-center rounded-full h-10 w-10 hover:bg-card hover:text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Clear Chat History"
+          >
+            <Trash2 className="h-5 w-5" />
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex flex-1 overflow-hidden">
-        {/* Left Pane - Dynamic Form */}
-        <div className="w-full lg:w-1/2 flex flex-col overflow-y-auto p-6 md:p-8">
-          <div className="flex flex-col gap-8">
-            {/* Header */}
-            <div>
-              <h1 className="font-display text-3xl font-bold tracking-tight">Define Your Research Question</h1>
-              <p className="mt-2 text-muted-foreground">Fill in the details below or use the AI assistant to help formulate your question.</p>
-            </div>
-
-            {/* Project Selector */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Select Project</label>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => handleProjectChange(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm focus:border-primary focus:ring-primary"
-              >
-                <option value="">Select a project...</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>{project.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium">Progress</p>
-                <p className="text-sm font-medium text-primary">{filledFields}/{totalFields} Complete</p>
-              </div>
-              <div className="w-full rounded-full bg-card h-2">
-                <div
-                  className="h-2 rounded-full bg-primary transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Accordions for Framework Fields */}
-            <div className="flex flex-col gap-4">
-              {currentFramework?.fields.map((field) => (
-                <details
-                  key={field.key}
-                  className="flex flex-col rounded-xl border border-border bg-card group transition-all duration-300"
-                  open={openAccordions.has(field.key)}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    toggleAccordion(field.key)
-                  }}
-                >
-                  <summary className="flex cursor-pointer items-center justify-between gap-4 p-4 list-none">
-                    <div className="flex items-center gap-3">
-                      <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                        frameworkData[field.key]?.trim()
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {field.key}
-                      </span>
-                      <p className="font-display text-lg font-bold">{field.label}</p>
-                    </div>
-                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${
-                      openAccordions.has(field.key) ? 'rotate-180' : ''
-                    }`} />
-                  </summary>
-                  <div
-                    className="px-4 pb-4"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <p className="text-muted-foreground mb-3 text-sm">{field.description}</p>
-                    <Input
-                      value={frameworkData[field.key] || ""}
-                      onChange={(e) => setFrameworkData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      placeholder={`e.g., ${field.label === 'Population' ? 'Adults over 65 with type 2 diabetes' : `Enter ${field.label.toLowerCase()}...`}`}
-                      className="w-full"
-                    />
-                  </div>
-                </details>
-              ))}
-            </div>
-
-            {/* Framework Selector */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="font-display text-lg font-bold">Select Theoretical Framework</p>
-              <p className="text-muted-foreground mt-1 mb-3 text-sm">Choose a framework to structure your research.</p>
-              <div className="relative">
-                <Input
-                  value={frameworkSearch}
-                  onChange={(e) => setFrameworkSearch(e.target.value)}
-                  placeholder="Search for a framework..."
-                  className="pr-10"
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              </div>
-              {frameworkSearch && filteredFrameworks.length > 0 && (
-                <div className="mt-2 rounded-lg border border-border bg-background max-h-40 overflow-y-auto">
-                  {filteredFrameworks.map(([key, schema]) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setSelectedFramework(key)
-                        setFrameworkSearch("")
-                        setOpenAccordions(new Set([schema.fields[0]?.key]))
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-card transition-colors ${
-                        selectedFramework === key ? 'bg-primary/10 text-primary' : ''
-                      }`}
-                    >
-                      <span className="font-medium">{schema.name}</span>
-                      <span className="text-muted-foreground ml-2">- {schema.description}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {Object.entries(frameworks).slice(0, 5).map(([key, schema]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setSelectedFramework(key)
-                      setOpenAccordions(new Set([schema.fields[0]?.key]))
-                    }}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      selectedFramework === key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card border border-border hover:border-primary/50'
-                    }`}
-                  >
-                    {schema.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Real-time Summary */}
-            <div className="rounded-xl bg-card p-4 mt-4 sticky bottom-4">
-              <p className="font-display text-md font-bold mb-2">Formulated Research Question</p>
-              <p className={`text-sm ${formulatedQuestion.includes('→') ? '' : 'italic text-muted-foreground'}`}>
-                {formulatedQuestion}
-              </p>
-            </div>
-          </div>
+      {/* Context Bar - Project Selector */}
+      <div className="px-4 md:px-6 py-3 border-b border-border bg-card/50">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Project:</label>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => handleProjectChange(e.target.value)}
+            className="max-w-xs rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-primary"
+          >
+            <option value="">Select...</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>{project.name}</option>
+            ))}
+          </select>
         </div>
+      </div>
 
-        {/* Right Pane - AI Chat */}
-        <div className="hidden lg:flex w-1/2 flex-col border-l border-border bg-card">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex flex-col gap-6">
-              {/* AI Welcome Message (if no messages) */}
-              {messages.length === 0 && (
-                <div className="flex items-start gap-3 max-w-lg">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="rounded-lg rounded-tl-none bg-muted p-3">
-                      <p className="text-sm">
-                        Hello! I'm here to help you refine your research question using the {currentFramework?.name || 'PICO'} framework.
-                        Tell me about your research topic, and I'll help you identify the key components.
+      {/* Main Chat Area */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className={`flex flex-col gap-6 max-w-4xl ${
+            preferredLanguage === 'he'
+              ? 'mr-0 ml-auto items-end'
+              : 'ml-0 mr-auto items-start'
+          }`}>
+            {/* Welcome / Language Selection */}
+            {messages.length === 0 && (
+              <div className={`flex items-start gap-3 max-w-xl w-full ${
+                preferredLanguage === 'he' ? 'flex-row-reverse' : ''
+              }`}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+
+                <div className="flex flex-col gap-4 flex-1">
+                  {/* Language selection */}
+                  {!preferredLanguage && (
+                    <div className="rounded-lg rounded-tl-none bg-muted p-4">
+                      <p className="text-sm font-semibold mb-3 text-center">Choose your preferred language</p>
+                      <p className="text-sm text-muted-foreground mb-4 text-center">בחר את השפה המועדפת עליך</p>
+                      <div className="flex gap-3 justify-center">
+                        <button
+                          onClick={() => setPreferredLanguage('he')}
+                          className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          עברית
+                        </button>
+                        <button
+                          onClick={() => setPreferredLanguage('en')}
+                          className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          English
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hebrew welcome */}
+                  {preferredLanguage === 'he' && (
+                    <div className="rounded-lg rounded-tr-none bg-muted p-4" dir="rtl">
+                      <p className="text-sm font-semibold mb-2">שלום! 👋</p>
+                      <p className="text-sm mb-2">
+                        אני אאפיין עבורך את שאלת המחקר ואזהה את המסגרת התיאורטית המתאימה ביותר.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        פשוט ספר לי על הנושא או הרעיון למחקר שלך.
                       </p>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {/* Chat Messages */}
-              {messages.map((message, index) => (
+                  {/* English welcome */}
+                  {preferredLanguage === 'en' && (
+                    <div className="rounded-lg rounded-tl-none bg-muted p-4">
+                      <p className="text-sm font-semibold mb-2">Hello! 👋</p>
+                      <p className="text-sm mb-2">
+                        I'll analyze your research topic and automatically identify the most appropriate theoretical framework.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Just tell me about your research idea or topic.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Chat Messages */}
+            {messages.map((message, index) => {
+              const isHebrew = preferredLanguage === 'he'
+              const isUser = message.role === 'user'
+              const isAssistant = message.role === 'assistant'
+
+              // Message alignment based on language direction:
+              // Hebrew (RTL): User on RIGHT edge, AI slightly left
+              // English (LTR): User on LEFT edge, AI slightly right
+              const messageAlignment = isHebrew
+                ? (isUser ? 'self-end' : 'self-start')
+                : (isUser ? 'self-start' : 'self-end')
+
+              // Flex direction for avatar placement
+              // Hebrew: User avatar on right, AI avatar on left
+              // English: User avatar on left, AI avatar on right
+              const flexDirection = isHebrew
+                ? (isUser ? 'flex-row-reverse' : '')
+                : (isUser ? '' : 'flex-row-reverse')
+
+              // Bubble corner styling - corner near avatar is flat
+              const bubbleCorner = isHebrew
+                ? (isUser ? 'rounded-tr-none' : 'rounded-tl-none')
+                : (isUser ? 'rounded-tl-none' : 'rounded-tr-none')
+
+              return (
                 <div
                   key={index}
-                  className={`flex items-start gap-3 max-w-lg ${
-                    message.role === 'user' ? 'self-end' : ''
-                  }`}
+                  className={`flex items-start gap-3 max-w-2xl w-full ${messageAlignment} ${flexDirection}`}
                 >
-                  {message.role === 'assistant' && (
+                  {isAssistant && (
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Sparkles className="h-5 w-5" />
                     </div>
                   )}
-                  <div className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : ''}`}>
-                    <div className={`rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'rounded-tr-none bg-primary text-primary-foreground'
-                        : 'rounded-tl-none bg-muted'
-                    }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  </div>
-                  {message.role === 'user' && (
+                  {isUser && (
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <span className="text-sm font-medium">You</span>
+                      <span className="text-sm font-medium">{isHebrew ? 'את/ה' : 'You'}</span>
                     </div>
                   )}
-                </div>
-              ))}
 
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex items-start gap-3 max-w-lg">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div className="rounded-lg rounded-tl-none bg-muted p-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <div
+                      className={`rounded-lg p-4 ${
+                        isUser
+                          ? `bg-primary text-primary-foreground ${bubbleCorner}`
+                          : `bg-muted ${bubbleCorner}`
+                      }`}
+                      dir={isHebrew ? 'rtl' : 'ltr'}
+                    >
+                      <FormattedMessage content={message.content} role={message.role} />
+                    </div>
                   </div>
                 </div>
-              )}
+              )
+            })}
 
-              <div ref={messagesEndRef} />
-            </div>
+            {/* Loading indicator - matches AI message position */}
+            {isLoading && (
+              <div className={`flex items-start gap-3 max-w-lg ${
+                preferredLanguage === 'he' ? 'self-start' : 'self-end flex-row-reverse'
+              }`}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div className={`rounded-lg bg-muted p-3 ${
+                  preferredLanguage === 'he' ? 'rounded-tl-none' : 'rounded-tr-none'
+                }`}>
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
           </div>
+        </div>
 
-          {/* Chat Input */}
-          <div className="border-t border-border p-4">
-            {/* Suggested Prompts */}
-            <div className="flex gap-2 mb-3 flex-wrap">
-              {suggestedPrompts.map((prompt, i) => (
-                <button
-                  key={i}
-                  onClick={() => setInputMessage(prompt)}
-                  className="text-xs text-muted-foreground border border-border rounded-full px-3 py-1 hover:bg-muted transition-colors"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-            <div className="relative glassmorphism rounded-lg">
+        {/* Chat Input */}
+        <div className={`border-t border-border p-4 bg-background`} dir={preferredLanguage === 'he' ? 'rtl' : 'ltr'}>
+          <div className={`max-w-4xl ${preferredLanguage === 'he' ? 'mr-0 ml-auto' : 'ml-0 mr-auto'}`}>
+            <div className="relative">
               <Input
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Ask for suggestions or refinements..."
-                disabled={isLoading || !selectedProjectId}
-                className="pr-12 bg-transparent border-border"
+                placeholder={preferredLanguage === 'he' ? "ספר לי על המחקר שלך..." : "Tell me about your research..."}
+                disabled={isLoading || !selectedProjectId || !preferredLanguage}
+                className={`bg-card border-border ${preferredLanguage === 'he' ? 'pl-12 pr-4' : 'pr-12'}`}
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={isLoading || !inputMessage.trim() || !selectedProjectId}
                 size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                className={`absolute top-1/2 -translate-y-1/2 h-8 w-8 ${preferredLanguage === 'he' ? 'left-2' : 'right-2'}`}
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className={`h-4 w-4 ${preferredLanguage === 'he' ? 'rotate-180' : ''}`} />
                 )}
               </Button>
             </div>
+
             {!selectedProjectId && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Please select a project to start chatting
+              <p className="mt-2 text-xs text-muted-foreground text-center">
+                {preferredLanguage === 'he' ? 'אנא בחר פרויקט כדי להתחיל' : 'Please select a project to start'}
               </p>
             )}
           </div>

@@ -100,6 +100,7 @@ class AIService:
         message: str,
         conversation_history: List[Dict[str, str]],
         framework_type: str,
+        language: str = "en",
     ) -> Dict[str, Any]:
         """
         Handle chat interaction for the Define tool with hybrid JSON output.
@@ -108,13 +109,14 @@ class AIService:
             message: User's message
             conversation_history: Previous conversation (only chat_response parts)
             framework_type: Selected framework type
+            language: Response language ("en" or "he")
 
         Returns:
             Dict with 'chat_response' and 'framework_data'
         """
 
-        # Use the new define system prompt
-        system_prompt = get_define_system_prompt(framework_type)
+        # Use the new define system prompt with language
+        system_prompt = get_define_system_prompt(framework_type, language=language)
 
         messages = [SystemMessage(content=system_prompt)]
 

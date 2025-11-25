@@ -7,8 +7,6 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.models.schemas import ChatRequest, ChatResponse, FrameworkSchemaResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
-from datetime import datetime
-import json
 
 router = APIRouter(prefix="/define", tags=["define"])
 
@@ -58,22 +56,24 @@ async def chat(request: ChatRequest):
 
         # Get AI response (returns dict with chat_response and framework_data)
         framework_type = request.framework_type or project.get("framework_type", "PICO")
+        language = request.language or "en"
         ai_result = await ai_service.chat_for_define(
             message=request.message,
             conversation_history=chat_history,
             framework_type=framework_type,
+            language=language,
         )
 
         # Extract parts
         ai_response = ai_result.get("chat_response", "")
         extracted_data = ai_result.get("framework_data", {})
 
-        # Save AI response with Hebrew support (ensure_ascii=False)
+        # Save AI response (only the chat_response text, not the full JSON)
         await db_service.save_message(
             {
                 "project_id": str(request.project_id),
                 "role": "assistant",
-                "content": json.dumps(ai_result, ensure_ascii=False),
+                "content": ai_response,
             }
         )
 
@@ -107,6 +107,26 @@ async def get_conversation(project_id: str):
     try:
         conversation = await db_service.get_conversation(project_id)
         return {"messages": conversation}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
+@router.delete("/conversation/{project_id}")
+async def clear_conversation(project_id: str):
+    """Clear all chat history for a project"""
+    try:
+        success = await db_service.clear_conversation(project_id)
+        if success:
+            return {"status": "cleared", "project_id": project_id}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to clear conversation"
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
