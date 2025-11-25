@@ -106,10 +106,31 @@ class QueryGenerateRequest(BaseModel):
     query_type: str = Field(default="boolean", pattern="^(boolean|mesh|advanced)$")
 
 
+class ConceptAnalysis(BaseModel):
+    concept_number: int
+    component: str
+    free_text_terms: List[str]
+    mesh_terms: List[str]
+
+
+class QueryStrategies(BaseModel):
+    broad: str          # Relaxed logic
+    focused: str        # Strict logic
+    clinical_filtered: str # Validated Hedges
+
+
+class ToolboxItem(BaseModel):
+    label: str
+    query: str
+
+
 class QueryGenerateResponse(BaseModel):
-    query_text: str
-    query_type: str
-    suggestions: Optional[List[str]] = None
+    message: str  # Markdown explanation
+    concepts: List[ConceptAnalysis]
+    queries: QueryStrategies
+    toolbox: Optional[List[ToolboxItem]] = None
+    framework_type: str
+    framework_data: Dict[str, Any]
 
 
 # ============================================================================

@@ -1,9 +1,17 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AppSidebar } from "@/components/sidebar/app-sidebar"
 
-const inter = Inter({ subsets: ["latin"] })
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+})
 
 export const metadata: Metadata = {
   title: "MedAI Hub - Systematic Literature Review Platform",
@@ -16,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="dark">
+      <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans`}>
         <div className="flex h-screen overflow-hidden">
           {/* Persistent Sidebar */}
           <AppSidebar />

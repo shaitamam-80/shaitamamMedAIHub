@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { projectsApi, type Project } from "@/lib/api"
+import { apiClient, type Project } from "@/lib/api"
 import { Plus, FolderOpen } from "lucide-react"
 
 export default function ProjectsPage() {
@@ -24,9 +24,11 @@ export default function ProjectsPage() {
   }, [])
 
   const loadProjects = async () => {
-    const { data } = await projectsApi.list()
-    if (data) {
+    try {
+      const data = await apiClient.getProjects()
       setProjects(data)
+    } catch (error) {
+      console.error("Failed to load projects:", error)
     }
   }
 
@@ -34,16 +36,14 @@ export default function ProjectsPage() {
     if (!newProject.name.trim()) return
 
     setIsLoading(true)
-    const { data, error } = await projectsApi.create(newProject)
-
-    if (data) {
+    try {
+      const data = await apiClient.createProject(newProject) as Project
       setProjects([data, ...projects])
       setNewProject({ name: "", description: "", framework_type: "PICO" })
       setShowCreateForm(false)
-    } else if (error) {
-      alert(`Error: ${error}`)
+    } catch (error) {
+      alert(`Error: ${error instanceof Error ? error.message : "Failed to create project"}`)
     }
-
     setIsLoading(false)
   }
 

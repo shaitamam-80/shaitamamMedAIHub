@@ -39,14 +39,18 @@ async def generate_query(request: QueryGenerateRequest):
                 detail="No framework data available. Please complete the Define tool first.",
             )
 
-        # Generate query using AI
-        query_text = await ai_service.generate_pubmed_query(framework_data)
+        # Get framework_type from project
+        framework_type = project.get("framework_type", "PICO")
 
-        # Save query to database
+        # Generate comprehensive query strategy using AI
+        result = await ai_service.generate_pubmed_query(framework_data, framework_type)
+
+        # Save the focused query to database (primary query)
+        focused_query = result.get("queries", {}).get("focused", "")
         await db_service.save_query_string(
             {
                 "project_id": str(request.project_id),
-                "query_text": query_text,
+                "query_text": focused_query,
                 "query_type": request.query_type,
             }
         )
@@ -57,19 +61,18 @@ async def generate_query(request: QueryGenerateRequest):
                 "project_id": str(request.project_id),
                 "tool": "QUERY",
                 "status": "completed",
-                "results": {"query_text": query_text, "query_type": request.query_type},
-                "config": {"framework_data": framework_data},
+                "results": result,
+                "config": {"framework_data": framework_data, "framework_type": framework_type},
             }
         )
 
         return QueryGenerateResponse(
-            query_text=query_text,
-            query_type=request.query_type,
-            suggestions=[
-                "Try using MeSH terms for more precise results",
-                "Consider adding year filters: AND 2020:2024[dp]",
-                "Use [Title/Abstract] tags to limit search scope",
-            ],
+            message=result.get("message", "Query generated successfully."),
+            concepts=result.get("concepts", []),
+            queries=result.get("queries", {"broad": "", "focused": "", "clinical_filtered": ""}),
+            toolbox=result.get("toolbox", []),
+            framework_type=framework_type,
+            framework_data=framework_data
         )
 
     except HTTPException:

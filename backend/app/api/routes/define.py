@@ -8,6 +8,7 @@ from app.api.models.schemas import ChatRequest, ChatResponse, FrameworkSchemaRes
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from datetime import datetime
+import json
 
 router = APIRouter(prefix="/define", tags=["define"])
 
@@ -55,31 +56,25 @@ async def chat(request: ChatRequest):
             {"role": msg["role"], "content": msg["content"]} for msg in conversation
         ]
 
-        # Get AI response
+        # Get AI response (returns dict with chat_response and framework_data)
         framework_type = request.framework_type or project.get("framework_type", "PICO")
-        ai_response = await ai_service.chat_for_define(
+        ai_result = await ai_service.chat_for_define(
             message=request.message,
             conversation_history=chat_history,
             framework_type=framework_type,
         )
 
-        # Save AI response
+        # Extract parts
+        ai_response = ai_result.get("chat_response", "")
+        extracted_data = ai_result.get("framework_data", {})
+
+        # Save AI response with Hebrew support (ensure_ascii=False)
         await db_service.save_message(
             {
                 "project_id": str(request.project_id),
                 "role": "assistant",
-                "content": ai_response,
+                "content": json.dumps(ai_result, ensure_ascii=False),
             }
-        )
-
-        # Extract framework data from full conversation
-        all_messages = chat_history + [
-            {"role": "user", "content": request.message},
-            {"role": "assistant", "content": ai_response},
-        ]
-
-        extracted_data = await ai_service.extract_framework_data(
-            conversation=all_messages, framework_type=framework_type
         )
 
         # Update project with extracted data if any

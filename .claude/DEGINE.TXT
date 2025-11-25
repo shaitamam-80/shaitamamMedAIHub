@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MedAI Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&amp;family=Plus+Jakarta+Sans:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#059467",
+              "background-light": "#f0f4f8",
+              "background-dark": "#0f172a",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"],
+              "body": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+            font-size: 24px;
+        }
+        .material-symbols-outlined.fill {
+           font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-body text-slate-300">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden pb-24">
+<!-- Hero Section -->
+<main class="flex-grow px-4 pt-12 text-center">
+<h1 class="text-white tracking-tight text-3xl font-bold leading-tight font-display">Welcome to MedAI Hub</h1>
+<p class="text-slate-400 text-base font-normal leading-normal pt-2 pb-8">Streamlining medical research from question to conclusion.</p>
+<div class="flex justify-center">
+<button class="flex w-full max-w-sm cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Get Started with Projects</span>
+</button>
+</div>
+</main>
+<!-- Core Tools Section -->
+<section class="p-4 mt-8">
+<div class="grid grid-cols-1 gap-4">
+<div class="flex flex-1 gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4 flex-col">
+<span class="material-symbols-outlined text-primary">emoji_objects</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-white text-base font-bold leading-tight font-display">Define</h2>
+<p class="text-slate-400 text-sm font-normal leading-normal">Formulate clear and concise research questions with structured guidance.</p>
+</div>
+</div>
+<div class="flex flex-1 gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4 flex-col">
+<span class="material-symbols-outlined text-primary">manage_search</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-white text-base font-bold leading-tight font-display">Query</h2>
+<p class="text-slate-400 text-sm font-normal leading-normal">Translate your questions into powerful, effective search strings for databases.</p>
+</div>
+</div>
+<div class="flex flex-1 gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4 flex-col">
+<span class="material-symbols-outlined text-primary">checklist</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-white text-base font-bold leading-tight font-display">Review</h2>
+<p class="text-slate-400 text-sm font-normal leading-normal">Efficiently screen and analyze articles with AI-assisted review tools.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Platform Features Section -->
+<section class="px-4 mt-4">
+<h2 class="text-white text-xl font-bold leading-tight tracking-tight px-0 pb-4 pt-5 font-display">Platform Features</h2>
+<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-1">
+<h3 class="text-white text-base font-bold leading-tight font-display">Dynamic Framework Support</h3>
+<p class="text-slate-400 text-sm font-normal leading-normal">Adapt your research methodology with flexible and dynamic framework options.</p>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-white text-base font-bold leading-tight font-display">AI-Powered Analysis</h3>
+<p class="text-slate-400 text-sm font-normal leading-normal">Leverage machine learning to identify key themes, data, and insights from articles.</p>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-white text-base font-bold leading-tight font-display">Project-Based Workflow</h3>
+<p class="text-slate-400 text-sm font-normal leading-normal">Organize your research into distinct projects for better management and collaboration.</p>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-white text-base font-bold leading-tight font-display">MEDLINE Parser</h3>
+<p class="text-slate-400 text-sm font-normal leading-normal">Seamlessly import and parse citations and abstracts directly from MEDLINE.</p>
+</div>
+</div>
+</section>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 h-20 border-t border-slate-700/80 bg-slate-900/70 backdrop-blur-lg">
+<div class="flex h-full items-center justify-around px-2">
+<a class="flex flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill">home</span>
+<span class="text-xs font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">folder_managed</span>
+<span class="text-xs font-medium">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">emoji_objects</span>
+<span class="text-xs font-medium">Define</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">manage_search</span>
+<span class="text-xs font-medium">Query</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">checklist</span>
+<span class="text-xs font-medium">Review</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>
+
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Research Architect - Define</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glassmorphism {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10B981", // Emerald-600
+                        "background-light": "#F8FAFC", // Slate-50
+                        "background-dark": "#0F172A", // Slate-900 equivalent for dark bg
+                        "text-primary": "#0F172A", // Slate-900
+                        "text-secondary": "#64748B", // Slate-500
+                        "surface-dark": "#1E293B" // Slate-800 for dark surfaces
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body bg-background-light dark:bg-background-dark text-text-primary dark:text-background-light">
+<div class="flex h-screen w-full flex-col">
+<!-- Top App Bar -->
+<header class="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-sm px-4 md:px-6 sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-text-primary dark:text-background-light">widgets</span>
+<h1 class="font-display text-xl font-bold text-text-primary dark:text-background-light">Define</h1>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center rounded-full h-10 w-10 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-text-primary dark:text-background-light">history</span>
+</button>
+<button class="flex items-center justify-center rounded-full h-10 w-10 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-text-primary dark:text-background-light">settings</span>
+</button>
+<img alt="User avatar" class="h-9 w-9 rounded-full object-cover border-2 border-slate-300 dark:border-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKUJ2o_wQGdyHTgucwKUDksq5SzqnPFmZAu1UDKVo5hEAZSw5WKzFX4CYozZPY1cwoGPILMIEGxOrJ81JUUFm1hTXFMLLbSguUV-uq_gri7obrUeRxlzik2jKMBau7jXR_ezx-hrkWsK8mP7kPOfcj1axELXdEaBWsfkiGgOE60LqAngBJCCWhGbNbPQ-kiw0vmVZrZi0RI_RbH8oi-YYirnSIqpTot13elxKAFvwqVw5rO1nphIYPAt90X3dqIcnrLXlrjdGosms"/>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex flex-1 overflow-hidden">
+<!-- Left Pane: Dynamic Form -->
+<div class="w-full lg:w-1/2 flex flex-col overflow-y-auto p-6 md:p-8">
+<div class="flex flex-col gap-8">
+<!-- Header -->
+<div>
+<h1 class="font-display text-3xl font-bold tracking-tight text-text-primary dark:text-background-light">Define Your Research Question</h1>
+<p class="mt-2 text-text-secondary dark:text-slate-400">Fill in the details below or use the AI assistant to help formulate your question.</p>
+</div>
+<!-- Progress Bar -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<p class="text-sm font-medium text-text-primary dark:text-slate-300">Progress</p>
+<p class="text-sm font-medium text-primary">1/4 Complete</p>
+</div>
+<div class="w-full rounded-full bg-slate-200 dark:bg-surface-dark h-2">
+<div class="h-2 rounded-full bg-primary" style="width: 25%;"></div>
+</div>
+</div>
+<!-- Accordions for PICO framework -->
+<div class="flex flex-col gap-4">
+<details class="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark group transition-all duration-300" open="">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none">
+<p class="font-display text-lg font-bold text-text-primary dark:text-background-light">Population</p>
+<span class="material-symbols-outlined text-text-secondary dark:text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="px-4 pb-4">
+<p class="text-text-secondary dark:text-slate-400 mb-3 text-sm">Define the specific patient or problem being addressed.</p>
+<input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-background-light dark:bg-background-dark focus:border-primary focus:ring-primary text-sm" placeholder="e.g., Adults over 65 with type 2 diabetes" type="text"/>
+</div>
+</details>
+<details class="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark group transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none">
+<p class="font-display text-lg font-bold text-text-primary dark:text-background-light">Intervention</p>
+<span class="material-symbols-outlined text-text-secondary dark:text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+</details>
+<details class="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark group transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none">
+<p class="font-display text-lg font-bold text-text-primary dark:text-background-light">Comparison</p>
+<span class="material-symbols-outlined text-text-secondary dark:text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+</details>
+<details class="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark group transition-all duration-300">
+<summary class="flex cursor-pointer items-center justify-between gap-4 p-4 list-none">
+<p class="font-display text-lg font-bold text-text-primary dark:text-background-light">Outcome</p>
+<span class="material-symbols-outlined text-text-secondary dark:text-slate-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+</details>
+</div>
+<!-- Framework Selector -->
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark p-4">
+<p class="font-display text-lg font-bold text-text-primary dark:text-background-light">Select Theoretical Framework</p>
+<p class="text-text-secondary dark:text-slate-400 mt-1 mb-3 text-sm">Choose a framework to structure your research.</p>
+<div class="relative">
+<input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-background-light dark:bg-background-dark focus:border-primary focus:ring-primary text-sm pr-10" placeholder="Search for a framework..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary dark:text-slate-400">search</span>
+</div>
+</div>
+<!-- Real-time Summary -->
+<div class="rounded-xl bg-slate-100 dark:bg-surface-dark p-4 mt-4 sticky bottom-0">
+<p class="font-display text-md font-bold text-text-primary dark:text-background-light mb-2">Formulated Research Question</p>
+<p class="text-text-secondary dark:text-slate-400 text-sm italic">Your question will appear here as you fill the form...</p>
+</div>
+</div>
+</div>
+<!-- Right Pane: AI Chat -->
+<div class="hidden lg:flex w-1/2 flex-col border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark">
+<div class="flex-1 overflow-y-auto p-6">
+<div class="flex flex-col gap-6">
+<!-- AI Welcome Message -->
+<div class="flex items-start gap-3 max-w-lg">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="rounded-lg rounded-tl-none bg-slate-100 dark:bg-slate-700 p-3">
+<p class="text-sm">Hello! I'm here to help you refine your research question. How can we start?</p>
+</div>
+</div>
+</div>
+<!-- User Message Example -->
+<div class="flex items-start gap-3 max-w-lg self-end">
+<div class="flex flex-col gap-1 items-end">
+<div class="rounded-lg rounded-tr-none bg-primary text-white p-3">
+<p class="text-sm">I'm studying the impact of telehealth on chronic disease management.</p>
+</div>
+</div>
+<img alt="User avatar" class="h-10 w-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTdmq3uOx2-IU2gs8_GNCYO1pAuAqPt_igdlZdgpF6HfA1iRQmAX49J827l_IwIdy2XD8c367182jM0Xxn29uMWE3CR1g_VrqmoPvTUSqny9C_PBMwKsifTFjQQvjUKEu2MR980L8jsq8UsTweWQgv3e7uV4wP_fm4bD11fCpIso_SBrTuDrf7MlbNKZSq-PDGklf0_EYVlh8dwHDCQV0NGV897PEQhYabtWHpm268J7_XnWliXJbeb2zuh7xYvX53xLgeSmZan4k"/>
+</div>
+<!-- AI Response with Action -->
+<div class="flex items-start gap-3 max-w-lg">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="rounded-lg rounded-tl-none bg-slate-100 dark:bg-slate-700 p-3">
+<p class="text-sm">That's a great topic. For the 'Population' field, consider specifying the chronic disease, like 'patients with hypertension.' Would you like me to add that to the form?</p>
+</div>
+<button class="flex items-center gap-2 self-start rounded-md px-3 py-1.5 text-xs text-primary bg-primary/10 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined !text-sm">add</span>
+                                    Copy to Form
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Chat Input -->
+<div class="border-t border-slate-200 dark:border-slate-800 p-4">
+<!-- Suggested Prompts -->
+<div class="flex gap-2 mb-3">
+<button class="text-xs text-text-secondary dark:text-slate-400 border border-slate-300 dark:border-slate-700 rounded-full px-3 py-1 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">Suggest an outcome</button>
+<button class="text-xs text-text-secondary dark:text-slate-400 border border-slate-300 dark:border-slate-700 rounded-full px-3 py-1 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">Refine my intervention</button>
+<button class="text-xs text-text-secondary dark:text-slate-400 border border-slate-300 dark:border-slate-700 rounded-full px-3 py-1 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">Find a framework</button>
+</div>
+<div class="relative rounded-lg glassmorphism">
+<input class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-transparent focus:border-primary focus:ring-primary text-sm pr-12 placeholder:text-text-secondary dark:placeholder:text-slate-400" placeholder="Ask for suggestions or refinements..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined !text-xl">send</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
+
+
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Query Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&amp;family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glassmorphism {
+            background: rgba(248, 250, 252, 0.1);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(248, 250, 252, 0.15);
+        }
+    </style>
+<script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#059669", 
+              "background-dark": "#020617", 
+              "background-light": "#f8fafc",
+              "text-light": "#f8fafc", 
+              "text-dark": "#0f172a", 
+              "emerald-600": "#059669",
+              "slate-900": "#0f172a",
+              "slate-50": "#f8fafc",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "mono": ["JetBrains Mono", "monospace"],
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "0.75rem",
+              "xl": "1rem",
+              "full": "9999px",
+            },
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-slate-900 text-slate-50 font-body">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-lg">
+<div class="flex items-center p-4">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-slate-50" style="font-size: 28px;">
+                        menu
+                    </span>
+</div>
+<h1 class="font-display text-slate-50 text-xl font-bold leading-tight tracking-tight flex-1 text-center">Query</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-slate-50 gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-slate-50" style="font-size: 24px;">
+                            help_outline
+                        </span>
+</button>
+</div>
+</div>
+</div>
+<main class="flex-grow p-4 space-y-6">
+<!-- Card: Concept Analysis -->
+<div class="flex flex-col items-stretch justify-start rounded-xl glassmorphism">
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-5">
+<p class="font-display text-slate-50 text-lg font-bold leading-tight">Concept Analysis</p>
+<p class="text-slate-300 text-sm font-normal leading-normal">Key concepts extracted from your research question.</p>
+<div class="flex flex-wrap gap-2 pt-3 pb-2">
+<span class="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-300">Population</span>
+<span class="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-300">Intervention</span>
+<span class="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-300">Outcome</span>
+<span class="inline-flex items-center rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-medium text-emerald-300">Clinical Trial</span>
+</div>
+<div class="flex items-end justify-end pt-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-5 bg-emerald-600 text-slate-50 text-sm font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 18px;">
+                                edit
+                            </span>
+<span class="truncate">Edit Concepts</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Section Header: The 3-Layer Strategy -->
+<h2 class="font-display text-slate-50 text-xl font-bold leading-tight tracking-tight px-1 pt-4 pb-2">The 3-Layer Strategy</h2>
+<!-- Accordions: Strategies -->
+<div class="flex flex-col gap-4">
+<details class="flex flex-col rounded-xl glassmorphism group">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
+<div class="flex flex-col">
+<p class="font-display text-slate-50 text-base font-bold leading-normal">Comprehensive Strategy</p>
+<p class="text-slate-400 text-xs font-normal leading-normal pt-1">Broadest search to capture all relevant literature.</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-open:rotate-180 transition-transform duration-300" style="font-size: 24px;">
+                            expand_more
+                        </span>
+</summary>
+<div class="px-5 pb-5">
+<div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+<p class="font-mono text-slate-300 text-xs leading-relaxed">
+                                ("heart failure" OR "cardiac failure") AND ("drug therapy" OR "pharmacotherapy") AND ("mortality" OR "survival rate")
+                             </p>
+</div>
+<div class="flex items-center justify-end gap-3 mt-4">
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-slate-50/10 text-slate-200 text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-emerald-600 text-white text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">science</span>
+<span>Test Search</span>
+</button>
+</div>
+</div>
+</details>
+<details class="flex flex-col rounded-xl glassmorphism group">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
+<div class="flex flex-col">
+<p class="font-display text-slate-50 text-base font-bold leading-normal">Focused Strategy</p>
+<p class="text-slate-400 text-xs font-normal leading-normal pt-1">Targets more specific, high-relevance results.</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-open:rotate-180 transition-transform duration-300" style="font-size: 24px;">
+                            expand_more
+                        </span>
+</summary>
+<div class="px-5 pb-5">
+<div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+<p class="font-mono text-slate-300 text-xs leading-relaxed">
+                                ("congestive heart failure"[MeSH Terms]) AND ("beta-blockers"[Pharmacological Action]) AND ("hospitalization"[Title/Abstract])
+                             </p>
+</div>
+<div class="flex items-center justify-end gap-3 mt-4">
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-slate-50/10 text-slate-200 text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-emerald-600 text-white text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">science</span>
+<span>Test Search</span>
+</button>
+</div>
+</div>
+</details>
+<details class="flex flex-col rounded-xl glassmorphism group">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
+<div class="flex flex-col">
+<p class="font-display text-slate-50 text-base font-bold leading-normal">Clinical Filtered Strategy</p>
+<p class="text-slate-400 text-xs font-normal leading-normal pt-1">Narrows results to specific clinical study types.</p>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-open:rotate-180 transition-transform duration-300" style="font-size: 24px;">
+                            expand_more
+                        </span>
+</summary>
+<div class="px-5 pb-5">
+<div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+<p class="font-mono text-slate-300 text-xs leading-relaxed">
+                                (("heart failure") AND ("drug therapy")) AND ("randomized controlled trial"[Publication Type])
+                             </p>
+</div>
+<div class="flex items-center justify-end gap-3 mt-4">
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-slate-50/10 text-slate-200 text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-emerald-600 text-white text-xs font-medium leading-normal gap-2">
+<span class="material-symbols-outlined" style="font-size: 16px;">science</span>
+<span>Test Search</span>
+</button>
+</div>
+</div>
+</details>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<div class="sticky bottom-0 z-10">
+<div class="flex border-t border-slate-700 bg-slate-900/80 backdrop-blur-lg px-4 pb-3 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px; font-variation-settings: 'FILL' 0;">
+                            home
+                        </span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-emerald-400" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px; font-variation-settings: 'FILL' 1;">
+                            query_stats
+                        </span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Query</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px; font-variation-settings: 'FILL' 0;">
+                            checklist
+                        </span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Screen</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px; font-variation-settings: 'FILL' 0;">
+                            person
+                        </span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Profile</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>
+
+
+
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Upload for Review</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&amp;family=Inter:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b981",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "text-primary": "#0f172a",
+                        "text-primary-dark": "#f8fafc",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#334155",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "heading": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-text-primary-dark">
+<div class="relative flex h-screen w-full flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex shrink-0 items-center bg-background-light dark:bg-background-dark px-4 py-3">
+<button class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-text-primary dark:text-text-primary-dark text-2xl">arrow_back</span>
+</button>
+<h1 class="font-heading text-lg font-bold flex-1 text-center pr-10">Upload for Review</h1>
+</header>
+<main class="flex flex-1 flex-col px-4 pt-6 pb-4">
+<!-- Headline and Body Text -->
+<div class="flex flex-col">
+<h2 class="font-heading text-[32px] font-bold leading-tight tracking-tight text-text-primary dark:text-text-primary-dark">Import from PubMed</h2>
+<p class="mt-2 text-base font-normal leading-normal text-text-primary/80 dark:text-text-primary-dark/80">Select your MEDLINE format file to begin the screening process.</p>
+</div>
+<!-- Empty State / File Upload Area -->
+<div class="flex flex-col pt-8">
+<div class="flex flex-col items-center gap-6 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark px-6 py-14">
+<div class="flex size-16 items-center justify-center rounded-full bg-primary/10">
+<span class="material-symbols-outlined text-3xl text-primary">upload_file</span>
+</div>
+<div class="flex max-w-[480px] flex-col items-center gap-1">
+<p class="font-heading text-lg font-bold leading-tight tracking-[-0.015em] text-center text-text-primary dark:text-text-primary-dark">Tap to Select File</p>
+<p class="text-sm font-normal leading-normal text-center text-text-primary/80 dark:text-text-primary-dark/80">Choose a .txt file from your device</p>
+</div>
+</div>
+</div>
+<div class="flex-grow"></div>
+<!-- Primary CTA Button (disabled state) -->
+<div class="flex w-full py-3">
+<button class="flex w-full cursor-not-allowed items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-text-primary/20 dark:bg-text-primary-dark/20 text-text-primary/50 dark:text-text-primary-dark/50 text-base font-bold leading-normal tracking-[0.015em]" disabled="">
+<span class="truncate">Start Upload</span>
+</button>
+</div>
+</main>
+</div>
+</body></html>
+
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Screening Results</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#059467", /* Emerald-600 */
+              "background-light": "#f8fafc", /* Slate-50 */
+              "background-dark": "#020617", /* Slate-950 (A dark variant for dark mode) */
+              "text-primary": "#0f172a", /* Slate-900 */
+              "text-secondary": "#64748b", /* Slate-500 */
+              "status-include": "#10b981", /* Emerald-500 */
+              "status-exclude": "#ef4444", /* Red-500 */
+              "status-maybe": "#f59e0b", /* Amber-500 */
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "mono": ["JetBrains Mono", "monospace"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex flex-col gap-2 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 pb-2">
+<div class="flex items-center h-12 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-center text-text-primary dark:text-background-light">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<div class="flex size-12 shrink-0 items-center justify-center text-text-primary dark:text-background-light">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</div>
+</div>
+<p class="font-display text-text-primary dark:text-background-light tracking-light text-3xl font-bold leading-tight">AI in Cardiology Review</p>
+</div>
+<!-- Chips -->
+<div class="sticky top-[120px] z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm px-4 pt-2 pb-3">
+<div class="flex gap-2.5 overflow-x-auto pb-2 -mx-4 px-4">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-slate-200/50 dark:bg-slate-800/50 pl-4 pr-3">
+<p class="text-text-primary dark:text-background-light text-sm font-medium leading-normal">Total: 1250</p>
+<span class="material-symbols-outlined text-text-primary dark:text-background-light text-xl">arrow_drop_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 pl-4 pr-3 text-status-include">
+<p class="text-sm font-medium leading-normal">Included: 85</p>
+<span class="material-symbols-outlined text-xl">arrow_drop_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-red-500/10 dark:bg-red-500/20 pl-4 pr-3 text-status-exclude">
+<p class="text-sm font-medium leading-normal">Excluded: 1150</p>
+<span class="material-symbols-outlined text-xl">arrow_drop_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 pl-4 pr-3 text-status-maybe">
+<p class="text-sm font-medium leading-normal">Maybe: 15</p>
+<span class="material-symbols-outlined text-xl">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<!-- Section Header -->
+<div class="flex justify-between items-center px-4 pb-2 pt-4">
+<h3 class="font-display text-text-primary dark:text-background-light text-xl font-bold leading-tight">Screening Results</h3>
+<button class="flex items-center justify-center gap-1 text-text-secondary dark:text-slate-400">
+<span class="material-symbols-outlined text-xl">filter_list</span>
+<span class="text-sm font-medium">Sort</span>
+</button>
+</div>
+<!-- Card List -->
+<div class="flex flex-col gap-4 p-4">
+<!-- Card 1: Included -->
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)] bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg border border-white/30 dark:border-slate-800/50 @container">
+<div class="flex w-full grow flex-col items-stretch justify-center gap-3 p-4">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-2 rounded-full bg-status-include/10 px-3 py-1 text-sm font-medium text-status-include">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span>INCLUDE</span>
+</div>
+<button class="flex items-center justify-center text-text-secondary dark:text-slate-400">
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+<p class="font-display text-text-primary dark:text-background-light text-lg font-bold leading-tight">Machine Learning for Predicting Cardiac Events</p>
+<div class="flex flex-col gap-2">
+<p class="text-text-secondary dark:text-slate-400 text-sm font-normal leading-normal">J. Doe et al., Journal of Medicine, 2023</p>
+<p class="text-text-secondary dark:text-slate-400 text-sm font-normal leading-normal">Reason: Matches primary keywords and study type...</p>
+</div>
+<div class="flex items-center gap-2 pt-2">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-red-500/10 text-status-exclude text-sm font-medium leading-normal transition-colors hover:bg-red-500/20">
+<span class="truncate">Exclude</span>
+</button>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-amber-500/10 text-status-maybe text-sm font-medium leading-normal transition-colors hover:bg-amber-500/20">
+<span class="truncate">Maybe</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Excluded -->
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)] bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg border border-white/30 dark:border-slate-800/50 @container">
+<div class="flex w-full grow flex-col items-stretch justify-center gap-3 p-4">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-2 rounded-full bg-status-exclude/10 px-3 py-1 text-sm font-medium text-status-exclude">
+<span class="material-symbols-outlined text-base">cancel</span>
+<span>EXCLUDE</span>
+</div>
+<button class="flex items-center justify-center text-text-secondary dark:text-slate-400">
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+</div>
+<p class="font-display text-text-primary dark:text-background-light text-lg font-bold leading-tight">A Retrospective Analysis of Patient Readmission Rates</p>
+<div class="flex flex-col gap-2">
+<p class="text-text-secondary dark:text-slate-400 text-sm font-normal leading-normal">A. Smith et al., Healthcare Weekly, 2022</p>
+<p class="text-text-secondary dark:text-slate-400 text-sm font-normal leading-normal">Reason: Study population does not match inclusion criteria...</p>
+</div>
+<div class="flex items-center gap-2 pt-2">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-emerald-500/10 text-status-include text-sm font-medium leading-normal transition-colors hover:bg-emerald-500/20">
+<span class="truncate">Include</span>
+</button>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-amber-500/10 text-status-maybe text-sm font-medium leading-normal transition-colors hover:bg-amber-500/20">
+<span class="truncate">Maybe</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3: Expanded View -->
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.2)] bg-white/50 dark:bg-slate-900/50 backdrop-blur-lg border border-white/30 dark:border-slate-800/50 @container">
+<div class="flex w-full grow flex-col items-stretch justify-center gap-3 p-4">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-2 rounded-full bg-status-maybe/10 px-3 py-1 text-sm font-medium text-status-maybe">
+<span class="material-symbols-outlined text-base">help</span>
+<span>MAYBE</span>
+</div>
+<button class="flex items-center justify-center text-text-secondary dark:text-slate-400">
+<span class="material-symbols-outlined">expand_less</span>
+</button>
+</div>
+<p class="font-display text-text-primary dark:text-background-light text-lg font-bold leading-tight">Cardiovascular Risk Prediction using Deep Learning</p>
+<div class="flex flex-col gap-4 pt-2 border-t border-slate-200/80 dark:border-slate-800/80 mt-2">
+<div>
+<p class="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-slate-400 mb-1">AI Reasoning</p>
+<p class="text-text-primary dark:text-slate-300 text-sm">Article directly addresses PICO, but methodology is borderline. Manual review suggested.</p>
+</div>
+<div>
+<p class="text-xs font-semibold uppercase tracking-wider text-text-secondary dark:text-slate-400 mb-2">Relevant Query Terms</p>
+<div class="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
+<code class="font-mono text-sm text-text-primary dark:text-slate-300">("deep learning" OR "AI") AND ("cardiovascular risk")</code>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-3">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-emerald-500/10 text-status-include text-sm font-medium leading-normal transition-colors hover:bg-emerald-500/20">
+<span class="truncate">Include</span>
+</button>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-red-500/10 text-status-exclude text-sm font-medium leading-normal transition-colors hover:bg-red-500/20">
+<span class="truncate">Exclude</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Action Button -->
+<div class="sticky bottom-0 mt-auto p-4 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent">
+<button class="flex w-full min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-4 bg-primary text-white text-base font-bold leading-normal shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all gap-2">
+<span class="truncate">Export Results</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>

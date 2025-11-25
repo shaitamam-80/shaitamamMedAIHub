@@ -75,3 +75,5 @@ Thumbs.db
 # Database
 *.sqlite
 *.db
+nul
+backend/nul

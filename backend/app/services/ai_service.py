@@ -7,28 +7,66 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from typing import Dict, Any, List, Optional
 import json
+import re
 from app.core.config import settings
+from app.core.prompts import (
+    get_define_system_prompt,
+    get_extraction_prompt,
+    get_query_system_prompt,
+    FRAMEWORK_SCHEMAS
+)
 
 
 class AIService:
     """Service for AI operations using Google Gemini"""
 
     def __init__(self):
-        # Initialize Gemini Pro for heavy lifting
+        # Initialize Gemini models
+        # Using gemini-2.5-flash for all tasks (best balance of speed and quality)
+        # Note: gemini-1.5-* models are deprecated, use gemini-2.5-flash instead
         self.gemini_pro = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_PRO_MODEL,
+            model="gemini-2.5-flash",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=settings.TEMPERATURE,
             max_tokens=settings.MAX_TOKENS,
         )
 
-        # Initialize Gemini Flash for speed
         self.gemini_flash = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_FLASH_MODEL,
+            model="gemini-2.5-flash",
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=settings.TEMPERATURE,
             max_tokens=settings.MAX_TOKENS,
         )
+
+    def _extract_json(self, text: str, find_object: bool = True) -> Optional[Dict[str, Any]]:
+        """
+        Robustly extract JSON from AI response text.
+
+        Args:
+            text: Response text that may contain JSON
+            find_object: If True, look for {...}. If False, look for [...]
+
+        Returns:
+            Parsed JSON object/array or None
+        """
+        try:
+            if find_object:
+                # Find first { and last }
+                json_start = text.find("{")
+                json_end = text.rfind("}") + 1
+            else:
+                # Find first [ and last ]
+                json_start = text.find("[")
+                json_end = text.rfind("]") + 1
+
+            if json_start >= 0 and json_end > json_start:
+                json_str = text[json_start:json_end]
+                return json.loads(json_str)
+
+            # Try parsing the whole text
+            return json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            return None
 
     async def extract_framework_data(
         self, conversation: List[Dict[str, str]], framework_type: str
@@ -44,122 +82,145 @@ class AIService:
             Dictionary with extracted framework fields
         """
 
-        # Build the system prompt based on framework type
-        system_prompt = self._build_extraction_prompt(framework_type)
+        # Use the new extraction prompt
+        system_prompt = get_extraction_prompt(conversation, framework_type)
 
-        # Convert conversation to LangChain messages
-        messages = [SystemMessage(content=system_prompt)]
-
-        for msg in conversation:
-            if msg["role"] == "user":
-                messages.append(HumanMessage(content=msg["content"]))
-            elif msg["role"] == "assistant":
-                messages.append(AIMessage(content=msg["content"]))
-
-        # Add extraction request
-        messages.append(
-            HumanMessage(
-                content="Based on our conversation, extract the framework data as JSON. "
-                "Return ONLY valid JSON with no additional text."
-            )
-        )
+        # Simple one-shot extraction
+        messages = [HumanMessage(content=system_prompt)]
 
         # Get response from Gemini Flash (faster for extraction)
         response = await self.gemini_flash.ainvoke(messages)
 
         # Parse JSON response
-        try:
-            # Try to extract JSON from response
-            content = response.content
-            # Find JSON in response (handle cases where AI adds extra text)
-            json_start = content.find("{")
-            json_end = content.rfind("}") + 1
-            if json_start >= 0 and json_end > json_start:
-                json_str = content[json_start:json_end]
-                extracted_data = json.loads(json_str)
-                return extracted_data
-            else:
-                return {}
-        except json.JSONDecodeError:
-            # If parsing fails, return empty dict
-            return {}
+        extracted_data = self._extract_json(response.content, find_object=True)
+        return extracted_data if extracted_data else {}
 
     async def chat_for_define(
         self,
         message: str,
         conversation_history: List[Dict[str, str]],
         framework_type: str,
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
-        Handle chat interaction for the Define tool
+        Handle chat interaction for the Define tool with hybrid JSON output.
 
         Args:
             message: User's message
-            conversation_history: Previous conversation
+            conversation_history: Previous conversation (only chat_response parts)
             framework_type: Selected framework type
 
         Returns:
-            AI's response
+            Dict with 'chat_response' and 'framework_data'
         """
 
-        system_prompt = f"""You are a helpful research assistant helping formulate a research question using the {framework_type} framework.
-
-Your role is to:
-1. Ask clarifying questions to understand the research topic
-2. Guide the researcher through each component of the {framework_type} framework
-3. Help refine and structure their research question
-4. Be conversational and supportive
-
-{self._get_framework_description(framework_type)}
-
-Keep responses concise and focused. Ask one question at a time."""
+        # Use the new define system prompt
+        system_prompt = get_define_system_prompt(framework_type)
 
         messages = [SystemMessage(content=system_prompt)]
 
-        # Add conversation history
+        # Add conversation history - extract only chat_response to avoid pollution
         for msg in conversation_history:
+            content = msg["content"]
+
+            # If content is JSON with chat_response, extract it
+            if isinstance(content, str) and content.strip().startswith("{"):
+                try:
+                    parsed = json.loads(content)
+                    if "chat_response" in parsed:
+                        content = parsed["chat_response"]
+                except json.JSONDecodeError:
+                    pass  # Use original content
+
             if msg["role"] == "user":
-                messages.append(HumanMessage(content=msg["content"]))
+                messages.append(HumanMessage(content=content))
             elif msg["role"] == "assistant":
-                messages.append(AIMessage(content=msg["content"]))
+                messages.append(AIMessage(content=content))
 
         # Add current message
         messages.append(HumanMessage(content=message))
 
-        # Get streaming response from Gemini Flash
+        # Get response from Gemini Flash
         response = await self.gemini_flash.ainvoke(messages)
 
-        return response.content
+        # Parse the hybrid JSON response
+        result = self._extract_json(response.content, find_object=True)
 
-    async def generate_pubmed_query(self, framework_data: Dict[str, str]) -> str:
+        if result and "chat_response" in result and "framework_data" in result:
+            return result
+        else:
+            # Fallback if AI didn't follow format
+            return {
+                "chat_response": response.content,
+                "framework_data": {}
+            }
+
+    async def generate_pubmed_query(
+        self,
+        framework_data: Dict[str, Any],
+        framework_type: str
+    ) -> Dict[str, Any]:
         """
-        Generate PubMed boolean search query from framework data
+        Generate comprehensive PubMed search strategy from framework data.
 
         Args:
             framework_data: Extracted framework fields
+            framework_type: Framework name
 
         Returns:
-            PubMed search query string
+            Dict with message, concepts, queries, toolbox, framework_type, framework_data
         """
 
-        prompt = f"""You are a medical librarian expert in creating PubMed search queries.
+        # Use the new query system prompt
+        system_prompt = get_query_system_prompt(framework_type)
 
-Given the following research question components:
-{json.dumps(framework_data, indent=2)}
+        # Build the request
+        framework_text = "\n".join([
+            f"**{key}:** {value}"
+            for key, value in framework_data.items()
+            if value  # Only include non-empty values
+        ])
 
-Generate an effective PubMed boolean search query using:
-- AND, OR, NOT operators
-- MeSH terms where appropriate
-- Field tags like [Title/Abstract], [MeSH Terms]
-- Appropriate wildcards (*)
+        user_message = f"""Generate a comprehensive PubMed search strategy for this {framework_type} framework:
 
-Return ONLY the search query, no explanations."""
+{framework_text}
 
-        messages = [HumanMessage(content=prompt)]
+Return the complete JSON structure as specified in your instructions."""
 
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message)
+        ]
+
+        # Get response from Gemini (using flash for speed)
         response = await self.gemini_flash.ainvoke(messages)
 
-        return response.content.strip()
+        # Parse JSON response with robust extraction
+        result = self._extract_json(response.content, find_object=True)
+
+        if result and "message" in result and "concepts" in result and "queries" in result:
+            # Ensure framework_type and framework_data are included
+            result["framework_type"] = framework_type
+            result["framework_data"] = framework_data
+
+            # Ensure toolbox exists (even if empty)
+            if "toolbox" not in result:
+                result["toolbox"] = []
+
+            return result
+        else:
+            # Fallback structure if parsing fails
+            return {
+                "message": "Failed to generate query strategy. Please try again.",
+                "concepts": [],
+                "queries": {
+                    "broad": "",
+                    "focused": "",
+                    "clinical_filtered": ""
+                },
+                "toolbox": [],
+                "framework_type": framework_type,
+                "framework_data": framework_data
+            }
 
     async def analyze_abstract_batch(
         self, abstracts: List[Dict[str, Any]], criteria: Dict[str, Any]
@@ -216,67 +277,8 @@ Return ONLY valid JSON, no additional text."""
         response = await self.gemini_pro.ainvoke(messages)
 
         # Parse JSON response
-        try:
-            content = response.content
-            json_start = content.find("[")
-            json_end = content.rfind("]") + 1
-            if json_start >= 0 and json_end > json_start:
-                json_str = content[json_start:json_end]
-                results = json.loads(json_str)
-                return results
-            else:
-                return []
-        except json.JSONDecodeError:
-            return []
-
-    def _build_extraction_prompt(self, framework_type: str) -> str:
-        """Build system prompt for extracting framework data"""
-
-        descriptions = {
-            "PICO": """Extract PICO components:
-- P (Population): Who are the patients/population?
-- I (Intervention): What is the intervention being studied?
-- C (Comparison): What is the comparison/control?
-- O (Outcome): What outcomes are being measured?""",
-            "CoCoPop": """Extract CoCoPop components:
-- Condition: What is the health condition or disease?
-- Context: What is the setting or context?
-- Population: Who is the target population?""",
-            "PEO": """Extract PEO components:
-- P (Population): Who is the population?
-- E (Exposure): What is the exposure or phenomenon?
-- O (Outcome): What is the outcome of interest?""",
-            "SPIDER": """Extract SPIDER components:
-- S (Sample): Who is the sample?
-- PI (Phenomenon of Interest): What is being studied?
-- D (Design): What is the study design?
-- E (Evaluation): What is being evaluated?
-- R (Research type): What type of research?""",
-        }
-
-        base_description = descriptions.get(
-            framework_type,
-            f"Extract components for {framework_type} framework based on the conversation.",
-        )
-
-        return f"""You are analyzing a conversation to extract structured research question components.
-
-{base_description}
-
-Analyze the conversation and extract the relevant information into a JSON object.
-If information is not available for a field, use an empty string."""
-
-    def _get_framework_description(self, framework_type: str) -> str:
-        """Get description of framework for chat context"""
-
-        descriptions = {
-            "PICO": "PICO Framework: Population, Intervention, Comparison, Outcome",
-            "CoCoPop": "CoCoPop Framework: Condition, Context, Population",
-            "PEO": "PEO Framework: Population, Exposure, Outcome",
-            "SPIDER": "SPIDER Framework: Sample, Phenomenon of Interest, Design, Evaluation, Research type",
-        }
-
-        return descriptions.get(framework_type, f"{framework_type} Research Framework")
+        results = self._extract_json(response.content, find_object=False)
+        return results if results else []
 
 
 # Global instance
