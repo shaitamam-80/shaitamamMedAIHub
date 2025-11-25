@@ -3,17 +3,21 @@ MedAI Hub - Query Tool API Routes
 Handles PubMed search query generation
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.api.models.schemas import QueryGenerateRequest, QueryGenerateResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
+from app.core.auth import get_current_user, UserPayload
 from uuid import UUID
 
 router = APIRouter(prefix="/query", tags=["query"])
 
 
 @router.post("/generate", response_model=QueryGenerateResponse)
-async def generate_query(request: QueryGenerateRequest):
+async def generate_query(
+    request: QueryGenerateRequest,
+    current_user: UserPayload = Depends(get_current_user)
+):
     """
     Generate PubMed boolean search query from framework data
 
@@ -26,6 +30,12 @@ async def generate_query(request: QueryGenerateRequest):
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        # Verify ownership
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
         # Use project's framework data if not provided
@@ -84,11 +94,23 @@ async def generate_query(request: QueryGenerateRequest):
 
 
 @router.get("/history/{project_id}")
-async def get_query_history(project_id: UUID):
+async def get_query_history(
+    project_id: UUID,
+    current_user: UserPayload = Depends(get_current_user)
+):
     """Get all generated queries for a project"""
     try:
+        # Verify project ownership
+        project = await db_service.get_project(project_id)
+        if project and project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
         queries = await db_service.get_query_strings_by_project(project_id)
         return {"queries": queries}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)

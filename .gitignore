@@ -59,6 +59,15 @@ coverage/
 *.cover
 .coverage
 htmlcov/
+playwright-report/
+test-results/
+
+# MCP Config (local)
+.mcp.json
+
+# Root package files (use frontend/package.json instead)
+/package.json
+/package-lock.json
 
 # Uploads
 backend/uploads/

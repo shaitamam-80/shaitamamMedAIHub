@@ -24,9 +24,9 @@ export default function QueryPage() {
   async function loadProjects() {
     try {
       const data = await apiClient.getProjects()
-      setProjects(data.projects || [])
-      if (data.projects && data.projects.length > 0) {
-        setSelectedProject(data.projects[0])
+      setProjects(data || [])
+      if (data && data.length > 0) {
+        setSelectedProject(data[0])
       }
     } catch (error) {
       console.error("Failed to load projects:", error)

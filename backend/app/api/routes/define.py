@@ -3,10 +3,11 @@ MedAI Hub - Define Tool API Routes
 Handles research question formulation with AI chat
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.api.models.schemas import ChatRequest, ChatResponse, FrameworkSchemaResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
+from app.core.auth import get_current_user, UserPayload
 
 router = APIRouter(prefix="/define", tags=["define"])
 
@@ -18,7 +19,10 @@ async def get_frameworks():
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    current_user: UserPayload = Depends(get_current_user)
+):
     """
     Handle chat interaction for research question formulation
 
@@ -35,6 +39,12 @@ async def chat(request: ChatRequest):
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        # Verify ownership
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
         # Save user message
@@ -102,11 +112,23 @@ async def chat(request: ChatRequest):
 
 
 @router.get("/conversation/{project_id}")
-async def get_conversation(project_id: str):
+async def get_conversation(
+    project_id: str,
+    current_user: UserPayload = Depends(get_current_user)
+):
     """Get full conversation history for a project"""
     try:
+        # Verify project ownership
+        project = await db_service.get_project(project_id)
+        if project and project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
         conversation = await db_service.get_conversation(project_id)
         return {"messages": conversation}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -114,9 +136,19 @@ async def get_conversation(project_id: str):
 
 
 @router.delete("/conversation/{project_id}")
-async def clear_conversation(project_id: str):
+async def clear_conversation(
+    project_id: str,
+    current_user: UserPayload = Depends(get_current_user)
+):
     """Clear all chat history for a project"""
     try:
+        # Verify project ownership
+        project = await db_service.get_project(project_id)
+        if project and project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
         success = await db_service.clear_conversation(project_id)
         if success:
             return {"status": "cleared", "project_id": project_id}

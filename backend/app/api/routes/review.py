@@ -3,7 +3,7 @@ MedAI Hub - Review Tool API Routes
 Handles MEDLINE file upload, parsing, and AI-powered abstract screening
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks, Depends
 from app.api.models.schemas import (
     FileUploadResponse,
     AbstractResponse,
@@ -15,6 +15,7 @@ from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.services.medline_parser import MedlineParser
 from app.core.config import settings
+from app.core.auth import get_current_user, UserPayload
 from typing import List
 from uuid import UUID
 import os
@@ -29,6 +30,7 @@ async def upload_medline_file(
     project_id: str,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """
     Upload and parse MEDLINE format file
@@ -42,6 +44,12 @@ async def upload_medline_file(
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        # Verify ownership
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
         # Validate file type
@@ -146,20 +154,35 @@ async def parse_medline_file(file_path: str, project_id: str, file_id: str):
 
 
 @router.get("/abstracts/{project_id}", response_model=List[AbstractResponse])
-async def get_abstracts(project_id: UUID, status: str = None):
+async def get_abstracts(
+    project_id: UUID,
+    status: str = None,
+    current_user: UserPayload = Depends(get_current_user),
+):
     """Get all abstracts for a project, optionally filtered by status"""
     try:
+        # Verify project ownership
+        project = await db_service.get_project(project_id)
+        if project and project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Access denied"
+            )
+
         abstracts = await db_service.get_abstracts_by_project(project_id, status)
         return abstracts
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=500, detail=str(e)
         )
 
 
 @router.post("/analyze", response_model=BatchAnalysisResponse)
 async def analyze_abstracts(
-    request: BatchAnalysisRequest, background_tasks: BackgroundTasks
+    request: BatchAnalysisRequest,
+    background_tasks: BackgroundTasks,
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """
     Run AI-powered batch analysis on abstracts
@@ -173,6 +196,12 @@ async def analyze_abstracts(
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        # Verify ownership
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
         # Create analysis run
@@ -273,7 +302,11 @@ async def run_batch_analysis(
 
 
 @router.patch("/abstracts/{abstract_id}", response_model=AbstractResponse)
-async def update_abstract_decision(abstract_id: UUID, decision: AbstractUpdateDecision):
+async def update_abstract_decision(
+    abstract_id: UUID,
+    decision: AbstractUpdateDecision,
+    current_user: UserPayload = Depends(get_current_user),
+):
     """Update abstract screening decision (human override)"""
     try:
         updated = await db_service.update_abstract_decision(

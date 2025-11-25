@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, MessageSquare, Search, FolderOpen, Home } from "lucide-react"
+import { FileText, MessageSquare, Search, FolderOpen, Home, LogOut, User } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/ui/button"
 
 const navigation = [
   {
@@ -40,6 +42,19 @@ const navigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, signOut, loading } = useAuth()
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/auth/login')
+  }
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.email) return 'U'
+    return user.email.charAt(0).toUpperCase()
+  }
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
@@ -102,11 +117,49 @@ export function AppSidebar() {
         </div>
       </ScrollArea>
 
-      {/* Footer */}
+      {/* User Section */}
       <div className="border-t p-4">
-        <p className="text-xs text-muted-foreground">
-          v1.0.0
-        </p>
+        {loading ? (
+          <div className="flex items-center space-x-3">
+            <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-2 w-16 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        ) : user ? (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <span className="text-sm font-medium">{getUserInitials()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {user.email}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Researcher
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-muted-foreground hover:text-destructive"
+              onClick={handleSignOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
+        ) : (
+          <Link href="/auth/login">
+            <Button variant="outline" size="sm" className="w-full">
+              <User className="mr-2 h-4 w-4" />
+              Sign in
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   )

@@ -48,15 +48,16 @@ class DatabaseService:
         )
         return response.data[0] if response.data else None
 
-    async def list_projects(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """List all projects"""
-        response = (
-            self.client.table("projects")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
+    async def list_projects(
+        self, user_id: Optional[str] = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """List projects, optionally filtered by user_id"""
+        query = self.client.table("projects").select("*")
+
+        if user_id:
+            query = query.eq("user_id", user_id)
+
+        response = query.order("created_at", desc=True).limit(limit).execute()
         return response.data or []
 
     # ========================================================================
