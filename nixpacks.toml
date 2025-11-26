@@ -1,7 +1,8 @@
 # Nixpacks configuration for Railway deployment (Monorepo Root)
 
 [phases.setup]
-nixPkgs = ["python311", "gcc"]
+nixPkgs = ["python311", "gcc", "zlib"]
+aptPkgs = ["libstdc++6"]
 
 [phases.install]
 # Install dependencies from backend/requirements.txt
