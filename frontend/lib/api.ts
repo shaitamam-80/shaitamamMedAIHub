@@ -71,10 +71,10 @@ export interface QueryGenerateResponse {
   query: string;
   explanation?: string;
   framework_data?: Record<string, string>;
-  framework_type?: string;
-  message?: string;
-  concepts?: QueryConcept[];
-  queries?: {
+  framework_type: string;
+  message: string;
+  concepts: QueryConcept[];
+  queries: {
     broad: string;
     focused: string;
     clinical_filtered: string;
