@@ -527,10 +527,10 @@ function AbstractCard({ abstract, isExpanded, onToggle, onDecision }: AbstractCa
         {isExpanded && (
           <div className="flex flex-col gap-4 pt-2 border-t border-border/50 mt-2">
             {/* Abstract Text */}
-            {abstract.abstract && (
+            {abstract.abstract_text && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Abstract</p>
-                <p className="text-sm leading-relaxed">{abstract.abstract}</p>
+                <p className="text-sm leading-relaxed">{abstract.abstract_text}</p>
               </div>
             )}
 
