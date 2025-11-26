@@ -13,11 +13,8 @@ export interface Project {
 }
 
 export interface ChatMessage {
-  id: string;
-  project_id: string;
   role: 'user' | 'assistant';
   content: string;
-  created_at: string;
 }
 
 export interface FrameworkField {
@@ -42,10 +39,10 @@ export interface AbstractResponse {
   journal?: string;
   publication_date?: string;
   keywords?: string[];
-  status: 'pending' | 'included' | 'excluded' | 'maybe';
+  status: 'pending' | 'include' | 'exclude' | 'maybe';
   ai_decision?: string;
   ai_reasoning?: string;
-  user_decision?: string;
+  human_decision?: string;
   user_notes?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
@@ -71,8 +68,13 @@ export interface QueryGenerateResponse {
 
 export interface ChatResponse {
   message: string;
-  framework_data?: Record<string, string>;
-  conversation_id?: string;
+  extracted_fields?: Record<string, string>;
+}
+
+export interface BatchAnalysisResponse {
+  status: string;
+  message: string;
+  total_abstracts: number;
 }
 
 class ApiClient {
@@ -141,14 +143,20 @@ class ApiClient {
   }
 
   // Define - Chat
-  async chatForDefine(data: {
-    project_id: string;
-    message: string;
-    framework_type: string;
-  }): Promise<ChatResponse> {
+  async chat(
+    projectId: string,
+    message: string,
+    frameworkType: string,
+    language: string = 'en'
+  ): Promise<ChatResponse> {
     return this.request('/api/v1/define/chat', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        project_id: projectId,
+        message,
+        framework_type: frameworkType,
+        language,
+      }),
     });
   }
 
@@ -156,11 +164,17 @@ class ApiClient {
     return this.request(`/api/v1/define/conversation/${projectId}`);
   }
 
+  async clearConversation(projectId: string): Promise<void> {
+    return this.request(`/api/v1/define/conversation/${projectId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Query
-  async generateQuery(data: { project_id: string; framework_data?: Record<string, string> }): Promise<QueryGenerateResponse> {
+  async generateQuery(projectId: string): Promise<QueryGenerateResponse> {
     return this.request('/api/v1/query/generate', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ project_id: projectId }),
     });
   }
 
@@ -168,8 +182,8 @@ class ApiClient {
     return this.request(`/api/v1/query/history/${projectId}`);
   }
 
-  // Review
-  async uploadFile(projectId: string, file: File): Promise<FileUploadResponse> {
+  // Review - File Upload
+  async uploadMedlineFile(projectId: string, file: File): Promise<FileUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('project_id', projectId);
@@ -188,22 +202,24 @@ class ApiClient {
     return response.json();
   }
 
+  // Review - Abstracts
   async getAbstracts(projectId: string, status?: string): Promise<AbstractResponse[]> {
     const params = status ? `?status=${status}` : '';
     return this.request(`/api/v1/review/abstracts/${projectId}${params}`);
   }
 
-  async updateAbstract(abstractId: string, data: { decision: string; notes?: string }): Promise<AbstractResponse> {
+  async updateAbstractDecision(abstractId: string, decision: string): Promise<AbstractResponse> {
     return this.request(`/api/v1/review/abstracts/${abstractId}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ decision }),
     });
   }
 
-  async startBatchAnalysis(data: { project_id: string; batch_size?: number }): Promise<{ status: string; message: string }> {
+  // Review - Batch Analysis
+  async startBatchAnalysis(projectId: string, fileId: string): Promise<BatchAnalysisResponse> {
     return this.request('/api/v1/review/analyze', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ project_id: projectId, file_id: fileId }),
     });
   }
 
