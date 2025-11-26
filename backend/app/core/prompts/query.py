@@ -90,6 +90,27 @@ VALIDATED_HEDGES = {
     }
 }
 
+# ============================================
+# PROXIMITY SEARCH GUIDE (PubMed-Specific)
+# ============================================
+
+PROXIMITY_SEARCH_GUIDE = {
+    "supported": True,
+    "syntax": '"term1 term2"[field:~N]',
+    "supported_fields": ["ti", "tiab", "ad"],
+    "note": "Only works with Title, Title/Abstract, and Affiliation fields. Does NOT work with MeSH.",
+    "examples": [
+        {"intent": "Terms within 2 words", "query": '"diabetes management"[tiab:~2]'},
+        {"intent": "In title, within 3 words", "query": '"patient safety"[ti:~3]'},
+        {"intent": "Exact adjacency", "query": '"heart failure"[tiab:~0]'}
+    ],
+    "guidance": [
+        "Start with N=0-3 for precision, expand if needed",
+        "Terms can appear in any order within distance N",
+        "Maximum practical distance is ~10"
+    ]
+}
+
 
 # ============================================
 # FRAMEWORK-SPECIFIC QUERY LOGIC (9 Cases)
@@ -378,7 +399,10 @@ Generate 5-8 toolbox items that users can add to their searches:
   {{"label": "Add RCT Filter", "query": "AND (randomized controlled trial[pt] OR randomised[tiab])"}},
   {{"label": "Focus on Title Words Only", "query": "[Replace [tiab] with [ti] in main query]"}},
   {{"label": "Adults Only (19+)", "query": "AND (adult[mh] OR \\"young adult\\"[mh] OR \\"middle aged\\"[mh] OR aged[mh])"}},
-  {{"label": "Children Only (<18)", "query": "AND (child[mh] OR adolescent[mh] OR infant[mh] OR pediatric*[tiab])"}}
+  {{"label": "Children Only (<18)", "query": "AND (child[mh] OR adolescent[mh] OR infant[mh] OR pediatric*[tiab])"}},
+  {{"label": "Proximity: Within 2 Words", "query": "Replace phrase with \\"term1 term2\\"[tiab:~2]"}},
+  {{"label": "Proximity: Within 5 Words", "query": "Replace phrase with \\"term1 term2\\"[tiab:~5]"}},
+  {{"label": "Proximity: Title Only", "query": "Replace [tiab:~N] with [ti:~N] for title proximity"}}
 ]
 ```
 
@@ -393,6 +417,31 @@ Generate 5-8 toolbox items that users can add to their searches:
 2. Select the appropriate hedge
 3. Append with AND to the focused query
 4. Always cite the source in the explanation
+
+---
+
+## Proximity Searching (PubMed-Specific)
+
+PubMed supports proximity searching to find terms near each other:
+
+**Syntax:** `"term1 term2"[field:~N]`
+
+| Field | Tag | Example |
+|-------|-----|---------|
+| Title | `[ti:~N]` | `"patient safety"[ti:~3]` |
+| Title/Abstract | `[tiab:~N]` | `"diabetes management"[tiab:~2]` |
+| Affiliation | `[ad:~N]` | `"Harvard MIT"[ad:~5]` |
+
+**Key Points:**
+- N = maximum word distance (start with 0-3, expand if needed)
+- Terms can appear in ANY order within distance N
+- `[tiab:~0]` = exact adjacency (same as phrase search)
+- Does NOT work with MeSH terms - free-text only!
+
+**When to Use:**
+- Finding concept relationships: `"insulin resistance"[tiab:~3]`
+- Capturing word order variations: `"therapy gene"[tiab:~2]` finds "gene therapy" AND "therapy for gene"
+- More flexible than exact phrase matching
 
 ---
 
@@ -514,3 +563,30 @@ def get_all_hedges() -> Dict[str, Dict[str, Any]]:
 def get_framework_query_logic(framework_type: str) -> Dict[str, Any]:
     """Returns the query logic for a specific framework."""
     return FRAMEWORK_QUERY_LOGIC.get(framework_type, FRAMEWORK_QUERY_LOGIC["PICO"])
+
+
+def get_proximity_query(term1: str, term2: str, distance: int = 2, field: str = "tiab") -> str:
+    """
+    Generates a PubMed proximity search query.
+
+    Args:
+        term1: First search term
+        term2: Second search term
+        distance: Maximum word distance (0-10 recommended)
+        field: Field to search (ti, tiab, or ad only)
+
+    Returns:
+        Formatted proximity query string
+
+    Raises:
+        ValueError: If field is not supported for proximity search
+    """
+    if field not in ["ti", "tiab", "ad"]:
+        raise ValueError(f"Proximity search only supports ti, tiab, ad. Got: {field}")
+
+    return f'"{term1} {term2}"[{field}:~{distance}]'
+
+
+def get_proximity_guide() -> dict:
+    """Returns the proximity search guide dictionary."""
+    return PROXIMITY_SEARCH_GUIDE

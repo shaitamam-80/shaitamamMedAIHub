@@ -13,7 +13,9 @@ class DatabaseService:
     """Service for database operations with Supabase"""
 
     def __init__(self):
-        self.client: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        # Use service role key if available (bypasses RLS), otherwise use anon key
+        key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY
+        self.client: Client = create_client(settings.SUPABASE_URL, key)
 
     # ========================================================================
     # Projects

@@ -20,8 +20,11 @@ from .query import (
     get_hedge_for_framework,
     get_all_hedges,
     get_framework_query_logic,
+    get_proximity_query,
+    get_proximity_guide,
     VALIDATED_HEDGES,
-    FRAMEWORK_QUERY_LOGIC
+    FRAMEWORK_QUERY_LOGIC,
+    PROXIMITY_SEARCH_GUIDE
 )
 
 # Shared utilities exports
@@ -57,8 +60,11 @@ __all__ = [
     "get_hedge_for_framework",
     "get_all_hedges",
     "get_framework_query_logic",
+    "get_proximity_query",
+    "get_proximity_guide",
     "VALIDATED_HEDGES",
     "FRAMEWORK_QUERY_LOGIC",
+    "PROXIMITY_SEARCH_GUIDE",
 
     # Shared utilities
     "FRAMEWORK_SCHEMAS",
