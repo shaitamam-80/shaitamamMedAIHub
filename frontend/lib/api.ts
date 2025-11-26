@@ -80,8 +80,8 @@ export interface QueryGenerateResponse {
     clinical_filtered: string;
   };
   toolbox?: Array<{
-    category: string;
-    items: string[];
+    query: string;
+    label: string;
   }>;
 }
 
