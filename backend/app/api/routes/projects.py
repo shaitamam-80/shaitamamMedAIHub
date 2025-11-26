@@ -3,12 +3,16 @@ MedAI Hub - Projects API Routes
 Handles project CRUD operations
 """
 
+import logging
+from typing import List
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.api.models.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.services.database import db_service
 from app.core.auth import get_current_user, UserPayload
-from typing import List
-from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -32,8 +36,10 @@ async def create_project(
 
         return created_project
     except Exception as e:
+        logger.exception(f"Error creating project: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the project.",
         )
 
 
@@ -47,8 +53,10 @@ async def list_projects(
         projects = await db_service.list_projects(user_id=current_user.id, limit=limit)
         return projects
     except Exception as e:
+        logger.exception(f"Error listing projects for user {current_user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving projects.",
         )
 
 
@@ -76,8 +84,10 @@ async def get_project(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error getting project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving the project.",
         )
 
 
@@ -117,6 +127,8 @@ async def update_project(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error updating project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the project.",
         )

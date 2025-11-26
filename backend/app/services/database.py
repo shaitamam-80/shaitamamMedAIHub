@@ -69,6 +69,16 @@ class DatabaseService:
         response = self.client.table("files").insert(file_data).execute()
         return response.data[0] if response.data else None
 
+    async def get_file(self, file_id: UUID) -> Optional[Dict[str, Any]]:
+        """Get file by ID"""
+        response = (
+            self.client.table("files")
+            .select("*")
+            .eq("id", str(file_id))
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
     async def get_files_by_project(self, project_id: UUID) -> List[Dict[str, Any]]:
         """Get all files for a project"""
         response = (
@@ -122,6 +132,16 @@ class DatabaseService:
         """Create abstract record"""
         response = (
             self.client.table("abstracts").insert(abstract_data).execute()
+        )
+        return response.data[0] if response.data else None
+
+    async def get_abstract(self, abstract_id: UUID) -> Optional[Dict[str, Any]]:
+        """Get abstract by ID"""
+        response = (
+            self.client.table("abstracts")
+            .select("*")
+            .eq("id", str(abstract_id))
+            .execute()
         )
         return response.data[0] if response.data else None
 

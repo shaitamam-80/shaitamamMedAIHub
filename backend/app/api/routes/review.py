@@ -3,6 +3,14 @@ MedAI Hub - Review Tool API Routes
 Handles MEDLINE file upload, parsing, and AI-powered abstract screening
 """
 
+import logging
+import os
+import re
+import aiofiles
+from datetime import datetime
+from typing import List
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks, Depends
 from app.api.models.schemas import (
     FileUploadResponse,
@@ -16,11 +24,8 @@ from app.services.ai_service import ai_service
 from app.services.medline_parser import MedlineParser
 from app.core.config import settings
 from app.core.auth import get_current_user, UserPayload
-from typing import List
-from uuid import UUID
-import os
-import aiofiles
-from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/review", tags=["review"])
 
@@ -63,16 +68,36 @@ async def upload_medline_file(
         # Create uploads directory if not exists
         os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-        # Save file
+        # Sanitize filename to prevent path traversal
+        safe_basename = os.path.basename(file.filename)
+        safe_basename = re.sub(r'[^\w\-_.]', '_', safe_basename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{file.filename}"
+        safe_filename = f"{timestamp}_{safe_basename}"
         file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
 
-        async with aiofiles.open(file_path, "wb") as f:
-            content = await file.read()
-            await f.write(content)
+        # Read file in chunks to validate size before saving
+        MAX_SIZE = settings.MAX_UPLOAD_SIZE
+        chunks = []
+        total_size = 0
 
+        while True:
+            chunk = await file.read(8192)  # Read 8KB at a time
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File exceeds maximum size of {MAX_SIZE // (1024*1024)}MB",
+                )
+            chunks.append(chunk)
+
+        content = b"".join(chunks)
         file_size = len(content)
+
+        # Save file
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(content)
 
         # Create file record
         file_record = await db_service.create_file(
@@ -102,8 +127,10 @@ async def upload_medline_file(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error uploading file for project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while uploading the file. Please try again.",
         )
 
 
@@ -147,34 +174,41 @@ async def parse_medline_file(file_path: str, project_id: str, file_id: str):
         ).eq("id", file_id).execute()
 
     except Exception as e:
-        # Update file status to error
+        logger.exception(f"Error parsing MEDLINE file {file_id}: {e}")
+        # Update file status to error (with generic message for security)
         await db_service.client.table("files").update(
-            {"status": "error", "metadata": {"error": str(e)}}
+            {"status": "error", "metadata": {"error": "Failed to parse file"}}
         ).eq("id", file_id).execute()
 
 
 @router.get("/abstracts/{project_id}", response_model=List[AbstractResponse])
 async def get_abstracts(
     project_id: UUID,
-    status: str = None,
+    filter_status: str = None,
     current_user: UserPayload = Depends(get_current_user),
 ):
     """Get all abstracts for a project, optionally filtered by status"""
     try:
-        # Verify project ownership
+        # Verify project exists and ownership
         project = await db_service.get_project(project_id)
-        if project and project.get("user_id") and project["user_id"] != current_user.id:
+        if not project:
             raise HTTPException(
-                status_code=403, detail="Access denied"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
-        abstracts = await db_service.get_abstracts_by_project(project_id, status)
+        abstracts = await db_service.get_abstracts_by_project(project_id, filter_status)
         return abstracts
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error getting abstracts for project {project_id}: {e}")
         raise HTTPException(
-            status_code=500, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving abstracts.",
         )
 
 
@@ -241,8 +275,10 @@ async def analyze_abstracts(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error starting batch analysis for project {request.project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while starting the analysis.",
         )
 
 
@@ -290,13 +326,14 @@ async def run_batch_analysis(
         )
 
     except Exception as e:
-        # Update analysis run with error
+        logger.exception(f"Error in batch analysis {analysis_run_id}: {e}")
+        # Update analysis run with generic error message for security
         await db_service.update_analysis_run(
             analysis_run_id,
             {
                 "status": "failed",
                 "completed_at": datetime.now().isoformat(),
-                "error_message": str(e),
+                "error_message": "Analysis failed. Please try again.",
             },
         )
 
@@ -309,6 +346,32 @@ async def update_abstract_decision(
 ):
     """Update abstract screening decision (human override)"""
     try:
+        # 1. Get the abstract first
+        abstract = await db_service.get_abstract(abstract_id)
+        if not abstract:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Abstract not found"
+            )
+
+        # 2. Get the file to find project_id
+        file_record = await db_service.get_file(abstract["file_id"])
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+            )
+
+        # 3. Verify project ownership
+        project = await db_service.get_project(file_record["project_id"])
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+        # 4. Now safe to update
         updated = await db_service.update_abstract_decision(
             abstract_id,
             {
@@ -317,15 +380,12 @@ async def update_abstract_decision(
             },
         )
 
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Abstract not found"
-            )
-
         return updated
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error updating abstract {abstract_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while updating the abstract.",
         )

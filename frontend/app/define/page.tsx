@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import ReactMarkdown from "react-markdown"
 import {
   apiClient,
   Project,
@@ -33,96 +34,31 @@ const parseAssistantMessage = (content: string) => {
 }
 
 // Component to render formatted message with proper markdown and RTL support
+// Using ReactMarkdown for safe HTML rendering (prevents XSS)
 const FormattedMessage = ({ content, role }: { content: string; role: string }) => {
   const parsedContent = role === 'assistant' ? parseAssistantMessage(content) : content
 
-  // Simple markdown renderer
-  const renderMarkdown = (text: string) => {
-    const lines = text.split('\n')
-    const elements: JSX.Element[] = []
-    let currentList: string[] = []
-    let listType: 'ul' | 'ol' | null = null
-
-    const flushList = () => {
-      if (currentList.length > 0 && listType) {
-        const ListTag = listType === 'ul' ? 'ul' : 'ol'
-        elements.push(
-          <ListTag key={elements.length} className={`my-2 ${listType === 'ul' ? 'list-disc' : 'list-decimal'} list-inside space-y-1`}>
-            {currentList.map((item, i) => (
-              <li key={i} dangerouslySetInnerHTML={{ __html: item }} />
-            ))}
-          </ListTag>
-        )
-        currentList = []
-        listType = null
-      }
-    }
-
-    const formatInline = (line: string) => {
-      return line
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`(.+?)`/g, '<code class="bg-muted px-1 rounded text-xs">$1</code>')
-    }
-
-    lines.forEach((line, idx) => {
-      const trimmedLine = line.trim()
-
-      // Headers
-      const headerMatch = trimmedLine.match(/^(#{1,4})\s+(.+)/)
-      if (headerMatch) {
-        flushList()
-        const level = headerMatch[1].length
-        const title = formatInline(headerMatch[2])
-        const headerClasses = {
-          1: 'text-lg font-bold mt-4 mb-2 text-primary',
-          2: 'text-base font-bold mt-3 mb-2',
-          3: 'text-sm font-semibold mt-2 mb-1',
-          4: 'text-sm font-medium mt-2 mb-1 text-muted-foreground'
-        }
-        elements.push(
-          <div key={idx} className={headerClasses[level as 1|2|3|4]} dangerouslySetInnerHTML={{ __html: title }} />
-        )
-        return
-      }
-
-      // Bullet list items
-      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-        if (listType !== 'ul') flushList()
-        listType = 'ul'
-        currentList.push(formatInline(trimmedLine.slice(2)))
-        return
-      }
-
-      // Numbered list items
-      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)/)
-      if (numberedMatch) {
-        if (listType !== 'ol') flushList()
-        listType = 'ol'
-        currentList.push(formatInline(numberedMatch[2]))
-        return
-      }
-
-      // Empty line
-      if (trimmedLine === '') {
-        flushList()
-        return
-      }
-
-      // Regular paragraph
-      flushList()
-      elements.push(
-        <p key={idx} className="my-1" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-      )
-    })
-
-    flushList()
-    return elements
-  }
-
   return (
     <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-      {renderMarkdown(parsedContent)}
+      <ReactMarkdown
+        components={{
+          h1: ({ children }) => <h1 className="text-lg font-bold mt-4 mb-2 text-primary">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-sm font-medium mt-2 mb-1 text-muted-foreground">{children}</h4>,
+          p: ({ children }) => <p className="my-1">{children}</p>,
+          strong: ({ children }) => <strong>{children}</strong>,
+          em: ({ children }) => <em>{children}</em>,
+          code: ({ children }) => (
+            <code className="bg-muted px-1 rounded text-xs">{children}</code>
+          ),
+          ul: ({ children }) => <ul className="my-2 list-disc list-inside space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="my-2 list-decimal list-inside space-y-1">{children}</ol>,
+          li: ({ children }) => <li className="my-0.5">{children}</li>,
+        }}
+      >
+        {parsedContent}
+      </ReactMarkdown>
     </div>
   )
 }

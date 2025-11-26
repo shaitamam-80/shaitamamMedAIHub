@@ -3,11 +3,15 @@ MedAI Hub - Define Tool API Routes
 Handles research question formulation with AI chat
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.api.models.schemas import ChatRequest, ChatResponse, FrameworkSchemaResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.core.auth import get_current_user, UserPayload
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/define", tags=["define"])
 
@@ -106,8 +110,10 @@ async def chat(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error in chat for project {request.project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while processing your message.",
         )
 
 
@@ -130,8 +136,10 @@ async def get_conversation(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error getting conversation for project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving the conversation.",
         )
 
 
@@ -160,6 +168,8 @@ async def clear_conversation(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error clearing conversation for project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while clearing the conversation.",
         )

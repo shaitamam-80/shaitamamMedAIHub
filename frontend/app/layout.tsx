@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AppSidebar } from "@/components/sidebar/app-sidebar"
 import { AuthProvider } from "@/contexts/auth-context"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -34,7 +35,9 @@ export default function RootLayout({
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto">
-              {children}
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
             </main>
           </div>
         </AuthProvider>

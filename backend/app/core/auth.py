@@ -3,13 +3,17 @@ MedAI Hub - Authentication Module
 Handles JWT validation with Supabase
 """
 
+import logging
+from typing import Optional
+
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional
-import httpx
 from pydantic import BaseModel
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # Security scheme
@@ -72,9 +76,10 @@ async def get_current_user(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
         except httpx.RequestError as e:
+            logger.exception(f"Authentication service error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Authentication service unavailable: {str(e)}",
+                detail="Authentication service temporarily unavailable. Please try again.",
             )
 
 

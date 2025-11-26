@@ -3,12 +3,16 @@ MedAI Hub - Query Tool API Routes
 Handles PubMed search query generation
 """
 
+import logging
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.api.models.schemas import QueryGenerateRequest, QueryGenerateResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.core.auth import get_current_user, UserPayload
-from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
 
@@ -88,8 +92,10 @@ async def generate_query(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error generating query for project {request.project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while generating the query.",
         )
 
 
@@ -112,6 +118,8 @@ async def get_query_history(
     except HTTPException:
         raise
     except Exception as e:
+        logger.exception(f"Error getting query history for project {project_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving query history.",
         )
