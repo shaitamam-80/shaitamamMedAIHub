@@ -64,7 +64,7 @@ export interface QueryConcept {
   concept_number: number;
   component: string;
   free_text_terms: string[];
-  mesh_terms?: string[];
+  mesh_terms: string[];
 }
 
 export interface QueryGenerateResponse {
