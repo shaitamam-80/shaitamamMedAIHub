@@ -18,7 +18,12 @@ class Settings(BaseSettings):
 
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://shaitamam.com",
+        "https://www.shaitamam.com",
+    ]
 
     # Google Gemini API
     GOOGLE_API_KEY: str  # Required - will fail if not set
