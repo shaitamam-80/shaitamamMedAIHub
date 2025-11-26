@@ -152,7 +152,7 @@ class ApiClient {
     });
   }
 
-  async getConversation(projectId: string): Promise<ChatMessage[]> {
+  async getConversation(projectId: string): Promise<{ messages: ChatMessage[]; framework_data?: Record<string, string> }> {
     return this.request(`/api/v1/define/conversation/${projectId}`);
   }
 
