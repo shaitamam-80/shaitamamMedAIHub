@@ -1,4 +1,8 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use HTTPS in production, fallback to localhost for development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.protocol === 'https:'
+    ? 'https://api.shaitamam.com'
+    : 'http://localhost:8000');
 
 // Type definitions
 export interface Project {
