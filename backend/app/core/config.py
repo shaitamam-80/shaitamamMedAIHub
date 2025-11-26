@@ -24,6 +24,7 @@ class Settings(BaseSettings):
         "https://shaitamam.com",
         "https://www.shaitamam.com",
     ]
+    BACKEND_CORS_ORIGIN_REGEX: Optional[str] = r"^https://.*\.vercel\.app$"
 
     # Google Gemini API
     GOOGLE_API_KEY: str  # Required - will fail if not set

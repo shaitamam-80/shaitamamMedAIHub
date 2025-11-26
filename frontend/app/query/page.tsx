@@ -1,61 +1,71 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Search, Copy, Sparkles, Loader2 } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import toast, { Toaster } from "react-hot-toast"
-import { apiClient, type QueryGenerateResponse } from "@/lib/api"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiClient, type Project, type QueryGenerateResponse } from "@/lib/api";
+import { Copy, Loader2, Search, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import ReactMarkdown from "react-markdown";
 
 export default function QueryPage() {
-  const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<any>(null)
-  const [queryResult, setQueryResult] = useState<QueryGenerateResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [selectedStrategy, setSelectedStrategy] = useState<"broad" | "focused" | "clinical_filtered">("focused")
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [queryResult, setQueryResult] = useState<QueryGenerateResponse | null>(
+    null
+  );
+  const [loading, setLoading] = useState(false);
+  const [selectedStrategy, setSelectedStrategy] = useState<
+    "broad" | "focused" | "clinical_filtered"
+  >("focused");
 
   useEffect(() => {
-    loadProjects()
-  }, [])
+    loadProjects();
+  }, []);
 
   async function loadProjects() {
     try {
-      const data = await apiClient.getProjects()
-      setProjects(data || [])
+      const data = await apiClient.getProjects();
+      setProjects(data || []);
       if (data && data.length > 0) {
-        setSelectedProject(data[0])
+        setSelectedProject(data[0]);
       }
     } catch (error) {
-      console.error("Failed to load projects:", error)
-      toast.error("Failed to load projects")
+      console.error("Failed to load projects:", error);
+      toast.error("Failed to load projects");
     }
   }
 
   async function handleGenerate() {
     if (!selectedProject) {
-      toast.error("Please select a project first")
-      return
+      toast.error("Please select a project first");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const result = await apiClient.generateQuery(selectedProject.id)
-      setQueryResult(result)
-      toast.success("Query generated successfully!")
+      const result = await apiClient.generateQuery(selectedProject.id);
+      setQueryResult(result);
+      toast.success("Query generated successfully!");
     } catch (error: any) {
-      console.error("Failed to generate query:", error)
-      toast.error(error.message || "Failed to generate query")
+      console.error("Failed to generate query:", error);
+      toast.error(error.message || "Failed to generate query");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   function copyToClipboard(text: string, label: string) {
-    navigator.clipboard.writeText(text)
-    toast.success(`${label} copied to clipboard!`)
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
   }
 
   return (
@@ -93,12 +103,14 @@ export default function QueryPage() {
       {/* Project Selection */}
       {projects.length > 0 && (
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium">Select Project</label>
+          <label className="mb-2 block text-sm font-medium">
+            Select Project
+          </label>
           <select
             value={selectedProject?.id || ""}
             onChange={(e) => {
-              const project = projects.find((p) => p.id === e.target.value)
-              setSelectedProject(project)
+              const project = projects.find((p) => p.id === e.target.value);
+              setSelectedProject(project);
             }}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
@@ -131,7 +143,9 @@ export default function QueryPage() {
             </p>
             <ul className="mt-4 list-inside list-disc space-y-2 text-sm text-muted-foreground">
               <li>Concept analysis with MeSH terms</li>
-              <li>Three query strategies (Broad, Focused, Clinical Filtered)</li>
+              <li>
+                Three query strategies (Broad, Focused, Clinical Filtered)
+              </li>
               <li>Toolbox filters for refinement</li>
               <li>AI analysis and recommendations</li>
             </ul>
@@ -153,14 +167,19 @@ export default function QueryPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {queryResult.concepts.map((concept) => (
-                  <div key={concept.concept_number} className="rounded-lg border border-border/50 p-4">
+                  <div
+                    key={concept.concept_number}
+                    className="rounded-lg border border-border/50 p-4"
+                  >
                     <h4 className="mb-2 font-semibold text-primary">
                       Concept {concept.concept_number}: {concept.component}
                     </h4>
 
                     {concept.free_text_terms.length > 0 && (
                       <div className="mb-3">
-                        <p className="mb-1 text-xs text-muted-foreground">Free-text terms:</p>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Free-text terms:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {concept.free_text_terms.map((term, idx) => (
                             <Badge key={idx} variant="emerald">
@@ -173,7 +192,9 @@ export default function QueryPage() {
 
                     {concept.mesh_terms.length > 0 && (
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">MeSH terms:</p>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          MeSH terms:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {concept.mesh_terms.map((term, idx) => (
                             <Badge key={idx} variant="slate">
@@ -210,11 +231,16 @@ export default function QueryPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs value={selectedStrategy} onValueChange={(v) => setSelectedStrategy(v as any)}>
+                <Tabs
+                  value={selectedStrategy}
+                  onValueChange={(v) => setSelectedStrategy(v as any)}
+                >
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="broad">Broad</TabsTrigger>
                     <TabsTrigger value="focused">Focused</TabsTrigger>
-                    <TabsTrigger value="clinical_filtered">Clinical Filtered</TabsTrigger>
+                    <TabsTrigger value="clinical_filtered">
+                      Clinical Filtered
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="broad" className="space-y-4">
@@ -227,7 +253,12 @@ export default function QueryPage() {
                           {queryResult.queries.broad}
                         </pre>
                         <Button
-                          onClick={() => copyToClipboard(queryResult.queries.broad, "Broad query")}
+                          onClick={() =>
+                            copyToClipboard(
+                              queryResult.queries.broad,
+                              "Broad query"
+                            )
+                          }
                           size="sm"
                           variant="outline"
                           className="absolute right-2 top-2"
@@ -241,14 +272,20 @@ export default function QueryPage() {
                   <TabsContent value="focused" className="space-y-4">
                     <div>
                       <p className="mb-2 text-sm text-muted-foreground">
-                        Balanced sensitivity and specificity. Recommended starting point.
+                        Balanced sensitivity and specificity. Recommended
+                        starting point.
                       </p>
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-md bg-slate-900 p-4 font-mono text-xs">
                           {queryResult.queries.focused}
                         </pre>
                         <Button
-                          onClick={() => copyToClipboard(queryResult.queries.focused, "Focused query")}
+                          onClick={() =>
+                            copyToClipboard(
+                              queryResult.queries.focused,
+                              "Focused query"
+                            )
+                          }
                           size="sm"
                           variant="outline"
                           className="absolute right-2 top-2"
@@ -262,14 +299,20 @@ export default function QueryPage() {
                   <TabsContent value="clinical_filtered" className="space-y-4">
                     <div>
                       <p className="mb-2 text-sm text-muted-foreground">
-                        Lower sensitivity, high specificity. Uses validated methodological filters.
+                        Lower sensitivity, high specificity. Uses validated
+                        methodological filters.
                       </p>
                       <div className="relative">
                         <pre className="overflow-x-auto rounded-md bg-slate-900 p-4 font-mono text-xs">
                           {queryResult.queries.clinical_filtered}
                         </pre>
                         <Button
-                          onClick={() => copyToClipboard(queryResult.queries.clinical_filtered, "Clinical query")}
+                          onClick={() =>
+                            copyToClipboard(
+                              queryResult.queries.clinical_filtered,
+                              "Clinical query"
+                            )
+                          }
                           size="sm"
                           variant="outline"
                           className="absolute right-2 top-2"
@@ -311,5 +354,5 @@ export default function QueryPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

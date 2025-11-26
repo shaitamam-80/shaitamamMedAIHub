@@ -1,5 +1,14 @@
 // API URL: Use environment variable, or default to production HTTPS
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.shaitamam.com';
+let API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://api.shaitamam.com";
+
+// FIX: Force HTTPS for production domain to prevent Mixed Content errors
+if (
+  API_BASE_URL.includes("shaitamam.com") &&
+  API_BASE_URL.startsWith("http://")
+) {
+  API_BASE_URL = API_BASE_URL.replace("http://", "https://");
+}
 
 // Type definitions
 export interface Project {
@@ -14,7 +23,7 @@ export interface Project {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -40,7 +49,7 @@ export interface AbstractResponse {
   journal?: string;
   publication_date?: string;
   keywords?: string[];
-  status: 'pending' | 'include' | 'exclude' | 'maybe';
+  status: "pending" | "include" | "exclude" | "maybe";
   ai_decision?: string;
   ai_reasoning?: string;
   human_decision?: string;
@@ -54,36 +63,38 @@ export interface FileUploadResponse {
   project_id: string;
   filename: string;
   file_type: string;
-  status: 'uploaded' | 'processing' | 'completed' | 'error';
+  status: "uploaded" | "processing" | "completed" | "error";
   total_abstracts?: number;
   processed_abstracts?: number;
   error_message?: string;
   created_at: string;
 }
 
-export interface QueryConcept {
+export interface ConceptAnalysis {
   concept_number: number;
   component: string;
   free_text_terms: string[];
   mesh_terms: string[];
 }
 
-export interface QueryGenerateResponse {
+export interface QueryStrategies {
+  broad: string;
+  focused: string;
+  clinical_filtered: string;
+}
+
+export interface ToolboxItem {
+  label: string;
   query: string;
-  explanation?: string;
-  framework_data?: Record<string, string>;
+}
+
+export interface QueryGenerateResponse {
+  message: string; // Markdown
+  concepts: ConceptAnalysis[];
+  queries: QueryStrategies;
+  toolbox: ToolboxItem[];
   framework_type: string;
-  message: string;
-  concepts: QueryConcept[];
-  queries: {
-    broad: string;
-    focused: string;
-    clinical_filtered: string;
-  };
-  toolbox?: Array<{
-    query: string;
-    label: string;
-  }>;
+  framework_data: Record<string, any>;
 }
 
 export interface ChatResponse {
@@ -113,7 +124,7 @@ class ApiClient {
     const config: RequestInit = {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       },
     };
@@ -121,7 +132,9 @@ class ApiClient {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
+      const error = await response
+        .json()
+        .catch(() => ({ detail: "An error occurred" }));
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
 
@@ -129,37 +142,46 @@ class ApiClient {
   }
 
   // Projects
-  async createProject(data: { name: string; description?: string; framework_type?: string }): Promise<Project> {
-    return this.request('/api/v1/projects', {
-      method: 'POST',
+  async createProject(data: {
+    name: string;
+    description?: string;
+    framework_type?: string;
+  }): Promise<Project> {
+    return this.request("/api/v1/projects", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   async getProjects(): Promise<Project[]> {
-    return this.request('/api/v1/projects');
+    return this.request("/api/v1/projects");
   }
 
   async getProject(id: string): Promise<Project> {
     return this.request(`/api/v1/projects/${id}`);
   }
 
-  async updateProject(id: string, data: Record<string, unknown>): Promise<Project> {
+  async updateProject(
+    id: string,
+    data: Record<string, unknown>
+  ): Promise<Project> {
     return this.request(`/api/v1/projects/${id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
   async deleteProject(id: string): Promise<void> {
     return this.request(`/api/v1/projects/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // Define - Frameworks
-  async getFrameworks(): Promise<{ frameworks: Record<string, FrameworkSchema> }> {
-    return this.request('/api/v1/define/frameworks');
+  async getFrameworks(): Promise<{
+    frameworks: Record<string, FrameworkSchema>;
+  }> {
+    return this.request("/api/v1/define/frameworks");
   }
 
   // Define - Chat
@@ -167,10 +189,10 @@ class ApiClient {
     projectId: string,
     message: string,
     frameworkType: string,
-    language: string = 'en'
+    language: string = "en"
   ): Promise<ChatResponse> {
-    return this.request('/api/v1/define/chat', {
-      method: 'POST',
+    return this.request("/api/v1/define/chat", {
+      method: "POST",
       body: JSON.stringify({
         project_id: projectId,
         message,
@@ -180,21 +202,29 @@ class ApiClient {
     });
   }
 
-  async getConversation(projectId: string): Promise<{ messages: ChatMessage[]; framework_data?: Record<string, string> }> {
+  async getConversation(
+    projectId: string
+  ): Promise<{
+    messages: ChatMessage[];
+    framework_data?: Record<string, string>;
+  }> {
     return this.request(`/api/v1/define/conversation/${projectId}`);
   }
 
   async clearConversation(projectId: string): Promise<void> {
     return this.request(`/api/v1/define/conversation/${projectId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // Query
   async generateQuery(projectId: string): Promise<QueryGenerateResponse> {
-    return this.request('/api/v1/query/generate', {
-      method: 'POST',
-      body: JSON.stringify({ project_id: projectId }),
+    return this.request(`/api/v1/query/generate`, {
+      method: "POST",
+      body: JSON.stringify({
+        project_id: projectId,
+        framework_data: {}, // Will be fetched from project backend-side if empty
+      }),
     });
   }
 
@@ -203,49 +233,63 @@ class ApiClient {
   }
 
   // Review - File Upload
-  async uploadMedlineFile(projectId: string, file: File): Promise<FileUploadResponse> {
+  async uploadMedlineFile(
+    projectId: string,
+    file: File
+  ): Promise<FileUploadResponse> {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('project_id', projectId);
+    formData.append("file", file);
+    formData.append("project_id", projectId);
 
     const url = `${this.baseUrl}/api/v1/review/upload`;
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
-      throw new Error(error.detail || 'Upload failed');
+      const error = await response
+        .json()
+        .catch(() => ({ detail: "Upload failed" }));
+      throw new Error(error.detail || "Upload failed");
     }
 
     return response.json();
   }
 
   // Review - Abstracts
-  async getAbstracts(projectId: string, status?: string): Promise<AbstractResponse[]> {
-    const params = status ? `?status=${status}` : '';
+  async getAbstracts(
+    projectId: string,
+    status?: string
+  ): Promise<AbstractResponse[]> {
+    const params = status ? `?status=${status}` : "";
     return this.request(`/api/v1/review/abstracts/${projectId}${params}`);
   }
 
-  async updateAbstractDecision(abstractId: string, decision: string): Promise<AbstractResponse> {
+  async updateAbstractDecision(
+    abstractId: string,
+    decision: string
+  ): Promise<AbstractResponse> {
     return this.request(`/api/v1/review/abstracts/${abstractId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify({ decision }),
     });
   }
 
   // Review - Batch Analysis
-  async startBatchAnalysis(projectId: string, fileId: string): Promise<BatchAnalysisResponse> {
-    return this.request('/api/v1/review/analyze', {
-      method: 'POST',
+  async startBatchAnalysis(
+    projectId: string,
+    fileId: string
+  ): Promise<BatchAnalysisResponse> {
+    return this.request("/api/v1/review/analyze", {
+      method: "POST",
       body: JSON.stringify({ project_id: projectId, file_id: fileId }),
     });
   }
 
   // Health check
   async healthCheck(): Promise<{ status: string; service: string }> {
-    return this.request('/health');
+    return this.request("/health");
   }
 }
 
