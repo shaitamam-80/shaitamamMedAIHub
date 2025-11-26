@@ -147,14 +147,14 @@ class ApiClient {
     description?: string;
     framework_type?: string;
   }): Promise<Project> {
-    return this.request("/api/v1/projects", {
+    return this.request("/api/v1/projects/", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   async getProjects(): Promise<Project[]> {
-    return this.request("/api/v1/projects");
+    return this.request("/api/v1/projects/");
   }
 
   async getProject(id: string): Promise<Project> {
@@ -202,9 +202,7 @@ class ApiClient {
     });
   }
 
-  async getConversation(
-    projectId: string
-  ): Promise<{
+  async getConversation(projectId: string): Promise<{
     messages: ChatMessage[];
     framework_data?: Record<string, string>;
   }> {
