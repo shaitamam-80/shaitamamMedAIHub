@@ -108,11 +108,16 @@ export interface BatchAnalysisResponse {
   total_abstracts: number;
 }
 
-class ApiClient {
+export class ApiClient {
   private baseUrl: string;
+  private accessToken: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+  }
+
+  setAccessToken(token: string | null) {
+    this.accessToken = token;
   }
 
   private async request<T>(
@@ -121,12 +126,18 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...((options.headers as Record<string, string>) || {}),
+    };
+
+    if (this.accessToken) {
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
     const config: RequestInit = {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
     };
 
     const response = await fetch(url, config);
