@@ -136,7 +136,7 @@ class ApiClient {
   }
 
   // Define - Frameworks
-  async getFrameworks(): Promise<Record<string, FrameworkSchema>> {
+  async getFrameworks(): Promise<{ frameworks: Record<string, FrameworkSchema> }> {
     return this.request('/api/v1/define/frameworks');
   }
 
