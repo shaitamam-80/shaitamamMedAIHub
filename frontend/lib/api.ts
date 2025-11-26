@@ -60,10 +60,29 @@ export interface FileUploadResponse {
   created_at: string;
 }
 
+export interface QueryConcept {
+  concept_number: number;
+  component: string;
+  free_text_terms: string[];
+  mesh_terms?: string[];
+}
+
 export interface QueryGenerateResponse {
   query: string;
   explanation?: string;
   framework_data?: Record<string, string>;
+  framework_type?: string;
+  message?: string;
+  concepts?: QueryConcept[];
+  queries?: {
+    broad: string;
+    focused: string;
+    clinical_filtered: string;
+  };
+  toolbox?: Array<{
+    category: string;
+    items: string[];
+  }>;
 }
 
 export interface ChatResponse {
