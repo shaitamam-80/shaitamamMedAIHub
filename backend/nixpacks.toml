@@ -1,0 +1,9 @@
+# Nixpacks configuration for Railway deployment
+# This fixes the issue where uvicorn was running during build phase
+
+[phases.build]
+# No build command needed - we're not compiling anything
+cmds = []
+
+[start]
+cmd = "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
