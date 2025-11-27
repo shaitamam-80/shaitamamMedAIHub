@@ -4,7 +4,7 @@ Defines data validation models for API requests and responses
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from uuid import UUID
 
@@ -43,7 +43,6 @@ class FrameworkData(BaseModel):
             ]
         }
 
-
 # ============================================================================
 # Project Models
 # ============================================================================
@@ -55,7 +54,8 @@ class ProjectBase(BaseModel):
         None,
         description="Research framework type: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER",
     )
-    framework_data: Optional[Dict[str, Any]] = None
+    # Relaxed validation to handle legacy data or lists
+    framework_data: Optional[Any] = None
 
 
 class ProjectCreate(ProjectBase):
@@ -66,11 +66,12 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     framework_type: Optional[str] = None
-    framework_data: Optional[Dict[str, Any]] = None
+    framework_data: Optional[Any] = None
 
 
 class ProjectResponse(ProjectBase):
     id: UUID
+    user_id: Optional[UUID] = None  # Added for frontend synchronization
     created_at: datetime
     updated_at: datetime
 
