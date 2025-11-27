@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGIN_REGEX: Optional[str] = r"^https://.*\.vercel\.app$"
 
     # Google Gemini API
-    GOOGLE_API_KEY: str  # Required - will fail if not set
+    GOOGLE_API_KEY: str = ""  # Set in environment variables
     GEMINI_PRO_MODEL: str = "gemini-2.5-flash"
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
