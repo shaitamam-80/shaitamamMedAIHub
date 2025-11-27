@@ -460,24 +460,45 @@ export default function DefinePage() {
                         ({field.key})
                       </span>
                     </Label>
-                    {frameworkData[field.key] && (
-                      <Badge variant="secondary" className="text-[10px] h-5">
+                    {frameworkData[field.key] ? (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] h-5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                      >
                         Extracted
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] h-5 text-muted-foreground border-dashed"
+                      >
+                        Empty
                       </Badge>
                     )}
                   </div>
-                  <Textarea
-                    id={field.key}
-                    placeholder={field.description}
-                    value={frameworkData[field.key] || ""}
-                    onChange={(e) =>
-                      setFrameworkData((prev) => ({
-                        ...prev,
-                        [field.key]: e.target.value,
-                      }))
-                    }
-                    className="min-h-[100px] resize-none bg-background/50 focus:bg-background transition-colors"
-                  />
+                  <div className="relative">
+                    <Textarea
+                      id={field.key}
+                      placeholder={field.description}
+                      value={frameworkData[field.key] || ""}
+                      onChange={(e) =>
+                        setFrameworkData((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                      className={`min-h-[100px] resize-none transition-colors ${
+                        !frameworkData[field.key]
+                          ? "border-dashed border-muted-foreground/30 bg-muted/20 focus:bg-background focus:border-solid"
+                          : "bg-background/50 focus:bg-background"
+                      }`}
+                    />
+                    {preferredLanguage === "he" && (
+                      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/50 pointer-events-none">
+                        English Only
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (

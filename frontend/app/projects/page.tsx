@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,16 +7,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { apiClient, type Project } from "@/lib/api";
-import { FolderOpen, Plus } from "lucide-react";
+import { AlertTriangle, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function ProjectsPage() {
   const { loading: authLoading, user } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProject, setNewProject] = useState({
@@ -27,6 +35,11 @@ export default function ProjectsPage() {
     framework_type: "PICO",
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Delete State
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -40,6 +53,11 @@ export default function ProjectsPage() {
       setProjects(data);
     } catch (error) {
       console.error("Failed to load projects:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load projects",
+      });
     }
   };
 
@@ -52,14 +70,45 @@ export default function ProjectsPage() {
       setProjects([data, ...projects]);
       setNewProject({ name: "", description: "", framework_type: "PICO" });
       setShowCreateForm(false);
+      toast({
+        title: "Success",
+        description: "Project created successfully",
+      });
     } catch (error) {
-      alert(
-        `Error: ${
-          error instanceof Error ? error.message : "Failed to create project"
-        }`
-      );
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to create project",
+      });
     }
     setIsLoading(false);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    if (deleteConfirmation !== "DELETE") return;
+
+    setIsDeleting(true);
+    try {
+      await apiClient.deleteProject(projectToDelete.id);
+      setProjects(projects.filter((p) => p.id !== projectToDelete.id));
+      setProjectToDelete(null);
+      setDeleteConfirmation("");
+      toast({
+        title: "Project Deleted",
+        description:
+          "The project and all its data have been permanently removed.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Could not delete the project. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -79,7 +128,7 @@ export default function ProjectsPage() {
 
       {/* Create Project Form */}
       {showCreateForm && (
-        <Card className="mb-8">
+        <Card className="mb-8 border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle>Create New Project</CardTitle>
             <CardDescription>
@@ -96,6 +145,7 @@ export default function ProjectsPage() {
                   setNewProject({ ...newProject, name: e.target.value })
                 }
                 placeholder="e.g., Diabetes Treatment Meta-Analysis"
+                className="bg-background"
               />
             </div>
 
@@ -109,6 +159,7 @@ export default function ProjectsPage() {
                 }
                 placeholder="Brief description of your research project..."
                 rows={3}
+                className="bg-background"
               />
             </div>
 
@@ -116,7 +167,7 @@ export default function ProjectsPage() {
               <Label htmlFor="framework">Research Framework</Label>
               <select
                 id="framework"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={newProject.framework_type}
                 onChange={(e) =>
                   setNewProject({
@@ -125,13 +176,13 @@ export default function ProjectsPage() {
                   })
                 }
               >
-                <option value="PICO">PICO</option>
-                <option value="CoCoPop">CoCoPop</option>
-                <option value="PEO">PEO</option>
-                <option value="SPIDER">SPIDER</option>
-                <option value="SPICE">SPICE</option>
-                <option value="ECLIPSE">ECLIPSE</option>
-                <option value="FINER">FINER</option>
+                <option value="PICO">PICO (Clinical)</option>
+                <option value="CoCoPop">CoCoPop (Prevalence)</option>
+                <option value="PEO">PEO (Qualitative)</option>
+                <option value="SPIDER">SPIDER (Mixed Methods)</option>
+                <option value="SPICE">SPICE (Evaluation)</option>
+                <option value="ECLIPSE">ECLIPSE (Health Policy)</option>
+                <option value="FINER">FINER (Feasibility)</option>
               </select>
             </div>
           </CardContent>
@@ -148,9 +199,9 @@ export default function ProjectsPage() {
 
       {/* Projects Grid */}
       {projects.length === 0 ? (
-        <Card>
+        <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
+            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <p className="text-lg font-medium">No projects yet</p>
             <p className="text-sm text-muted-foreground">
               Create your first project to get started
@@ -160,20 +211,25 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="flex flex-col">
+            <Card
+              key={project.id}
+              className="flex flex-col group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-md"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <FolderOpen className="h-5 w-5" />
                   </div>
                   {project.framework_type && (
-                    <span className="rounded-full bg-secondary px-2 py-1 text-xs font-medium">
+                    <span className="rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary-foreground border border-secondary/20">
                       {project.framework_type}
                     </span>
                   )}
                 </div>
-                <CardTitle className="mt-4">{project.name}</CardTitle>
-                <CardDescription className="line-clamp-2">
+                <CardTitle className="mt-4 line-clamp-1" title={project.name}>
+                  {project.name}
+                </CardTitle>
+                <CardDescription className="line-clamp-2 min-h-[2.5rem]">
                   {project.description || "No description provided"}
                 </CardDescription>
               </CardHeader>
@@ -182,15 +238,90 @@ export default function ProjectsPage() {
                   Created: {new Date(project.created_at).toLocaleDateString()}
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" asChild>
+              <CardFooter className="gap-2 pt-0">
+                <Button variant="outline" className="flex-1" asChild>
                   <a href={`/define?project=${project.id}`}>Open Project</a>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setProjectToDelete(project);
+                    setDeleteConfirmation("");
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!projectToDelete}
+        onOpenChange={(open) => !open && setProjectToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Project?
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the
+              project
+              <span className="font-bold text-foreground">
+                {" "}
+                "{projectToDelete?.name}"{" "}
+              </span>
+              and all associated data, including:
+              <ul className="list-disc list-inside mt-2 mb-2">
+                <li>Chat history and extracted frameworks</li>
+                <li>Generated search queries</li>
+                <li>Uploaded files and screened abstracts</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label
+              htmlFor="confirm-delete"
+              className="mb-2 block text-sm font-medium"
+            >
+              Type{" "}
+              <span className="font-mono font-bold text-destructive">
+                DELETE
+              </span>{" "}
+              to confirm:
+            </Label>
+            <Input
+              id="confirm-delete"
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder="DELETE"
+              className="border-destructive/50 focus-visible:ring-destructive"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setProjectToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProject}
+              disabled={deleteConfirmation !== "DELETE" || isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
