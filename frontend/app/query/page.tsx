@@ -255,18 +255,6 @@ export default function QueryPage() {
                         <label className="text-xs font-medium text-muted-foreground">
                           Proximity (Words)
                         </label>
-                        <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                          ~{proximityValues[concept.concept_number] || 5}
-                        </span>
-                      </div>
-                      <Slider
-                        value={[proximityValues[concept.concept_number] || 5]}
-                        min={1}
-                        max={15}
-                        step={1}
-                        onValueChange={(vals) =>
-                          setProximityValues((prev) => ({
-                            ...prev,
                             [concept.concept_number]: vals[0],
                           }))
                         }
