@@ -1,60 +1,5 @@
-"use client"
-
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { FileText, MessageSquare, Search, FolderOpen, Home, LogOut, User } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-
-const navigation = [
-  {
-    name: "Home",
-    href: "/",
-    icon: Home,
-  },
-  {
-    name: "Projects",
-    href: "/projects",
-    icon: FolderOpen,
-  },
-  {
-    name: "Define",
-    href: "/define",
-    icon: MessageSquare,
-    description: "Research Question Formulator",
-  },
-  {
-    name: "Query",
-    href: "/query",
-    icon: Search,
-    description: "PubMed Search Builder",
-  },
-  {
-    name: "Review",
-    href: "/review",
-    icon: FileText,
-    description: "Literature Screening",
-  },
-]
-
-export function AppSidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { user, signOut, loading } = useAuth()
-
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/auth/login')
-  }
-
-  // Get user initials for avatar
-  const getUserInitials = () => {
-    if (!user?.email) return 'U'
-    return user.email.charAt(0).toUpperCase()
-  }
+"use client";
+  };
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
@@ -72,7 +17,8 @@ export function AppSidebar() {
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.name}
@@ -87,27 +33,51 @@ export function AppSidebar() {
                 <item.icon
                   className={cn(
                     "mr-3 h-5 w-5 flex-shrink-0",
-                    isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-accent-foreground"
+                    isActive
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground group-hover:text-accent-foreground"
                   )}
                   aria-hidden="true"
                 />
                 <div className="flex flex-col">
                   <span>{item.name}</span>
                   {item.description && (
-                    <span className={cn(
-                      "text-xs",
-                      isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-                    )}>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        isActive
+                          ? "text-primary-foreground/80"
+                          : "text-muted-foreground"
+                      )}
+                    >
                       {item.description}
                     </span>
                   )}
                 </div>
               </Link>
-            )
+            );
           })}
         </nav>
 
         <Separator className="my-4" />
+
+        {/* Quick Start Demo */}
+        <div className="px-3 py-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary"
+            onClick={handleQuickStart}
+            disabled={isCreatingDemo}
+          >
+            {isCreatingDemo ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <PlayCircle className="h-4 w-4" />
+            )}
+            Quick Start Demo
+          </Button>
+        </div>
 
         {/* Additional Info */}
         <div className="px-3 py-2">
@@ -134,12 +104,8 @@ export function AppSidebar() {
                 <span className="text-sm font-medium">{getUserInitials()}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.email}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Researcher
-                </p>
+                <p className="text-sm font-medium truncate">{user.email}</p>
+                <p className="text-xs text-muted-foreground">Researcher</p>
               </div>
             </div>
             <Button
@@ -162,5 +128,5 @@ export function AppSidebar() {
         )}
       </div>
     </div>
-  )
+  );
 }

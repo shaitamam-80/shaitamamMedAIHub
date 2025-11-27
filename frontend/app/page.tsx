@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient as api } from "@/lib/api";
 import {
@@ -10,7 +9,6 @@ import {
   Home,
   LayoutGrid,
   Lightbulb,
-  PlayCircle,
   Search,
   Sparkles,
   Workflow,
@@ -65,7 +63,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="flex-grow px-4 pt-16 pb-12 text-center md:pt-24">
         <div className="mx-auto max-w-3xl">
-          <h1 className="mb-6 max-w-4xl font-display text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
+          <h1 className="mb-6 max-w-4xl font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             Welcome to <span className="text-primary">MedAI Hub</span>
           </h1>
 
@@ -74,29 +72,6 @@ export default function HomePage() {
             AI to formulate questions, build search queries, and screen
             abstracts efficiently.
           </p>
-
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Link href="/projects">
-              <Button size="lg" className="h-12 px-8 text-base font-bold">
-                <FolderOpen className="mr-2 h-5 w-5" />
-                Go to Projects
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-12 px-8 text-base font-bold"
-              onClick={() =>
-                toast({
-                  title: "Demo Mode",
-                  description: "Quick start demo coming soon!",
-                })
-              }
-            >
-              <PlayCircle className="mr-2 h-5 w-5" />
-              Quick Start Demo
-            </Button>
-          </div>
         </div>
       </main>
 
