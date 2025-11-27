@@ -61,7 +61,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="flex-grow px-4 pt-16 pb-12 text-center md:pt-24">
         <div className="mx-auto max-w-3xl">
-          <h1 className="mb-6 max-w-4xl font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="mb-6 max-w-4xl font-display text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl text-balance">
             Welcome to <span className="text-primary">MedAI Hub</span>
           </h1>
 
