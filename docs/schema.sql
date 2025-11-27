@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Projects Table
 -- Stores research projects with dynamic framework data
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE projects (
 
 -- Files Table
 -- Stores uploaded MEDLINE and other research files
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     filename VARCHAR(255) NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE files (
 
 -- Analysis Runs Table
 -- Tracks all tool executions and their results
-CREATE TABLE analysis_runs (
+CREATE TABLE IF NOT EXISTS analysis_runs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     tool VARCHAR(20) NOT NULL, -- 'DEFINE', 'QUERY', 'REVIEW'
@@ -49,7 +49,7 @@ CREATE TABLE analysis_runs (
 
 -- Literature Abstracts Table (for Review tool)
 -- Stores parsed MEDLINE abstracts for screening
-CREATE TABLE abstracts (
+CREATE TABLE IF NOT EXISTS abstracts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     file_id UUID REFERENCES files(id) ON DELETE CASCADE,
@@ -71,7 +71,7 @@ CREATE TABLE abstracts (
 
 -- Chat Messages Table (for Define tool)
 -- Stores conversation history for research question formulation
-CREATE TABLE chat_messages (
+CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL, -- 'user', 'assistant', 'system'
@@ -82,7 +82,7 @@ CREATE TABLE chat_messages (
 
 -- Query Strings Table (for Query tool)
 -- Stores generated PubMed boolean search queries
-CREATE TABLE query_strings (
+CREATE TABLE IF NOT EXISTS query_strings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     query_text TEXT NOT NULL,
@@ -92,13 +92,13 @@ CREATE TABLE query_strings (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_files_project_id ON files(project_id);
-CREATE INDEX idx_analysis_runs_project_id ON analysis_runs(project_id);
-CREATE INDEX idx_abstracts_project_id ON abstracts(project_id);
-CREATE INDEX idx_abstracts_pmid ON abstracts(pmid);
-CREATE INDEX idx_abstracts_status ON abstracts(status);
-CREATE INDEX idx_chat_messages_project_id ON chat_messages(project_id);
-CREATE INDEX idx_query_strings_project_id ON query_strings(project_id);
+CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id);
+CREATE INDEX IF NOT EXISTS idx_analysis_runs_project_id ON analysis_runs(project_id);
+CREATE INDEX IF NOT EXISTS idx_abstracts_project_id ON abstracts(project_id);
+CREATE INDEX IF NOT EXISTS idx_abstracts_pmid ON abstracts(pmid);
+CREATE INDEX IF NOT EXISTS idx_abstracts_status ON abstracts(status);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_project_id ON chat_messages(project_id);
+CREATE INDEX IF NOT EXISTS idx_query_strings_project_id ON query_strings(project_id);
 
 -- Trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -109,24 +109,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
 CREATE TRIGGER update_projects_updated_at
     BEFORE UPDATE ON projects
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- Row Level Security (RLS) - Enable if using Supabase Auth
--- ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE files ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE analysis_runs ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE abstracts ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE query_strings ENABLE ROW LEVEL SECURITY;
-
--- Example RLS Policy (uncomment and adjust based on your auth setup)
--- CREATE POLICY "Users can view their own projects"
---     ON projects FOR SELECT
---     USING (auth.uid() = user_id);
-
--- CREATE POLICY "Users can insert their own projects"
---     ON projects FOR INSERT
---     WITH CHECK (auth.uid() = user_id);

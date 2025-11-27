@@ -1,51 +1,66 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { apiClient, type Project } from "@/lib/api"
-import { Plus, FolderOpen } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/auth-context";
+import { apiClient, type Project } from "@/lib/api";
+import { FolderOpen, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const { loading: authLoading, user } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
     framework_type: "PICO",
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    loadProjects()
-  }, [])
+    if (!authLoading && user) {
+      loadProjects();
+    }
+  }, [authLoading, user]);
 
   const loadProjects = async () => {
     try {
-      const data = await apiClient.getProjects()
-      setProjects(data)
+      const data = await apiClient.getProjects();
+      setProjects(data);
     } catch (error) {
-      console.error("Failed to load projects:", error)
+      console.error("Failed to load projects:", error);
     }
-  }
+  };
 
   const handleCreateProject = async () => {
-    if (!newProject.name.trim()) return
+    if (!newProject.name.trim()) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const data = await apiClient.createProject(newProject) as Project
-      setProjects([data, ...projects])
-      setNewProject({ name: "", description: "", framework_type: "PICO" })
-      setShowCreateForm(false)
+      const data = (await apiClient.createProject(newProject)) as Project;
+      setProjects([data, ...projects]);
+      setNewProject({ name: "", description: "", framework_type: "PICO" });
+      setShowCreateForm(false);
     } catch (error) {
-      alert(`Error: ${error instanceof Error ? error.message : "Failed to create project"}`)
+      alert(
+        `Error: ${
+          error instanceof Error ? error.message : "Failed to create project"
+        }`
+      );
     }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -104,7 +119,10 @@ export default function ProjectsPage() {
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
                 value={newProject.framework_type}
                 onChange={(e) =>
-                  setNewProject({ ...newProject, framework_type: e.target.value })
+                  setNewProject({
+                    ...newProject,
+                    framework_type: e.target.value,
+                  })
                 }
               >
                 <option value="PICO">PICO</option>
@@ -121,10 +139,7 @@ export default function ProjectsPage() {
             <Button onClick={handleCreateProject} disabled={isLoading}>
               {isLoading ? "Creating..." : "Create Project"}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateForm(false)}
-            >
+            <Button variant="outline" onClick={() => setShowCreateForm(false)}>
               Cancel
             </Button>
           </CardFooter>
@@ -169,9 +184,7 @@ export default function ProjectsPage() {
               </CardContent>
               <CardFooter>
                 <Button variant="outline" className="w-full" asChild>
-                  <a href={`/define?project=${project.id}`}>
-                    Open Project
-                  </a>
+                  <a href={`/define?project=${project.id}`}>Open Project</a>
                 </Button>
               </CardFooter>
             </Card>
@@ -179,5 +192,5 @@ export default function ProjectsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
