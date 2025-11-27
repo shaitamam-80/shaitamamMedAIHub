@@ -1,6 +1,5 @@
 "use client";
 
-import { apiClient } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import {
@@ -36,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
-      apiClient.setAccessToken(session?.access_token ?? null);
       setLoading(false);
     };
 
@@ -48,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      apiClient.setAccessToken(session?.access_token ?? null);
       setLoading(false);
     });
 

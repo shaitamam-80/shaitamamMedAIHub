@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    /* Medical Blue Theme - Light Mode (Refined Slate) */
-    --background: 210 40% 98%; /* #F8FAFC (Slate-50) - Softer than pure white */
-    --foreground: 222 47% 11%; /* #0F172A (Slate-900) - Deep Navy Text */
+    /* Medical Blue Theme - Light Mode (Professional & Trustworthy) */
+    --background: 210 40% 98%; /* #F8FAFC (Slate-50) */
+    --foreground: 222 47% 11%; /* #0F172A (Slate-900) */
 
     --card: 0 0% 100%; /* #FFFFFF */
     --card-foreground: 222 47% 11%; /* #0F172A */
@@ -14,14 +14,14 @@
     --popover: 0 0% 100%; /* #FFFFFF */
     --popover-foreground: 222 47% 11%; /* #0F172A */
 
-    --primary: 199 89% 48%; /* #0EA5E9 (Sky-500) - Slightly more vibrant blue */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary: 221 83% 53%; /* #2563EB (Blue-600) - Deep, trustworthy medical blue */
+    --primary-foreground: 210 40% 98%; /* #F8FAFC */
 
     --secondary: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
     --secondary-foreground: 222 47% 11%; /* #0F172A */
 
     --muted: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
-    --muted-foreground: 215 25% 40%; /* #475569 (Slate-600) - Darker for better contrast */
+    --muted-foreground: 215 16% 47%; /* #64748B (Slate-500) */
 
     --accent: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
     --accent-foreground: 222 47% 11%; /* #0F172A */
@@ -29,9 +29,9 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%; /* #E2E8F0 (Slate-200) - Subtle borders */
+    --border: 214 32% 91%; /* #E2E8F0 (Slate-200) */
     --input: 214 32% 91%; /* #E2E8F0 */
-    --ring: 199 89% 48%; /* #0EA5E9 */
+    --ring: 221 83% 53%; /* #2563EB (Match Primary) */
 
     --radius: 0.5rem;
   }
