@@ -52,6 +52,7 @@ class ProjectBase(BaseModel):
     description: Optional[str] = None
     framework_type: Optional[str] = Field(
         None,
+        max_length=50,
         description="Research framework type: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER",
     )
     # Relaxed validation to handle legacy data or lists
@@ -203,7 +204,7 @@ class AnalysisRunResponse(AnalysisRunBase):
     status: str
     started_at: datetime
     completed_at: Optional[datetime] = None
-    results: Optional[Dict[str, Any]] = None
+    results: Optional[Any] = None
     error_message: Optional[str] = None
 
     class Config:
