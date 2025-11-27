@@ -60,38 +60,6 @@ async def health_check():
     return {"status": "healthy", "service": "MedAI Hub Backend"}
 
 
-@app.get("/debug/config")
-async def debug_config():
-    """Debug endpoint to check configuration (remove in production)"""
-    from app.services.database import db_service
-
-    # Mask keys for security (show first 10 and last 4 chars)
-    def mask_key(key: str) -> str:
-        if not key or len(key) < 20:
-            return "NOT_SET" if not key else "TOO_SHORT"
-        return f"{key[:10]}...{key[-4:]}"
-
-    # Test Supabase connection
-    db_status = "unknown"
-    db_error = None
-    try:
-        # Try a simple query
-        result = db_service.client.table("projects").select("id").limit(1).execute()
-        db_status = "connected"
-    except Exception as e:
-        db_status = "error"
-        db_error = str(e)
-
-    return {
-        "supabase_url": settings.SUPABASE_URL,
-        "supabase_key_masked": mask_key(settings.SUPABASE_KEY),
-        "service_role_key_masked": mask_key(settings.SUPABASE_SERVICE_ROLE_KEY) if settings.SUPABASE_SERVICE_ROLE_KEY else "NOT_SET",
-        "using_service_role": bool(settings.SUPABASE_SERVICE_ROLE_KEY),
-        "db_status": db_status,
-        "db_error": db_error,
-    }
-
-
 if __name__ == "__main__":
     import uvicorn
 
