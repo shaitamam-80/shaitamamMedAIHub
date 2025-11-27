@@ -62,6 +62,24 @@ class DatabaseService:
         response = query.order("created_at", desc=True).limit(limit).execute()
         return response.data or []
 
+    async def delete_project(self, project_id: UUID) -> bool:
+        """
+        Delete a project and all associated data (CASCADE).
+
+        Args:
+            project_id: UUID of the project to delete
+
+        Returns:
+            True if deletion succeeded, False otherwise
+        """
+        try:
+            self.client.table("projects").delete().eq(
+                "id", str(project_id)
+            ).execute()
+            return True
+        except Exception:
+            return False
+
     # ========================================================================
     # Files
     # ========================================================================

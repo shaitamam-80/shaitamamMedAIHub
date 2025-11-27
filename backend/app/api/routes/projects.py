@@ -132,3 +132,52 @@ async def update_project(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while updating the project.",
         )
+
+
+@router.delete("/{project_id}")
+async def delete_project(
+    project_id: UUID,
+    current_user: UserPayload = Depends(get_current_user)
+):
+    """
+    Delete a project and all associated data.
+
+    This will CASCADE delete all related:
+    - Files
+    - Abstracts
+    - Chat messages
+    - Query strings
+    - Analysis runs
+    """
+    try:
+        # Check if project exists
+        existing_project = await db_service.get_project(project_id)
+        if not existing_project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        # Verify ownership
+        if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+        # Delete project (CASCADE will handle related data)
+        success = await db_service.delete_project(project_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete project",
+            )
+
+        return {"status": "success", "id": str(project_id), "message": "Project deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error deleting project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while deleting the project.",
+        )

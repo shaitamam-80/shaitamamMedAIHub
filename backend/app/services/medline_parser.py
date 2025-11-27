@@ -6,6 +6,7 @@ Parses PubMed MEDLINE format (.txt) files into structured abstracts
 from typing import List, Dict, Optional
 from datetime import datetime
 import re
+import chardet
 
 
 class MedlineAbstract:
@@ -59,9 +60,30 @@ class MedlineParser:
         self.abstracts: List[MedlineAbstract] = []
 
     def parse_file(self, file_path: str) -> List[MedlineAbstract]:
-        """Parse a MEDLINE format file"""
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        """
+        Parse a MEDLINE format file with automatic encoding detection.
+
+        Uses chardet to detect file encoding for better compatibility
+        with files from different systems (UTF-8, Latin-1, Windows-1252, etc.)
+        """
+        # Detect encoding
+        with open(file_path, "rb") as f:
+            raw_data = f.read(10000)  # Read first 10KB for detection
+
+        detection = chardet.detect(raw_data)
+        encoding = detection["encoding"] or "utf-8"
+
+        # Use fallback for low confidence detections
+        if detection["confidence"] < 0.7:
+            encoding = "latin-1"  # Safe fallback that handles most Western encodings
+
+        # Read file with detected encoding
+        with open(file_path, "r", encoding=encoding, errors="replace") as f:
             content = f.read()
+
+        # Normalize line endings
+        content = content.replace("\r\n", "\n")
+
         return self.parse_content(content)
 
     def parse_content(self, content: str) -> List[MedlineAbstract]:

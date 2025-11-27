@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS query_strings (
 );
 
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_files_project_id ON files(project_id);
 CREATE INDEX IF NOT EXISTS idx_analysis_runs_project_id ON analysis_runs(project_id);
 CREATE INDEX IF NOT EXISTS idx_abstracts_project_id ON abstracts(project_id);

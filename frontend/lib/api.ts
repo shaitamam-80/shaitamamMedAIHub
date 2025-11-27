@@ -1,3 +1,11 @@
+/**
+ * MedAI Hub - API Client
+ * Uses axios with Supabase auth interceptor for all API calls
+ */
+
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import { supabase } from "./supabase";
+
 // API URL: Use environment variable, or default to production HTTPS
 let API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.shaitamam.com";
@@ -94,7 +102,7 @@ export interface QueryGenerateResponse {
   queries: QueryStrategies;
   toolbox: ToolboxItem[];
   framework_type: string;
-  framework_data: Record<string, any>;
+  framework_data: Record<string, unknown>;
 }
 
 export interface ChatResponse {
@@ -108,199 +116,215 @@ export interface BatchAnalysisResponse {
   total_abstracts: number;
 }
 
-export class ApiClient {
-  private baseUrl: string;
-  private accessToken: string | null = null;
+// Create axios instance
+const client: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
-
-  setAccessToken(token: string | null) {
-    this.accessToken = token;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((options.headers as Record<string, string>) || {}),
-    };
-
-    if (this.accessToken) {
-      headers["Authorization"] = `Bearer ${this.accessToken}`;
+// Auth interceptor: automatically inject Supabase access token
+client.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        config.headers.Authorization = `Bearer ${data.session.access_token}`;
+      }
+    } catch (error) {
+      // If auth fails, continue without token (for public endpoints)
+      console.warn("Failed to get auth session:", error);
     }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-    const config: RequestInit = {
-      ...options,
-      headers,
-    };
-
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ detail: "An error occurred" }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
+// Response interceptor: handle errors consistently
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message =
+      error.response?.data?.detail ||
+      error.message ||
+      "An error occurred";
+    return Promise.reject(new Error(message));
   }
+);
 
+// API Client object with all methods
+export const apiClient = {
+  // ========================================================================
   // Projects
-  async createProject(data: {
+  // ========================================================================
+
+  createProject: async (data: {
     name: string;
     description?: string;
     framework_type?: string;
-  }): Promise<Project> {
-    return this.request("/api/v1/projects/", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
+  }): Promise<Project> => {
+    const response = await client.post("/api/v1/projects/", data);
+    return response.data;
+  },
 
-  async getProjects(): Promise<Project[]> {
-    return this.request("/api/v1/projects/");
-  }
+  getProjects: async (): Promise<Project[]> => {
+    const response = await client.get("/api/v1/projects/");
+    return response.data;
+  },
 
-  async getProject(id: string): Promise<Project> {
-    return this.request(`/api/v1/projects/${id}`);
-  }
+  getProject: async (id: string): Promise<Project> => {
+    const response = await client.get(`/api/v1/projects/${id}`);
+    return response.data;
+  },
 
-  async updateProject(
+  updateProject: async (
     id: string,
     data: Record<string, unknown>
-  ): Promise<Project> {
-    return this.request(`/api/v1/projects/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-  }
+  ): Promise<Project> => {
+    const response = await client.patch(`/api/v1/projects/${id}`, data);
+    return response.data;
+  },
 
-  async deleteProject(id: string): Promise<void> {
-    return this.request(`/api/v1/projects/${id}`, {
-      method: "DELETE",
-    });
-  }
+  deleteProject: async (id: string): Promise<void> => {
+    await client.delete(`/api/v1/projects/${id}`);
+  },
 
+  // ========================================================================
   // Define - Frameworks
-  async getFrameworks(): Promise<{
-    frameworks: Record<string, FrameworkSchema>;
-  }> {
-    return this.request("/api/v1/define/frameworks");
-  }
+  // ========================================================================
 
+  getFrameworks: async (): Promise<{
+    frameworks: Record<string, FrameworkSchema>;
+  }> => {
+    const response = await client.get("/api/v1/define/frameworks");
+    return response.data;
+  },
+
+  // ========================================================================
   // Define - Chat
-  async chat(
+  // ========================================================================
+
+  chat: async (
     projectId: string,
     message: string,
     frameworkType: string,
     language: string = "en"
-  ): Promise<ChatResponse> {
-    return this.request("/api/v1/define/chat", {
-      method: "POST",
-      body: JSON.stringify({
-        project_id: projectId,
-        message,
-        framework_type: frameworkType,
-        language,
-      }),
+  ): Promise<ChatResponse> => {
+    const response = await client.post("/api/v1/define/chat", {
+      project_id: projectId,
+      message,
+      framework_type: frameworkType,
+      language,
     });
-  }
+    return response.data;
+  },
 
-  async getConversation(projectId: string): Promise<{
+  getConversation: async (
+    projectId: string
+  ): Promise<{
     messages: ChatMessage[];
     framework_data?: Record<string, string>;
-  }> {
-    return this.request(`/api/v1/define/conversation/${projectId}`);
-  }
+  }> => {
+    const response = await client.get(
+      `/api/v1/define/conversation/${projectId}`
+    );
+    return response.data;
+  },
 
-  async clearConversation(projectId: string): Promise<void> {
-    return this.request(`/api/v1/define/conversation/${projectId}`, {
-      method: "DELETE",
-    });
-  }
+  clearConversation: async (projectId: string): Promise<void> => {
+    await client.delete(`/api/v1/define/conversation/${projectId}`);
+  },
 
+  // ========================================================================
   // Query
-  async generateQuery(projectId: string): Promise<QueryGenerateResponse> {
-    return this.request(`/api/v1/query/generate`, {
-      method: "POST",
-      body: JSON.stringify({
-        project_id: projectId,
-        framework_data: {}, // Will be fetched from project backend-side if empty
-      }),
+  // ========================================================================
+
+  generateQuery: async (projectId: string): Promise<QueryGenerateResponse> => {
+    const response = await client.post("/api/v1/query/generate", {
+      project_id: projectId,
+      framework_data: {}, // Will be fetched from project backend-side if empty
     });
-  }
+    return response.data;
+  },
 
-  async getQueryHistory(projectId: string): Promise<QueryGenerateResponse[]> {
-    return this.request(`/api/v1/query/history/${projectId}`);
-  }
+  getQueryHistory: async (
+    projectId: string
+  ): Promise<QueryGenerateResponse[]> => {
+    const response = await client.get(`/api/v1/query/history/${projectId}`);
+    return response.data;
+  },
 
+  // ========================================================================
   // Review - File Upload
-  async uploadMedlineFile(
+  // ========================================================================
+
+  uploadMedlineFile: async (
     projectId: string,
     file: File
-  ): Promise<FileUploadResponse> {
+  ): Promise<FileUploadResponse> => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("project_id", projectId);
 
-    const url = `${this.baseUrl}/api/v1/review/upload`;
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
+    // Axios automatically uses the auth interceptor for file uploads too
+    const response = await client.post("/api/v1/review/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
+    return response.data;
+  },
 
-    if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ detail: "Upload failed" }));
-      throw new Error(error.detail || "Upload failed");
-    }
-
-    return response.json();
-  }
-
+  // ========================================================================
   // Review - Abstracts
-  async getAbstracts(
+  // ========================================================================
+
+  getAbstracts: async (
     projectId: string,
     status?: string
-  ): Promise<AbstractResponse[]> {
+  ): Promise<AbstractResponse[]> => {
     const params = status ? `?status=${status}` : "";
-    return this.request(`/api/v1/review/abstracts/${projectId}${params}`);
-  }
+    const response = await client.get(
+      `/api/v1/review/abstracts/${projectId}${params}`
+    );
+    return response.data;
+  },
 
-  async updateAbstractDecision(
+  updateAbstractDecision: async (
     abstractId: string,
     decision: string
-  ): Promise<AbstractResponse> {
-    return this.request(`/api/v1/review/abstracts/${abstractId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ decision }),
-    });
-  }
+  ): Promise<AbstractResponse> => {
+    const response = await client.patch(
+      `/api/v1/review/abstracts/${abstractId}`,
+      { decision }
+    );
+    return response.data;
+  },
 
+  // ========================================================================
   // Review - Batch Analysis
-  async startBatchAnalysis(
+  // ========================================================================
+
+  startBatchAnalysis: async (
     projectId: string,
     fileId: string
-  ): Promise<BatchAnalysisResponse> {
-    return this.request("/api/v1/review/analyze", {
-      method: "POST",
-      body: JSON.stringify({ project_id: projectId, file_id: fileId }),
+  ): Promise<BatchAnalysisResponse> => {
+    const response = await client.post("/api/v1/review/analyze", {
+      project_id: projectId,
+      file_id: fileId,
     });
-  }
+    return response.data;
+  },
 
-  // Health check
-  async healthCheck(): Promise<{ status: string; service: string }> {
-    return this.request("/health");
-  }
-}
+  // ========================================================================
+  // Health Check
+  // ========================================================================
 
-export const apiClient = new ApiClient(API_BASE_URL);
+  healthCheck: async (): Promise<{ status: string; service: string }> => {
+    const response = await client.get("/health");
+    return response.data;
+  },
+};
+
 export default apiClient;

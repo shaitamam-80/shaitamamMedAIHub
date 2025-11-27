@@ -8,6 +8,9 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from typing import Dict, Any, List, Optional
 import json
 import re
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from google.api_core.exceptions import ResourceExhausted
 from app.core.config import settings
 from app.core.prompts import (
     get_define_system_prompt,
@@ -21,6 +24,9 @@ class AIService:
     """Service for AI operations using Google Gemini"""
 
     def __init__(self):
+        # Rate limiting: max 5 concurrent API calls
+        self._semaphore = asyncio.Semaphore(5)
+
         # Initialize Gemini models
         # Using gemini-2.5-flash for all tasks (best balance of speed and quality)
         # Note: gemini-1.5-* models are deprecated, use gemini-2.5-flash instead
@@ -37,6 +43,25 @@ class AIService:
             temperature=settings.TEMPERATURE,
             max_tokens=settings.MAX_TOKENS,
         )
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(ResourceExhausted)
+    )
+    async def _invoke_with_retry(self, model, messages):
+        """
+        Invoke model with rate limiting and automatic retry on ResourceExhausted.
+
+        Args:
+            model: The Gemini model to use
+            messages: List of messages to send
+
+        Returns:
+            Model response
+        """
+        async with self._semaphore:
+            return await model.ainvoke(messages)
 
     def _extract_json(self, text: str, find_object: bool = True) -> Optional[Dict[str, Any]]:
         """
@@ -89,7 +114,7 @@ class AIService:
         messages = [HumanMessage(content=system_prompt)]
 
         # Get response from Gemini Flash (faster for extraction)
-        response = await self.gemini_flash.ainvoke(messages)
+        response = await self._invoke_with_retry(self.gemini_flash, messages)
 
         # Parse JSON response
         extracted_data = self._extract_json(response.content, find_object=True)
@@ -142,7 +167,7 @@ class AIService:
         messages.append(HumanMessage(content=message))
 
         # Get response from Gemini Flash
-        response = await self.gemini_flash.ainvoke(messages)
+        response = await self._invoke_with_retry(self.gemini_flash, messages)
 
         # Parse the hybrid JSON response
         result = self._extract_json(response.content, find_object=True)
@@ -194,7 +219,7 @@ Return the complete JSON structure as specified in your instructions."""
         ]
 
         # Get response from Gemini (using flash for speed)
-        response = await self.gemini_flash.ainvoke(messages)
+        response = await self._invoke_with_retry(self.gemini_flash, messages)
 
         # Parse JSON response with robust extraction
         result = self._extract_json(response.content, find_object=True)
@@ -276,7 +301,7 @@ Return ONLY valid JSON, no additional text."""
         messages = [HumanMessage(content=prompt)]
 
         # Use Gemini Pro for batch analysis (better reasoning)
-        response = await self.gemini_pro.ainvoke(messages)
+        response = await self._invoke_with_retry(self.gemini_pro, messages)
 
         # Parse JSON response
         results = self._extract_json(response.content, find_object=False)
