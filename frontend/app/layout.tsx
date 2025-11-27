@@ -1,4 +1,5 @@
 import { ErrorBoundary } from "@/components/error-boundary";
+import { MobileNav } from "@/components/mobile-nav";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -35,7 +36,9 @@ export default function RootLayout({
         <AuthProvider>
           <div className="flex h-screen overflow-hidden">
             {/* Persistent Sidebar */}
-            <AppSidebar />
+            <div className="hidden md:flex h-full">
+              <AppSidebar />
+            </div>
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto">
@@ -44,6 +47,7 @@ export default function RootLayout({
                 <Toaster />
               </ErrorBoundary>
             </main>
+            <MobileNav />
           </div>
         </AuthProvider>
       </body>

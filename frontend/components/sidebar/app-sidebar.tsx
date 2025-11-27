@@ -1,4 +1,109 @@
 "use client";
+
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { apiClient as api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import {
+  FileText,
+  FolderOpen,
+  Home,
+  LogOut,
+  MessageSquare,
+  PlayCircle,
+  Search,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+
+const navigation = [
+  {
+    name: "Home",
+    href: "/",
+    icon: Home,
+  },
+  {
+    name: "Projects",
+    href: "/projects",
+    icon: FolderOpen,
+  },
+  {
+    name: "Define",
+    href: "/define",
+    icon: MessageSquare,
+    description: "Research Question Formulator",
+  },
+  {
+    name: "Query",
+    href: "/query",
+    icon: Search,
+    description: "PubMed Search Builder",
+  },
+  {
+    name: "Review",
+    href: "/review",
+    icon: FileText,
+    description: "Literature Screening",
+  },
+];
+
+export function AppSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOut, loading } = useAuth();
+  const { toast } = useToast();
+  const [isCreatingDemo, setIsCreatingDemo] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/auth/login");
+  };
+
+  const handleQuickStart = async () => {
+    setIsCreatingDemo(true);
+    try {
+      // Create a demo project
+      const demoProject = {
+        name: `Demo Project ${new Date().toLocaleTimeString()}`,
+        description: "Auto-generated demo project for quick start",
+        framework_type: "PICO",
+      };
+
+      const project = await api.createProject(demoProject);
+
+      toast({
+        title: "Demo Project Created! 🚀",
+        description: "Redirecting you to the Define tool...",
+      });
+
+      // Redirect to Define tool with the new project
+      router.push(`/define?project=${project.id}`);
+    } catch (error: any) {
+      console.error("Failed to create demo project:", error);
+      toast({
+        variant: "destructive",
+        title: "Quick Start Failed",
+        description:
+          "Could not create a demo project. Please try logging in first.",
+      });
+      // If auth error, redirect to login
+      if (error?.message?.includes("401")) {
+        router.push("/auth/login");
+      }
+    } finally {
+      setIsCreatingDemo(false);
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.email) return "U";
+    return user.email.charAt(0).toUpperCase();
   };
 
   return (
