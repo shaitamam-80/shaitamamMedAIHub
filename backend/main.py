@@ -5,8 +5,9 @@ Production-ready SaaS platform for systematic literature review
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.api.routes import projects, define, query, review
 
@@ -58,6 +59,16 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "MedAI Hub Backend"}
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to ensure CORS headers are included in error responses"""
+    logger.exception(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Check logs for details."},
+    )
 
 
 if __name__ == "__main__":
