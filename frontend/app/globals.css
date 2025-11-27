@@ -4,34 +4,34 @@
 
 @layer base {
   :root {
-    /* Medical Blue Theme - Light Mode */
-    --background: 0 0% 95%; /* #F2F2F2 */
-    --foreground: 218 23% 23%; /* #2D3748 */
+    /* Medical Blue Theme - Light Mode (Refined Slate) */
+    --background: 210 40% 98%; /* #F8FAFC (Slate-50) - Softer than pure white */
+    --foreground: 222 47% 11%; /* #0F172A (Slate-900) - Deep Navy Text */
 
     --card: 0 0% 100%; /* #FFFFFF */
-    --card-foreground: 218 23% 23%; /* #2D3748 */
+    --card-foreground: 222 47% 11%; /* #0F172A */
 
     --popover: 0 0% 100%; /* #FFFFFF */
-    --popover-foreground: 218 23% 23%; /* #2D3748 */
+    --popover-foreground: 222 47% 11%; /* #0F172A */
 
-    --primary: 197 83% 46%; /* #14A1D9 */
+    --primary: 199 89% 48%; /* #0EA5E9 (Sky-500) - Slightly more vibrant blue */
     --primary-foreground: 0 0% 100%; /* #FFFFFF */
 
-    --secondary: 225 53% 68%; /* #8499D9 (Primary Light) */
-    --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+    --secondary: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
+    --secondary-foreground: 222 47% 11%; /* #0F172A */
 
-    --muted: 0 0% 75%; /* #BFBFBF (Neutral) */
-    --muted-foreground: 216 15% 52%; /* #718096 */
+    --muted: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
+    --muted-foreground: 215 16% 47%; /* #64748B (Slate-500) */
 
-    --accent: 225 53% 68%; /* #8499D9 (Primary Light) */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --accent: 210 40% 96.1%; /* #F1F5F9 (Slate-100) */
+    --accent-foreground: 222 47% 11%; /* #0F172A */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 75%; /* #BFBFBF */
-    --input: 0 0% 75%; /* #BFBFBF */
-    --ring: 197 83% 46%; /* #14A1D9 */
+    --border: 214 32% 91%; /* #E2E8F0 (Slate-200) - Subtle borders */
+    --input: 214 32% 91%; /* #E2E8F0 */
+    --ring: 199 89% 48%; /* #0EA5E9 */
 
     --radius: 0.5rem;
   }
