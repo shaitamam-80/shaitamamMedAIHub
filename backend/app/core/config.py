@@ -28,8 +28,8 @@ class Settings(BaseSettings):
 
     # Google Gemini API
     GOOGLE_API_KEY: str  # Required - will fail if not set
-    GEMINI_PRO_MODEL: str = "gemini-2.0-flash"
-    GEMINI_FLASH_MODEL: str = "gemini-2.0-flash"
+    GEMINI_PRO_MODEL: str = "gemini-2.5-flash"
+    GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
     # Supabase Configuration
     SUPABASE_URL: str  # Required

@@ -25,14 +25,14 @@ class AIService:
         # Using gemini-2.5-flash for all tasks (best balance of speed and quality)
         # Note: gemini-1.5-* models are deprecated, use gemini-2.5-flash instead
         self.gemini_pro = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model=settings.GEMINI_PRO_MODEL,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=settings.TEMPERATURE,
             max_tokens=settings.MAX_TOKENS,
         )
 
         self.gemini_flash = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model=settings.GEMINI_FLASH_MODEL,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=settings.TEMPERATURE,
             max_tokens=settings.MAX_TOKENS,
