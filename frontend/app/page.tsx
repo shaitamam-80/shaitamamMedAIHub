@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { api } from "@/lib/api";
+import { apiClient as api } from "@/lib/api";
 import {
   ClipboardCheck,
   FileSearch,
