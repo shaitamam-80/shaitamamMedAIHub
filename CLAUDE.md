@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **MedAI Hub** is an AI-powered systematic literature review platform for medical researchers. It helps researchers formulate research questions, generate PubMed search queries, and screen abstracts using AI.
 
 ### Tech Stack
+
 - **Backend**: FastAPI (Python 3.11) + Google Gemini AI (via LangChain)
 - **Frontend**: Next.js 15 (TypeScript) + Tailwind CSS + Shadcn UI
 - **Database**: Supabase PostgreSQL
@@ -14,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Deployment**: Railway (backend) + Vercel (frontend)
 
 ### Live URLs
+
 - **Frontend**: https://shaitamam.com
 - **Backend API**: https://api.shaitamam.com
 - **API Docs**: https://api.shaitamam.com/api/docs (DEBUG mode only)
@@ -23,6 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Backend (FastAPI)
+
 ```bash
 cd backend
 .\venv\Scripts\Activate.ps1  # Windows
@@ -34,6 +37,7 @@ pytest                       # Run tests
 ```
 
 ### Frontend (Next.js)
+
 ```bash
 cd frontend
 npm install
@@ -42,20 +46,24 @@ npm run build               # Production build
 npx tsc --noEmit            # Type check
 ```
 
-### Database
-- Run `docs/schema.sql` in Supabase SQL Editor
-- Tables: projects, files, abstracts, chat_messages, analysis_runs, query_strings
+### Database Setup
+
+1. Go to Supabase Dashboard → SQL Editor
+2. Run `docs/schema.sql` to create tables
+3. (Optional) Run `docs/rls_policies.sql` to enable Row Level Security
 
 ---
 
 ## Architecture
 
 ### Three-Tool System
+
 1. **Define Tool** (`/define`): AI chat to formulate research questions using frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER)
 2. **Query Tool** (`/query`): Generates PubMed boolean search queries from framework data
 3. **Review Tool** (`/review`): Upload MEDLINE files, AI screens abstracts for relevance
 
 ### Backend Structure
+
 ```
 backend/
 ├── main.py                     # FastAPI app, CORS, routes
@@ -80,6 +88,7 @@ backend/
 ```
 
 ### Frontend Structure
+
 ```
 frontend/
 ├── app/
@@ -108,6 +117,7 @@ frontend/
 ## Key Patterns
 
 ### Authentication Flow
+
 1. User logs in via Supabase Auth (email/password or OAuth)
 2. Frontend stores JWT in Supabase session
 3. `api.ts` interceptor adds `Authorization: Bearer {token}` to all requests
@@ -115,11 +125,13 @@ frontend/
 5. Protected routes use `Depends(get_current_user)`
 
 ### Service Layer Pattern
+
 - `ai_service` (singleton): All Gemini AI calls
 - `db_service` (singleton): All Supabase operations
 - Routes never access DB/AI directly
 
 ### Dynamic Framework System
+
 ```python
 # Backend defines schemas in app/core/prompts/shared.py
 FRAMEWORK_SCHEMAS = {
@@ -130,6 +142,7 @@ FRAMEWORK_SCHEMAS = {
 ```
 
 ### API Client (Frontend)
+
 ```typescript
 // lib/api.ts - Axios with auto auth
 const client = axios.create({ baseURL: API_URL });
@@ -144,38 +157,221 @@ client.interceptors.request.use(async (config) => {
 
 ---
 
-## API Endpoints
+## API Reference
+
+### Authentication
+
+All `/api/v1/*` endpoints require JWT token:
 
 ```
-Auth Required for all /api/v1/* endpoints
-
-POST   /api/v1/projects              Create project
-GET    /api/v1/projects              List user's projects
-GET    /api/v1/projects/{id}         Get project
-PATCH  /api/v1/projects/{id}         Update project
-DELETE /api/v1/projects/{id}         Delete project (CASCADE)
-
-GET    /api/v1/define/frameworks     Get framework schemas
-POST   /api/v1/define/chat           Chat with AI
-GET    /api/v1/define/conversation/{id}  Get chat history
-
-POST   /api/v1/query/generate        Generate PubMed query
-GET    /api/v1/query/history/{id}    Get query history
-
-POST   /api/v1/review/upload         Upload MEDLINE file
-GET    /api/v1/review/abstracts/{id} Get abstracts
-POST   /api/v1/review/analyze        Start AI screening
-PATCH  /api/v1/review/abstracts/{id} Update decision
-
-GET    /                             Health check
-GET    /health                       Health check
+Authorization: Bearer <token>
 ```
+
+### Projects
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/projects` | Create project |
+| GET | `/api/v1/projects` | List user's projects |
+| GET | `/api/v1/projects/{id}` | Get project |
+| PATCH | `/api/v1/projects/{id}` | Update project |
+| DELETE | `/api/v1/projects/{id}` | Delete project (CASCADE) |
+
+**Create Project Request:**
+
+```json
+{
+  "name": "My Research Project",
+  "description": "Optional description",
+  "framework_type": "PICO"
+}
+```
+
+### Define Tool
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/define/frameworks` | Get framework schemas |
+| POST | `/api/v1/define/chat` | Chat with AI |
+| GET | `/api/v1/define/conversation/{id}` | Get chat history |
+
+**Chat Request:**
+
+```json
+{
+  "project_id": "uuid",
+  "message": "I want to study exercise for depression in elderly",
+  "framework_type": "PICO"
+}
+```
+
+**Chat Response:**
+
+```json
+{
+  "response": "I understand you want to study...",
+  "framework_data": {
+    "population": "Elderly patients with depression",
+    "intervention": "Exercise",
+    "comparison": null,
+    "outcome": "Depression symptoms"
+  }
+}
+```
+
+### Query Tool
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/query/generate` | Generate PubMed query |
+| GET | `/api/v1/query/history/{id}` | Get query history |
+
+### Review Tool
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/review/upload` | Upload MEDLINE file (multipart/form-data) |
+| GET | `/api/v1/review/files/{id}` | Get uploaded files |
+| GET | `/api/v1/review/abstracts/{id}` | Get abstracts (?status=pending) |
+| POST | `/api/v1/review/analyze` | Start AI screening |
+| PATCH | `/api/v1/review/abstracts/{id}` | Update decision |
+
+### Error Responses
+
+```json
+{
+  "detail": "Error message here"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not Found |
+| 422 | Validation Error |
+| 500 | Server Error |
+
+---
+
+## Database Schema
+
+### Entity Relationship
+
+```
+projects (1) ──┬── (N) files ──── (N) abstracts
+               ├── (N) chat_messages
+               ├── (N) query_strings
+               └── (N) analysis_runs
+```
+
+### Tables
+
+#### projects
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| name | VARCHAR(255) | Project name |
+| description | TEXT | Optional |
+| framework_type | VARCHAR(50) | PICO, CoCoPop, PEO, etc. |
+| framework_data | JSONB | Dynamic fields |
+| user_id | UUID | Owner |
+| created_at | TIMESTAMPTZ | Auto |
+| updated_at | TIMESTAMPTZ | Auto-trigger |
+
+#### files
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| project_id | UUID | FK → projects |
+| filename | VARCHAR(255) | Original name |
+| file_path | TEXT | Storage path |
+| file_size | BIGINT | Bytes |
+| file_type | VARCHAR(50) | MEDLINE, CSV |
+| status | VARCHAR(50) | uploaded/processing/completed/error |
+| uploaded_at | TIMESTAMPTZ | Auto |
+
+#### abstracts
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| project_id | UUID | FK → projects |
+| file_id | UUID | FK → files |
+| pmid | VARCHAR(20) | PubMed ID (unique) |
+| title | TEXT | Article title |
+| abstract | TEXT | Abstract text |
+| authors | TEXT | Author list |
+| journal | VARCHAR(255) | Journal name |
+| publication_date | DATE | Pub date |
+| keywords | TEXT[] | Array |
+| status | VARCHAR(20) | pending/included/excluded/maybe |
+| decision | VARCHAR(20) | AI decision |
+| ai_reasoning | TEXT | AI explanation |
+| human_decision | VARCHAR(20) | Override |
+| screened_at | TIMESTAMPTZ | When screened |
+| metadata | JSONB | Extra MEDLINE fields |
+
+#### chat_messages
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| project_id | UUID | FK → projects |
+| role | VARCHAR(20) | user/assistant/system |
+| content | TEXT | Message |
+| created_at | TIMESTAMPTZ | Auto |
+
+#### query_strings
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| project_id | UUID | FK → projects |
+| query_text | TEXT | Boolean query |
+| query_type | VARCHAR(50) | boolean/mesh/advanced |
+| created_at | TIMESTAMPTZ | Auto |
+
+#### analysis_runs
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| project_id | UUID | FK → projects |
+| tool | VARCHAR(20) | DEFINE/QUERY/REVIEW |
+| status | VARCHAR(50) | pending/running/completed/failed |
+| started_at | TIMESTAMPTZ | Start |
+| completed_at | TIMESTAMPTZ | End |
+| results | JSONB | Results |
+| error_message | TEXT | Error if failed |
+
+### Indexes
+
+```sql
+CREATE INDEX idx_projects_user_id ON projects(user_id);
+CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
+CREATE INDEX idx_abstracts_project_id ON abstracts(project_id);
+CREATE INDEX idx_abstracts_pmid ON abstracts(pmid);
+CREATE INDEX idx_abstracts_status ON abstracts(status);
+```
+
+### Cascade Deletes
+
+All FK use `ON DELETE CASCADE` - deleting project removes all related data.
+
+### Row Level Security (Optional)
+
+Run `docs/rls_policies.sql` to enable user-level data isolation. Backend uses `service_role` key which bypasses RLS.
 
 ---
 
 ## Environment Variables
 
 ### Backend `.env`
+
 ```env
 GOOGLE_API_KEY=your_key           # From aistudio.google.com
 SUPABASE_URL=https://xxx.supabase.co
@@ -185,6 +381,7 @@ DEBUG=True                        # Enable /api/docs
 ```
 
 ### Frontend `.env.local`
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
@@ -192,6 +389,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
 ### Production (Railway)
+
 ```env
 GOOGLE_API_KEY=...
 SUPABASE_URL=https://yronyapjuaswetrmotuk.supabase.co
@@ -202,35 +400,38 @@ DEBUG=False
 
 ---
 
-## Database Schema
-
-6 tables with CASCADE delete:
-- `projects` - Research projects (user_id, name, framework_type, framework_data)
-- `files` - Uploaded MEDLINE files
-- `abstracts` - Parsed abstracts with AI decisions
-- `chat_messages` - Define tool conversation history
-- `query_strings` - Generated search queries
-- `analysis_runs` - Batch analysis tracking
-
-Key indexes: `user_id`, `project_id`, `created_at`, `pmid`
-
----
-
 ## Common Tasks
 
 ### Add New Framework
+
 1. Add to `FRAMEWORK_SCHEMAS` in `backend/app/core/prompts/shared.py`
 2. Frontend auto-renders (no changes needed)
 
 ### Add API Endpoint
+
 1. Create route in `backend/app/api/routes/`
 2. Add Pydantic models in `schemas.py`
 3. Register in `main.py`
 4. Add method in `lib/api.ts`
 
 ### Add UI Component
+
 ```bash
 npx shadcn-ui@latest add [component]
+```
+
+### Reset Database
+
+```sql
+-- Drop all tables
+DROP TABLE IF EXISTS query_strings CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS abstracts CASCADE;
+DROP TABLE IF EXISTS analysis_runs CASCADE;
+DROP TABLE IF EXISTS files CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+
+-- Then run docs/schema.sql
 ```
 
 ---
@@ -238,11 +439,13 @@ npx shadcn-ui@latest add [component]
 ## Deployment
 
 ### Railway (Backend)
+
 - Auto-deploys from `main` branch
 - Uses `railway.json` + `nixpacks.toml`
 - Environment variables in Railway dashboard
 
 ### Vercel (Frontend)
+
 - Auto-deploys from `main` branch
 - Environment variables in Vercel dashboard
 - Domain: shaitamam.com
@@ -252,21 +455,25 @@ npx shadcn-ui@latest add [component]
 ## Troubleshooting
 
 ### 500 Error on API
+
 1. Check Railway logs for actual error
 2. Verify `SUPABASE_SERVICE_ROLE_KEY` has no extra spaces
 3. Test connection: `GET /health`
 
 ### Auth Issues
+
 1. Check Supabase Auth settings
 2. Verify redirect URLs in Supabase dashboard
 3. Check browser console for CORS errors
 
 ### AI Not Responding
+
 1. Check `GOOGLE_API_KEY` quota
 2. Gemini may return malformed JSON - check logs
 3. Rate limiting may kick in on heavy usage
 
 ### Database Errors
+
 1. Verify `docs/schema.sql` was run
 2. Check Supabase project is not paused
 3. Service role key must match exactly
@@ -276,12 +483,15 @@ npx shadcn-ui@latest add [component]
 ## Recent Changes Log
 
 ### 2024-11-27
+
 - Fixed Supabase connection (service role key had extra space)
 - Removed debug endpoint `/debug/config`
 - Cleaned up old PRD files and design artifacts
+- Consolidated all docs into CLAUDE.md
 - Added test files structure
 
 ### Schema Changes
+
 - `ProjectResponse.id` and `user_id` changed from UUID to str (Supabase compatibility)
 - `framework_data` relaxed to `Any` type for legacy data support
 
@@ -303,3 +513,4 @@ npx shadcn-ui@latest add [component]
 | Auth Context | `frontend/contexts/auth-context.tsx` |
 | Define Page | `frontend/app/define/page.tsx` |
 | DB Schema | `docs/schema.sql` |
+| RLS Policies | `docs/rls_policies.sql` |
