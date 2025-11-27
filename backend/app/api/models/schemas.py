@@ -71,8 +71,8 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(ProjectBase):
-    id: UUID
-    user_id: Optional[UUID] = None  # Added for frontend synchronization
+    id: str  # String to handle Supabase UUID format
+    user_id: Optional[str] = None  # String to handle Supabase UUID format
     created_at: datetime
     updated_at: datetime
 
