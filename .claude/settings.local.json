@@ -18,7 +18,16 @@
       "Bash(git fetch:*)",
       "Bash(git stash:*)",
       "Bash(git merge:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(git rebase:*)",
+      "Bash(if exist \".next\" rmdir /s /q \".next\")",
+      "Bash(del /f nul)",
+      "Bash(del /f backendnul)",
+      "Bash(del /f frontendnul)",
+      "Bash(del /f \".claude\\DEGINE.TXT\")",
+      "Bash(del /f \"backend\\railway.json\")"
     ],
     "deny": [],
     "ask": []
