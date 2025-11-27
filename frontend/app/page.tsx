@@ -57,51 +57,6 @@ export default function HomePage() {
       }
     } finally {
       setIsCreatingDemo(false);
-    }
-  };
-
-  return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background">
-      {/* Hero Section */}
-      <main className="flex-grow px-4 pt-16 pb-12 text-center md:pt-24">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-6 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm text-primary">
-            <span className="mr-2 flex h-2 w-2 rounded-full bg-primary"></span>
-            v2.0 Now Available
-          </div>
-          <h1 className="text-4xl font-bold leading-tight tracking-tight font-display md:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
-            Welcome to MedAI Hub
-          </h1>
-          <p className="text-muted-foreground text-lg font-normal leading-relaxed pt-6 pb-10 max-w-2xl mx-auto">
-            Streamlining medical research from question to conclusion. Leverage
-            AI to formulate questions, build search queries, and screen
-            abstracts efficiently.
-          </p>
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link href="/projects">
-              <Button
-                size="lg"
-                className="h-14 px-8 text-base font-bold gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-              >
-                <FolderOpen className="h-5 w-5" />
-                Go to Projects
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-14 px-8 text-base font-bold gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all"
-              onClick={handleQuickStart}
-              disabled={isCreatingDemo}
-            >
-              {isCreatingDemo ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              ) : (
-                <PlayCircle className="h-5 w-5" />
-              )}
-              Quick Start Demo
-            </Button>
-          </div>
         </div>
       </main>
 
