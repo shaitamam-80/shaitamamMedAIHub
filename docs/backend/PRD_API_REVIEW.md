@@ -449,6 +449,94 @@ human_decision > ai_decision > pending
 - Maximum file size: 10MB
 - File sanitized to prevent path traversal
 
+### BR-REV-001b: File Encoding Handling (v2.0 - Critical)
+
+**Problem:** Files exported from PubMed, EndNote, or older systems may use different character encodings (UTF-8, Latin-1/ISO-8859-1, Windows-1252). Incorrect encoding detection causes parsing failures or garbled text.
+
+#### Required Implementation
+
+```python
+import chardet
+
+def detect_and_decode_file(file_path: str) -> str:
+    """
+    Detect file encoding and return decoded content.
+
+    Tries encodings in order:
+    1. UTF-8 (most common, PubMed default)
+    2. Detected encoding via chardet
+    3. Latin-1 fallback (never fails)
+    """
+    with open(file_path, 'rb') as f:
+        raw_content = f.read()
+
+    # Try UTF-8 first (fastest, most common)
+    try:
+        return raw_content.decode('utf-8')
+    except UnicodeDecodeError:
+        pass
+
+    # Detect encoding
+    detected = chardet.detect(raw_content)
+    encoding = detected.get('encoding', 'latin-1')
+    confidence = detected.get('confidence', 0)
+
+    # Use detected encoding if confident
+    if confidence > 0.7:
+        try:
+            return raw_content.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            pass
+
+    # Fallback to Latin-1 (never fails, maps bytes 1:1)
+    return raw_content.decode('latin-1')
+```
+
+#### Common Encodings by Source
+
+| Source | Common Encoding | Notes |
+|--------|-----------------|-------|
+| PubMed (modern) | UTF-8 | Default since ~2015 |
+| PubMed (old exports) | Latin-1 | Pre-2015 files |
+| EndNote | Windows-1252 | Windows Latin |
+| Zotero | UTF-8 | Always UTF-8 |
+| Manual .txt files | Varies | User-dependent |
+
+#### Parser Update Required
+
+```python
+# backend/app/services/medline_parser.py
+
+class MedlineParser:
+    def parse_file(self, file_path: str) -> List[ParsedAbstract]:
+        # Detect and decode with encoding handling
+        content = detect_and_decode_file(file_path)
+
+        # Normalize line endings
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+
+        # Continue with parsing...
+```
+
+#### Configuration
+
+```python
+# backend/app/core/config.py
+
+class Settings(BaseSettings):
+    # File Encoding
+    FILE_ENCODING_DETECTION: bool = True
+    FILE_ENCODING_FALLBACK: str = "latin-1"
+    FILE_ENCODING_MIN_CONFIDENCE: float = 0.7
+```
+
+#### Dependencies
+
+```
+# requirements.txt
+chardet>=5.0.0
+```
+
 ### BR-REV-002: Unique PMID
 
 - PMID has UNIQUE constraint in database
@@ -591,6 +679,14 @@ pending → running → completed
 - [ ] **REV-API-T005**: Preserve full metadata for export
 - [ ] **REV-API-T006**: Add RIS field mapping
 
+### 8.2b Tasks v2.0 (Critical - File Encoding)
+
+- [ ] **REV-API-T020**: Add chardet dependency for encoding detection
+- [ ] **REV-API-T021**: Implement detect_and_decode_file() function
+- [ ] **REV-API-T022**: Update MedlineParser to use encoding detection
+- [ ] **REV-API-T023**: Add encoding configuration to Settings
+- [ ] **REV-API-T024**: Add tests for UTF-8, Latin-1, Windows-1252 files
+
 ### 8.3 Tasks for Later
 
 - [ ] **REV-API-T010**: Add WebSocket for progress updates
@@ -629,4 +725,4 @@ pending → running → completed
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2024-12 | Initial implementation |
-| 2.0 | 2024-12 | Export formats (CSV, RIS, NBIB) |
+| 2.0 | 2024-12 | Export formats (CSV, RIS, NBIB), File encoding detection |

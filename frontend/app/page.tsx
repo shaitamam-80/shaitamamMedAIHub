@@ -57,6 +57,46 @@ export default function HomePage() {
       }
     } finally {
       setIsCreatingDemo(false);
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background">
+      {/* Hero Section */}
+      <main className="flex-grow px-4 pt-16 pb-12 text-center md:pt-24">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="mb-6 max-w-4xl font-display text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
+            Welcome to <span className="text-primary">MedAI Hub</span>
+          </h1>
+
+          <p className="mb-10 max-w-2xl text-lg font-medium text-muted-foreground sm:text-xl">
+            Streamlining medical research from question to conclusion. Leverage
+            AI to formulate questions, build search queries, and screen
+            abstracts efficiently.
+          </p>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Link href="/projects">
+              <Button size="lg" className="h-12 px-8 text-base font-bold">
+                <FolderOpen className="mr-2 h-5 w-5" />
+                Go to Projects
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 px-8 text-base font-bold"
+              onClick={() =>
+                toast({
+                  title: "Demo Mode",
+                  description: "Quick start demo coming soon!",
+                })
+              }
+            >
+              <PlayCircle className="mr-2 h-5 w-5" />
+              Quick Start Demo
+            </Button>
+          </div>
         </div>
       </main>
 

@@ -491,18 +491,114 @@ class Settings(BaseSettings):
 
 ---
 
-## 6. Error Handling
+## 6. Rate Limiting & Concurrency (v2.0 - Critical)
 
-### 6.1 AI Service Errors
+### 6.1 Gemini API Rate Limits
+
+**Problem:** When sending large batch analyses (50+ abstracts), concurrent requests to Gemini can trigger `429 Too Many Requests` errors.
+
+#### Google Gemini Rate Limits (Free Tier)
+
+| Model | RPM (Requests Per Minute) | TPM (Tokens Per Minute) |
+|-------|---------------------------|-------------------------|
+| gemini-2.5-flash | 15 | 1,000,000 |
+| gemini-1.5-pro | 2 | 32,000 |
+
+### 6.2 Required Implementation: Semaphore/Queue
+
+```python
+import asyncio
+from typing import List, Dict, Any
+
+class AIService:
+    def __init__(self):
+        # Limit concurrent Gemini requests
+        self._semaphore = asyncio.Semaphore(5)  # Max 5 concurrent requests
+        self._request_delay = 0.5  # Seconds between requests
+
+    async def _rate_limited_request(self, coro):
+        """Wrapper to enforce rate limiting."""
+        async with self._semaphore:
+            result = await coro
+            await asyncio.sleep(self._request_delay)
+            return result
+
+    async def analyze_abstract_batch(
+        self,
+        abstracts: List[Dict[str, Any]],
+        criteria: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Analyze abstracts with rate limiting.
+        """
+        # Split into smaller sub-batches if needed
+        SUB_BATCH_SIZE = 5  # Max abstracts per API call
+
+        all_results = []
+        for i in range(0, len(abstracts), SUB_BATCH_SIZE):
+            sub_batch = abstracts[i:i + SUB_BATCH_SIZE]
+
+            # Rate-limited API call
+            result = await self._rate_limited_request(
+                self._analyze_sub_batch(sub_batch, criteria)
+            )
+            all_results.extend(result)
+
+        return all_results
+```
+
+### 6.3 Retry Logic with Exponential Backoff
+
+```python
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+class AIService:
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type(RateLimitError)
+    )
+    async def _call_gemini(self, messages):
+        """Call Gemini with automatic retry on rate limit."""
+        try:
+            return await self.gemini_flash.ainvoke(messages)
+        except Exception as e:
+            if "429" in str(e) or "rate" in str(e).lower():
+                raise RateLimitError(str(e))
+            raise
+```
+
+### 6.4 Configuration Settings
+
+```python
+# backend/app/core/config.py
+
+class Settings(BaseSettings):
+    # Rate Limiting
+    GEMINI_MAX_CONCURRENT: int = 5          # Max parallel requests
+    GEMINI_REQUEST_DELAY: float = 0.5       # Seconds between requests
+    GEMINI_RETRY_ATTEMPTS: int = 3          # Retry on 429
+    GEMINI_RETRY_MIN_WAIT: int = 2          # Min seconds for backoff
+    GEMINI_RETRY_MAX_WAIT: int = 30         # Max seconds for backoff
+    BATCH_SUB_SIZE: int = 5                 # Abstracts per API call
+```
+
+---
+
+## 7. Error Handling
+
+### 7.1 AI Service Errors
 
 | Error | Handling |
 |-------|----------|
 | JSON parse failure | Return fallback structure |
 | API timeout | Propagate to route |
-| Rate limit | Propagate to route |
+| Rate limit (429) | Retry with exponential backoff |
 | Invalid response | Return empty data |
 
-### 6.2 Database Errors
+### 7.2 Database Errors
 
 | Error | Handling |
 |-------|----------|
@@ -526,18 +622,26 @@ class Settings(BaseSettings):
 - [x] All CRUD operations
 - [x] Bulk insert support
 
-### 7.2 Tasks for Later
+### 8.2 Tasks v2.0 (Critical - Rate Limiting)
+
+- [ ] **SVC-T006**: Implement asyncio.Semaphore for concurrent request limiting
+- [ ] **SVC-T007**: Add exponential backoff retry with tenacity library
+- [ ] **SVC-T008**: Split batch analysis into sub-batches of 5
+- [ ] **SVC-T009**: Add rate limit configuration to Settings
+- [ ] **SVC-T010**: Handle 429 errors gracefully with user feedback
+
+### 8.3 Tasks for Later
 
 - [ ] **SVC-T001**: Add request caching for AI
-- [ ] **SVC-T002**: Add retry logic for AI failures
-- [ ] **SVC-T003**: Add connection pooling for DB
-- [ ] **SVC-T004**: Add query logging
-- [ ] **SVC-T005**: Add metrics collection
+- [ ] **SVC-T002**: Add connection pooling for DB
+- [ ] **SVC-T003**: Add query logging
+- [ ] **SVC-T004**: Add metrics collection
 
 ---
 
-## 8. Version History
+## 9. Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2024-12 | Initial implementation |
+| 2.0 | 2024-12 | Added Rate Limiting & Concurrency requirements |
