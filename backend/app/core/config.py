@@ -27,13 +27,13 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGIN_REGEX: Optional[str] = r"^https://.*\.vercel\.app$"
 
     # Google Gemini API
-    GOOGLE_API_KEY: str = ""  # Set in environment variables
+    GOOGLE_API_KEY: str  # Required - will fail if not set
     GEMINI_PRO_MODEL: str = "gemini-2.5-flash"
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
-    # Supabase Configuration (defaults for build time, actual values from env at runtime)
-    SUPABASE_URL: str = ""
-    SUPABASE_KEY: str = ""
+    # Supabase Configuration
+    SUPABASE_URL: str  # Required
+    SUPABASE_KEY: str  # Required (anon/public key for client-side, service_role for server-side)
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None  # Optional: For admin operations
 
     # Database
