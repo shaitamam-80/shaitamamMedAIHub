@@ -303,28 +303,34 @@ async def get_research_questions(
 
         # Extract research questions from assistant messages
         questions = []
+        import re
+
+        def is_english(text: str) -> bool:
+            """Check if text is primarily English (ASCII letters)"""
+            # Count English letters vs Hebrew letters
+            english_chars = sum(1 for c in text if c.isascii() and c.isalpha())
+            total_letters = sum(1 for c in text if c.isalpha())
+            if total_letters == 0:
+                return False
+            return (english_chars / total_letters) > 0.7
+
         for msg in conversation:
             if msg.get("role") == "assistant":
                 content = msg.get("content", "")
 
-                # Look for quoted questions (Hebrew and English)
-                import re
-
-                # Hebrew quotes pattern
-                hebrew_patterns = [
-                    r'"([^"]+\?[^"]*)"',  # Hebrew quotes
-                    r'"([^"]+\?[^"]*)"',  # Standard quotes
+                # Look for quoted questions
+                patterns = [
+                    r'"([^"]+\?)"',  # Standard quotes ending with ?
+                    r'"([^"]+\?)"',  # Hebrew quotes ending with ?
                 ]
 
-                for pattern in hebrew_patterns:
+                for pattern in patterns:
                     matches = re.findall(pattern, content)
                     for match in matches:
-                        # Validate it's a substantial question
-                        if len(match) >= 30 and match.endswith("?"):
-                            # Skip English translations
-                            if not match.lower().startswith("what is the"):
-                                if match not in questions:
-                                    questions.append(match)
+                        # Only include English questions (PubMed doesn't support Hebrew)
+                        if len(match) >= 30 and is_english(match):
+                            if match not in questions:
+                                questions.append(match)
 
         return {
             "project_id": str(project_id),

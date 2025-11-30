@@ -194,6 +194,37 @@ class AIService:
                 "framework_data": {}
             }
 
+    def _contains_hebrew(self, text: str) -> bool:
+        """Check if text contains Hebrew characters"""
+        if not isinstance(text, str):
+            return False
+        return any('\u0590' <= char <= '\u05FF' for char in text)
+
+    async def _translate_to_english(self, text: str) -> str:
+        """Translate Hebrew text to English using AI"""
+        if not self._contains_hebrew(text):
+            return text
+
+        messages = [
+            HumanMessage(content=f"""Translate this Hebrew text to English for use in a medical research context.
+Return ONLY the English translation, nothing else.
+
+Text: {text}""")
+        ]
+
+        response = await self._invoke_with_retry(self.gemini_flash, messages)
+        return response.content.strip()
+
+    async def _translate_framework_data(self, framework_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate all Hebrew values in framework_data to English"""
+        translated = {}
+        for key, value in framework_data.items():
+            if isinstance(value, str) and self._contains_hebrew(value):
+                translated[key] = await self._translate_to_english(value)
+            else:
+                translated[key] = value
+        return translated
+
     async def generate_pubmed_query(
         self,
         framework_data: Dict[str, Any],
@@ -210,13 +241,16 @@ class AIService:
             Dict with message, concepts, queries, toolbox, framework_type, framework_data
         """
 
+        # Translate framework data to English if needed (PubMed requires English)
+        english_framework_data = await self._translate_framework_data(framework_data)
+
         # Use the new query system prompt
         system_prompt = get_query_system_prompt(framework_type)
 
-        # Build the request
+        # Build the request with translated data
         framework_text = "\n".join([
             f"**{key}:** {value}"
-            for key, value in framework_data.items()
+            for key, value in english_framework_data.items()
             if value  # Only include non-empty values
         ])
 
@@ -237,17 +271,37 @@ Return the complete JSON structure as specified in your instructions."""
         # Parse JSON response with robust extraction
         result = self._extract_json(response.content, find_object=True)
 
-        if result and "message" in result and "concepts" in result and "queries" in result:
+        if result and "queries" in result:
             # Ensure framework_type and framework_data are included
             result["framework_type"] = framework_type
-            result["framework_data"] = framework_data
+            result["framework_data"] = english_framework_data  # Use English version
 
-            # Ensure toolbox exists (even if empty)
+            # Ensure required fields exist
+            if "message" not in result:
+                result["message"] = "Query strategy generated successfully."
+            if "concepts" not in result:
+                result["concepts"] = []
             if "toolbox" not in result:
                 result["toolbox"] = []
 
+            # Ensure queries has required fields
+            queries = result.get("queries", {})
+            if isinstance(queries, dict):
+                if "broad" not in queries:
+                    queries["broad"] = ""
+                if "focused" not in queries:
+                    queries["focused"] = ""
+                if "clinical_filtered" not in queries:
+                    queries["clinical_filtered"] = ""
+                result["queries"] = queries
+
             return result
         else:
+            # Log the raw response for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to parse query response: {response.content[:500]}")
+
             # Fallback structure if parsing fails
             return {
                 "message": "Failed to generate query strategy. Please try again.",
@@ -259,7 +313,7 @@ Return the complete JSON structure as specified in your instructions."""
                 },
                 "toolbox": [],
                 "framework_type": framework_type,
-                "framework_data": framework_data
+                "framework_data": english_framework_data
             }
 
     async def assess_finer(
