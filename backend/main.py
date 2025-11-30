@@ -64,12 +64,18 @@ async def health_check():
 @app.get("/debug/env")
 async def debug_env():
     """Debug endpoint to check environment variables (temporary)"""
+    import os
+    raw_key = os.environ.get("GOOGLE_API_KEY", "")
     return {
         "google_api_key_set": bool(settings.GOOGLE_API_KEY),
         "google_api_key_length": len(settings.GOOGLE_API_KEY) if settings.GOOGLE_API_KEY else 0,
         "google_api_key_prefix": settings.GOOGLE_API_KEY[:10] + "..." if settings.GOOGLE_API_KEY and len(settings.GOOGLE_API_KEY) > 10 else "NOT SET",
         "supabase_url_set": bool(settings.SUPABASE_URL),
         "supabase_key_set": bool(settings.SUPABASE_KEY),
+        "raw_env_google_key_set": bool(raw_key),
+        "raw_env_google_key_length": len(raw_key),
+        "raw_env_google_key_prefix": raw_key[:10] + "..." if raw_key and len(raw_key) > 10 else "NOT SET",
+        "all_env_keys_with_google": [k for k in os.environ.keys() if "GOOGLE" in k.upper()],
     }
 
 
