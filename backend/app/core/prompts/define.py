@@ -232,6 +232,8 @@ The user has currently selected (or defaulted to): **{framework_type}**
 }}
 ```
 
+**⚠️ IMPORTANT:** The `finer_assessment` field is **REQUIRED** whenever you provide research question formulations (Broad, Focused, Alternative). Do NOT omit it!
+
 ### Rules for `framework_data`:
 1. Use the **exact component keys** for the *currently active* framework: {', '.join([f'"{c}"' for c in components])}
 2. Use **empty string `""`** if component is not yet defined.
