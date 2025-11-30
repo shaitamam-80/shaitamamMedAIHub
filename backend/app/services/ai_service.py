@@ -26,23 +26,32 @@ class AIService:
     def __init__(self):
         # Rate limiting: max 5 concurrent API calls
         self._semaphore = asyncio.Semaphore(5)
+        self._gemini_pro: Optional[ChatGoogleGenerativeAI] = None
+        self._gemini_flash: Optional[ChatGoogleGenerativeAI] = None
 
-        # Initialize Gemini models
-        # Using gemini-2.5-flash for all tasks (best balance of speed and quality)
-        # Note: gemini-1.5-* models are deprecated, use gemini-2.5-flash instead
-        self.gemini_pro = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_PRO_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
-            temperature=settings.TEMPERATURE,
-            max_tokens=settings.MAX_TOKENS,
-        )
+    @property
+    def gemini_pro(self) -> ChatGoogleGenerativeAI:
+        """Lazy initialization of Gemini Pro model"""
+        if self._gemini_pro is None:
+            self._gemini_pro = ChatGoogleGenerativeAI(
+                model=settings.GEMINI_PRO_MODEL,
+                google_api_key=settings.GOOGLE_API_KEY,
+                temperature=settings.TEMPERATURE,
+                max_tokens=settings.MAX_TOKENS,
+            )
+        return self._gemini_pro
 
-        self.gemini_flash = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_FLASH_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
-            temperature=settings.TEMPERATURE,
-            max_tokens=settings.MAX_TOKENS,
-        )
+    @property
+    def gemini_flash(self) -> ChatGoogleGenerativeAI:
+        """Lazy initialization of Gemini Flash model"""
+        if self._gemini_flash is None:
+            self._gemini_flash = ChatGoogleGenerativeAI(
+                model=settings.GEMINI_FLASH_MODEL,
+                google_api_key=settings.GOOGLE_API_KEY,
+                temperature=settings.TEMPERATURE,
+                max_tokens=settings.MAX_TOKENS,
+            )
+        return self._gemini_flash
 
     @retry(
         stop=stop_after_attempt(3),
