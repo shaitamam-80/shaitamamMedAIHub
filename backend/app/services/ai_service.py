@@ -225,6 +225,24 @@ Text: {text}""")
                 translated[key] = value
         return translated
 
+    def _generate_fallback_query(self, framework_data: Dict[str, Any], framework_type: str) -> str:
+        """
+        Generate a basic PubMed query from framework data when AI fails.
+        Creates a simple AND-based query from non-empty framework components.
+        """
+        terms = []
+        for key, value in framework_data.items():
+            if value and isinstance(value, str) and len(value.strip()) > 0:
+                # Clean the value and create a search term
+                clean_value = value.strip()
+                # Use tiab (title/abstract) for broader searching
+                terms.append(f'({clean_value}[tiab])')
+
+        if terms:
+            return " AND ".join(terms)
+        else:
+            return ""
+
     async def generate_pubmed_query(
         self,
         framework_data: Dict[str, Any],
@@ -300,18 +318,24 @@ Return the complete JSON structure as specified in your instructions."""
             # Log the raw response for debugging
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"Failed to parse query response: {response.content[:500]}")
+            logger.error(f"Failed to parse query response: {response.content[:500] if response.content else 'Empty response'}")
 
-            # Fallback structure if parsing fails
+            # Generate fallback query from framework data
+            fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+
             return {
-                "message": "Failed to generate query strategy. Please try again.",
+                "message": "Query generated using simplified strategy. For best results, try regenerating.",
                 "concepts": [],
                 "queries": {
-                    "broad": "",
-                    "focused": "",
-                    "clinical_filtered": ""
+                    "broad": fallback_query,
+                    "focused": fallback_query,
+                    "clinical_filtered": fallback_query
                 },
-                "toolbox": [],
+                "toolbox": [
+                    {"label": "Limit to Last 5 Years", "query": 'AND ("2020/01/01"[Date - Publication] : "3000"[Date - Publication])'},
+                    {"label": "English Language Only", "query": "AND English[lang]"},
+                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
+                ],
                 "framework_type": framework_type,
                 "framework_data": english_framework_data
             }
