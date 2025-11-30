@@ -227,20 +227,86 @@ Text: {text}""")
 
     def _generate_fallback_query(self, framework_data: Dict[str, Any], framework_type: str) -> str:
         """
-        Generate a basic PubMed query from framework data when AI fails.
-        Creates a simple AND-based query from non-empty framework components.
+        Generate a proper PubMed query from framework data when AI fails.
+        Creates Boolean query with proper structure based on framework type.
         """
-        terms = []
-        for key, value in framework_data.items():
-            if value and isinstance(value, str) and len(value.strip()) > 0:
-                # Clean the value and create a search term
-                clean_value = value.strip()
-                # Use tiab (title/abstract) for broader searching
-                terms.append(f'({clean_value}[tiab])')
+        # Map common framework keys to their role
+        population_keys = ['population', 'P', 'patient', 'participants', 'condition', 'Co']
+        intervention_keys = ['intervention', 'I', 'exposure', 'E', 'phenomenon', 'Ph']
+        comparison_keys = ['comparison', 'C', 'control']
+        outcome_keys = ['outcome', 'O', 'result', 'evaluation', 'Ev']
 
-        if terms:
-            return " AND ".join(terms)
+        def extract_search_terms(value: str) -> list:
+            """Extract meaningful search terms from a value."""
+            if not value or not isinstance(value, str):
+                return []
+
+            # Remove the research question if it's embedded
+            if '?' in value and len(value) > 100:
+                return []
+
+            # Split on common delimiters
+            terms = []
+            clean_value = value.strip()
+
+            # If it's a short phrase (likely a concept), use it directly
+            if len(clean_value) < 80:
+                # Remove parenthetical abbreviations for cleaner search
+                import re
+                clean_value = re.sub(r'\s*\([^)]*\)\s*', ' ', clean_value).strip()
+                if clean_value:
+                    terms.append(clean_value)
+
+            return terms
+
+        # Collect terms by category
+        population_terms = []
+        intervention_terms = []
+        comparison_terms = []
+        outcome_terms = []
+
+        for key, value in framework_data.items():
+            key_lower = key.lower()
+            extracted = extract_search_terms(value)
+
+            if any(pk.lower() in key_lower for pk in population_keys):
+                population_terms.extend(extracted)
+            elif any(ik.lower() in key_lower for ik in intervention_keys):
+                intervention_terms.extend(extracted)
+            elif any(ck.lower() in key_lower for ck in comparison_keys):
+                comparison_terms.extend(extracted)
+            elif any(ok.lower() in key_lower for ok in outcome_keys):
+                outcome_terms.extend(extracted)
+
+        # Build query parts
+        query_parts = []
+
+        if population_terms:
+            p_query = " OR ".join([f'"{t}"[tiab]' for t in population_terms[:2]])
+            query_parts.append(f'({p_query})')
+
+        if intervention_terms:
+            i_query = " OR ".join([f'"{t}"[tiab]' for t in intervention_terms[:2]])
+            query_parts.append(f'({i_query})')
+
+        if comparison_terms:
+            c_query = " OR ".join([f'"{t}"[tiab]' for t in comparison_terms[:2]])
+            query_parts.append(f'({c_query})')
+
+        if outcome_terms:
+            o_query = " OR ".join([f'"{t}"[tiab]' for t in outcome_terms[:2]])
+            query_parts.append(f'({o_query})')
+
+        if query_parts:
+            return " AND ".join(query_parts)
         else:
+            # Last resort: use any non-empty values
+            all_terms = []
+            for value in framework_data.values():
+                if value and isinstance(value, str) and len(value.strip()) < 50:
+                    all_terms.append(f'"{value.strip()}"[tiab]')
+            if all_terms:
+                return " AND ".join(all_terms[:3])
             return ""
 
     async def generate_pubmed_query(
@@ -262,25 +328,43 @@ Text: {text}""")
         # Translate framework data to English if needed (PubMed requires English)
         english_framework_data = await self._translate_framework_data(framework_data)
 
-        # Use the new query system prompt
-        system_prompt = get_query_system_prompt(framework_type)
-
         # Build the request with translated data
         framework_text = "\n".join([
-            f"**{key}:** {value}"
+            f"- {key}: {value}"
             for key, value in english_framework_data.items()
             if value  # Only include non-empty values
         ])
 
-        user_message = f"""Generate a comprehensive PubMed search strategy for this {framework_type} framework:
+        # Use a simpler, more focused prompt for better JSON generation
+        simple_prompt = f"""You are a PubMed search expert. Generate search queries for this {framework_type} research framework:
 
 {framework_text}
 
-Return the complete JSON structure as specified in your instructions."""
+Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+{{
+  "message": "Brief explanation of the search strategy",
+  "concepts": [
+    {{"component": "P", "terms": ["term1[tiab]", "term2[Mesh]"]}}
+  ],
+  "queries": {{
+    "broad": "PubMed query with OR operators for high recall",
+    "focused": "PubMed query with AND operators for precision",
+    "clinical_filtered": "Focused query AND (randomized controlled trial[pt] OR clinical trial[pt])"
+  }},
+  "toolbox": [
+    {{"label": "Limit to 5 years", "query": "AND (2020:2025[dp])"}}
+  ]
+}}
+
+Rules for queries:
+1. Use [tiab] for title/abstract, [Mesh] for MeSH terms
+2. Group synonyms with OR: (term1[tiab] OR term2[tiab])
+3. Combine concepts with AND
+4. Include truncation where appropriate: child*
+5. Quote multi-word phrases: "heart failure"[tiab]"""
 
         messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_message)
+            HumanMessage(content=simple_prompt)
         ]
 
         # Get response from Gemini (using flash for speed)
