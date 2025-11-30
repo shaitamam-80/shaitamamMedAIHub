@@ -60,23 +60,32 @@ class AIService:
         return self._gemini_flash
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(2),  # Reduced from 3 for faster failure
+        wait=wait_exponential(multiplier=1, min=1, max=5),  # Faster retry
         retry=retry_if_exception_type(ResourceExhausted)
     )
-    async def _invoke_with_retry(self, model, messages):
+    async def _invoke_with_retry(self, model, messages, timeout_seconds: int = 30):
         """
-        Invoke model with rate limiting and automatic retry on ResourceExhausted.
+        Invoke model with rate limiting, timeout, and automatic retry.
 
         Args:
             model: The Gemini model to use
             messages: List of messages to send
+            timeout_seconds: Maximum time to wait for response
 
         Returns:
             Model response
         """
         async with self._semaphore:
-            return await model.ainvoke(messages)
+            try:
+                return await asyncio.wait_for(
+                    model.ainvoke(messages),
+                    timeout=timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                import logging
+                logging.getLogger(__name__).error(f"AI request timed out after {timeout_seconds}s")
+                raise
 
     def _extract_json(self, text: str, find_object: bool = True) -> Optional[Dict[str, Any]]:
         """
@@ -218,14 +227,43 @@ Text: {text}""")
         return response.content.strip()
 
     async def _translate_framework_data(self, framework_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Translate all Hebrew values in framework_data to English"""
-        translated = {}
-        for key, value in framework_data.items():
-            if isinstance(value, str) and self._contains_hebrew(value):
-                translated[key] = await self._translate_to_english(value)
-            else:
-                translated[key] = value
-        return translated
+        """Translate all Hebrew values in framework_data to English in ONE API call"""
+        # Find which fields need translation
+        fields_to_translate = {
+            key: value for key, value in framework_data.items()
+            if isinstance(value, str) and self._contains_hebrew(value)
+        }
+
+        if not fields_to_translate:
+            return framework_data.copy()
+
+        # Translate all fields in one API call
+        fields_text = "\n".join([f"{key}: {value}" for key, value in fields_to_translate.items()])
+
+        messages = [
+            HumanMessage(content=f"""Translate these Hebrew medical research terms to English.
+Return ONLY a JSON object with the same keys and English translations.
+
+{fields_text}
+
+Example response format:
+{{"population": "Adults with diabetes", "intervention": "Exercise therapy"}}""")
+        ]
+
+        try:
+            response = await self._invoke_with_retry(self.gemini_flash, messages)
+            translations = self._extract_json(response.content, find_object=True)
+
+            if translations:
+                # Merge translations with original data
+                result = framework_data.copy()
+                result.update(translations)
+                return result
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Translation failed, using original: {e}")
+
+        return framework_data.copy()
 
     def _generate_fallback_query(self, framework_data: Dict[str, Any], framework_type: str) -> str:
         """
@@ -385,8 +423,30 @@ Generate professional PubMed queries now. Return ONLY the JSON object."""
             HumanMessage(content=query_prompt)
         ]
 
-        # Get response from Gemini (using flash for speed)
-        response = await self._invoke_with_retry(self.gemini_flash, messages)
+        # Get response from Gemini with timeout
+        try:
+            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=25)
+        except (asyncio.TimeoutError, Exception) as e:
+            import logging
+            logging.getLogger(__name__).error(f"Query generation failed: {e}")
+            # Return fallback immediately on error
+            fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+            return {
+                "message": "Query generated using fast fallback strategy.",
+                "concepts": [],
+                "queries": {
+                    "broad": fallback_query,
+                    "focused": fallback_query,
+                    "clinical_filtered": fallback_query
+                },
+                "toolbox": [
+                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
+                    {"label": "English Language Only", "query": "AND English[lang]"},
+                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
+                ],
+                "framework_type": framework_type,
+                "framework_data": english_framework_data
+            }
 
         # Parse JSON response with robust extraction
         result = self._extract_json(response.content, find_object=True)
