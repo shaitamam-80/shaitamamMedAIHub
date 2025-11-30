@@ -255,15 +255,15 @@ The FINER assessment evaluates the quality of the research question:
 
 **Example `finer_assessment`:**
 ```json
-"finer_assessment": {
-  "F": {"score": "high", "reason": "Large accessible population, standard intervention"},
-  "I": {"score": "high", "reason": "Major public health concern"},
-  "N": {"score": "medium", "reason": "Adds comparison data to existing literature"},
-  "E": {"score": "high", "reason": "Both interventions are established and safe"},
-  "R": {"score": "high", "reason": "Results could influence clinical guidelines"},
+"finer_assessment": {{
+  "F": {{"score": "high", "reason": "Large accessible population, standard intervention"}},
+  "I": {{"score": "high", "reason": "Major public health concern"}},
+  "N": {{"score": "medium", "reason": "Adds comparison data to existing literature"}},
+  "E": {{"score": "high", "reason": "Both interventions are established and safe"}},
+  "R": {{"score": "high", "reason": "Results could influence clinical guidelines"}},
   "overall": "proceed",
   "suggestions": ["Consider specifying outcome measurement tools"]
-}
+}}
 ```
 
 ---
