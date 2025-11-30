@@ -58,7 +58,7 @@ npx tsc --noEmit            # Type check
 
 ### Three-Tool System
 
-1. **Define Tool** (`/define`): AI chat to formulate research questions using frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER)
+1. **Define Tool** (`/define`): AI chat to formulate research questions using frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER, PFO, PICOT, PICOC)
 2. **Query Tool** (`/query`): Generates PubMed boolean search queries from framework data
 3. **Review Tool** (`/review`): Upload MEDLINE files, AI screens abstracts for relevance
 
@@ -441,8 +441,9 @@ DROP TABLE IF EXISTS projects CASCADE;
 ### Railway (Backend)
 
 - Auto-deploys from `main` branch
-- Uses `railway.json` + `nixpacks.toml`
+- Uses `Dockerfile` in `/backend` directory
 - Environment variables in Railway dashboard
+- Builder: Dockerfile (not Railpack/Nixpacks)
 
 ### Vercel (Frontend)
 
@@ -482,6 +483,14 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ## Recent Changes Log
 
+### 2025-11-30
+
+- Fixed Railway deployment (switched from Railpack to Dockerfile)
+- Added lazy initialization for `ai_service` and `db_service` to avoid build-time env var issues
+- Added default empty values for required env vars (`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`) for Docker build
+- Updated database constraint to support additional frameworks: PFO, PICOT, PICOC
+- Removed temporary debug endpoint `/debug/env`
+
 ### 2024-11-27
 
 - Fixed Supabase connection (service role key had extra space)
@@ -494,6 +503,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 - `ProjectResponse.id` and `user_id` changed from UUID to str (Supabase compatibility)
 - `framework_data` relaxed to `Any` type for legacy data support
+- `valid_framework_type` constraint updated to include: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER, PFO, PICOT, PICOC
 
 ---
 
@@ -508,6 +518,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 | DB Service | `backend/app/services/database.py` |
 | Schemas | `backend/app/api/models/schemas.py` |
 | Framework prompts | `backend/app/core/prompts/shared.py` |
+| Dockerfile | `backend/Dockerfile` |
 | API Client | `frontend/lib/api.ts` |
 | Supabase Client | `frontend/lib/supabase.ts` |
 | Auth Context | `frontend/contexts/auth-context.tsx` |
