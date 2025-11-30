@@ -490,6 +490,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 - Added default empty values for required env vars (`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`) for Docker build
 - Updated database constraint to support additional frameworks: PFO, PICOT, PICOC
 - Removed temporary debug endpoint `/debug/env`
+- Removed Research Framework selection from project creation form (AI auto-detects framework type)
 
 ### 2024-11-27
 
