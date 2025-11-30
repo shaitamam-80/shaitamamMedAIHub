@@ -7,6 +7,7 @@ import httpx
 import logging
 from typing import Dict, Any, List, Optional
 from xml.etree import ElementTree
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,17 @@ class PubMedService:
 
     def __init__(self):
         self.base_url = EUTILS_BASE_URL
-        # Optional: Add API key for higher rate limits
-        # self.api_key = settings.NCBI_API_KEY
+        # API key for higher rate limits (10 req/sec vs 3 req/sec)
+        self.api_key = settings.NCBI_API_KEY
+        self.email = settings.NCBI_EMAIL
+
+    def _add_auth_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Add API key and email to request params if configured"""
+        if self.api_key:
+            params["api_key"] = self.api_key
+        if self.email:
+            params["email"] = self.email
+        return params
 
     async def search(
         self,
@@ -42,14 +52,14 @@ class PubMedService:
         try:
             # Step 1: ESearch - Get PMIDs matching the query
             esearch_url = f"{self.base_url}/esearch.fcgi"
-            esearch_params = {
+            esearch_params = self._add_auth_params({
                 "db": "pubmed",
                 "term": query,
                 "retmax": max_results,
                 "retmode": "json",
                 "sort": "pub+date" if sort == "date" else "relevance",
                 "usehistory": "y"
-            }
+            })
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 esearch_response = await client.get(esearch_url, params=esearch_params)
@@ -70,11 +80,11 @@ class PubMedService:
 
             # Step 2: ESummary - Get article details
             esummary_url = f"{self.base_url}/esummary.fcgi"
-            esummary_params = {
+            esummary_params = self._add_auth_params({
                 "db": "pubmed",
                 "id": ",".join(pmids),
                 "retmode": "json"
-            }
+            })
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 esummary_response = await client.get(esummary_url, params=esummary_params)
@@ -136,11 +146,11 @@ class PubMedService:
         """
         try:
             efetch_url = f"{self.base_url}/efetch.fcgi"
-            efetch_params = {
+            efetch_params = self._add_auth_params({
                 "db": "pubmed",
                 "id": pmid,
                 "retmode": "xml"
-            }
+            })
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(efetch_url, params=efetch_params)
@@ -229,12 +239,12 @@ class PubMedService:
         """
         try:
             esearch_url = f"{self.base_url}/esearch.fcgi"
-            esearch_params = {
+            esearch_params = self._add_auth_params({
                 "db": "pubmed",
                 "term": query,
                 "retmax": 0,  # Don't return any results
                 "retmode": "json"
-            }
+            })
 
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(esearch_url, params=esearch_params)

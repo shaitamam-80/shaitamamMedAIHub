@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     TEMPERATURE: float = 0.7
     BATCH_SIZE: int = 10  # Number of abstracts to process in one AI call
 
+    # NCBI PubMed API Settings
+    # With API key: 10 requests/second, without: 3 requests/second
+    NCBI_API_KEY: Optional[str] = None
+    NCBI_EMAIL: Optional[str] = None  # Required by NCBI for identification
+
     class Config:
         env_file = ".env"
         case_sensitive = True
