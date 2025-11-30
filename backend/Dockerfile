@@ -12,6 +12,9 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Railway provides PORT env var
+ENV PORT=8000
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use shell form to allow env var substitution
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
