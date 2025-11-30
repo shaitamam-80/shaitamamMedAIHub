@@ -164,29 +164,6 @@ export default function ProjectsPage() {
                 className="bg-background"
               />
             </div>
-
-            <div>
-              <Label htmlFor="framework">Research Framework</Label>
-              <select
-                id="framework"
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={newProject.framework_type}
-                onChange={(e) =>
-                  setNewProject({
-                    ...newProject,
-                    framework_type: e.target.value,
-                  })
-                }
-              >
-                <option value="PICO">PICO (Clinical)</option>
-                <option value="CoCoPop">CoCoPop (Prevalence)</option>
-                <option value="PEO">PEO (Qualitative)</option>
-                <option value="SPIDER">SPIDER (Mixed Methods)</option>
-                <option value="SPICE">SPICE (Evaluation)</option>
-                <option value="ECLIPSE">ECLIPSE (Health Policy)</option>
-                <option value="FINER">FINER (Feasibility)</option>
-              </select>
-            </div>
           </CardContent>
           <CardFooter className="gap-2">
             <Button onClick={handleCreateProject} disabled={isLoading}>
@@ -218,15 +195,8 @@ export default function ProjectsPage() {
               className="flex flex-col group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-md"
             >
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FolderOpen className="h-5 w-5" />
-                  </div>
-                  {project.framework_type && (
-                    <span className="rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary-foreground border border-secondary/20">
-                      {project.framework_type}
-                    </span>
-                  )}
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <FolderOpen className="h-5 w-5" />
                 </div>
                 <CardTitle className="mt-4 line-clamp-1" title={project.name}>
                   {project.name}
