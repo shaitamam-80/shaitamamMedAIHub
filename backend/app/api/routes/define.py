@@ -5,7 +5,9 @@ Handles research question formulation with AI chat
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.api.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -20,6 +22,7 @@ from app.core.auth import get_current_user, UserPayload
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/define", tags=["define"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/frameworks", response_model=FrameworkSchemaResponse)
@@ -29,7 +32,9 @@ async def get_frameworks():
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def chat(
+    http_request: Request,
     request: ChatRequest,
     current_user: UserPayload = Depends(get_current_user)
 ):

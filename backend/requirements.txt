@@ -31,6 +31,9 @@ python-dotenv>=1.0.1
 # Date handling
 python-dateutil>=2.9.0
 
+# Rate limiting
+slowapi>=0.1.9
+
 # Testing (optional but recommended)
 pytest>=8.3.0
 pytest-asyncio>=0.24.0

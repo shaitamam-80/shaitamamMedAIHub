@@ -103,30 +103,45 @@ export default function ReviewPage() {
 
       // Poll for completion
       pollFileStatus(result.id)
-    } catch (error: any) {
-      toast.error(error.message || "Upload failed")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed"
+      toast.error(message)
     } finally {
       setIsUploading(false)
     }
   }
 
   const pollFileStatus = async (fileId: string) => {
+    const MAX_ATTEMPTS = 30; // 30 attempts * 2 seconds = 1 minute max
+    let attempts = 0;
+
     // Simple polling - in production use WebSockets
     const checkStatus = async () => {
+      attempts++;
+
+      if (attempts > MAX_ATTEMPTS) {
+        toast.error("File processing timeout. Please refresh to check status.");
+        return;
+      }
+
       try {
-        await loadAbstracts()
-        if (abstracts.length > 0) {
-          setViewMode('screening')
-          toast.success("File parsed successfully!")
+        // Make fresh API call to avoid stale closure
+        const freshAbstracts = await apiClient.getAbstracts(selectedProjectId);
+
+        if (freshAbstracts.length > 0) {
+          setAbstracts(freshAbstracts);
+          setViewMode('screening');
+          toast.success("File parsed successfully!");
         } else {
           // Keep polling
-          setTimeout(checkStatus, 2000)
+          setTimeout(checkStatus, 2000);
         }
       } catch (error) {
-        setTimeout(checkStatus, 2000)
+        // Continue polling on error
+        setTimeout(checkStatus, 2000);
       }
     }
-    setTimeout(checkStatus, 2000)
+    setTimeout(checkStatus, 2000);
   }
 
   const handleStartAnalysis = async () => {
@@ -152,8 +167,9 @@ export default function ReviewPage() {
         }
       }
       setTimeout(pollResults, 3000)
-    } catch (error: any) {
-      toast.error(error.message || "Analysis failed")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Analysis failed"
+      toast.error(message)
       setIsAnalyzing(false)
     }
   }
@@ -300,6 +316,7 @@ export default function ReviewPage() {
             <button
               onClick={() => setViewMode('screening')}
               className="text-sm text-primary hover:underline mt-4 text-center"
+              aria-label={`View ${abstracts.length} existing abstracts`}
             >
               View {abstracts.length} existing abstracts →
             </button>
@@ -320,6 +337,7 @@ export default function ReviewPage() {
           <button
             onClick={() => setViewMode('upload')}
             className="flex size-12 shrink-0 items-center justify-center text-foreground hover:bg-card rounded-full transition-colors"
+            aria-label="Go back to upload view"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
@@ -330,7 +348,10 @@ export default function ReviewPage() {
                 Analyzing...
               </span>
             )}
-            <button className="flex size-12 shrink-0 items-center justify-center text-foreground hover:bg-card rounded-full transition-colors">
+            <button
+              className="flex size-12 shrink-0 items-center justify-center text-foreground hover:bg-card rounded-full transition-colors"
+              aria-label="Filter abstracts"
+            >
               <Filter className="h-5 w-5" />
             </button>
           </div>
@@ -348,6 +369,7 @@ export default function ReviewPage() {
             className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 transition-colors ${
               statusFilter === 'all' ? 'bg-slate-200/50 dark:bg-slate-800' : 'bg-slate-200/30 dark:bg-slate-800/50'
             }`}
+            aria-label="Show all abstracts"
           >
             <p className="text-sm font-medium">Total: {stats.total}</p>
           </button>
@@ -356,6 +378,7 @@ export default function ReviewPage() {
             className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 transition-colors status-include ${
               statusFilter === 'include' ? 'ring-2 ring-emerald-500/50' : ''
             }`}
+            aria-label="Show included abstracts only"
           >
             <CheckCircle className="h-4 w-4" />
             <p className="text-sm font-medium">Included: {stats.include}</p>
@@ -365,6 +388,7 @@ export default function ReviewPage() {
             className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 transition-colors status-exclude ${
               statusFilter === 'exclude' ? 'ring-2 ring-red-500/50' : ''
             }`}
+            aria-label="Show excluded abstracts only"
           >
             <XCircle className="h-4 w-4" />
             <p className="text-sm font-medium">Excluded: {stats.exclude}</p>
@@ -374,6 +398,7 @@ export default function ReviewPage() {
             className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 transition-colors status-maybe ${
               statusFilter === 'maybe' ? 'ring-2 ring-amber-500/50' : ''
             }`}
+            aria-label="Show maybe abstracts only"
           >
             <HelpCircle className="h-4 w-4" />
             <p className="text-sm font-medium">Maybe: {stats.maybe}</p>
@@ -383,6 +408,7 @@ export default function ReviewPage() {
             className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg px-4 transition-colors status-pending ${
               statusFilter === 'pending' ? 'ring-2 ring-slate-500/50' : ''
             }`}
+            aria-label="Show pending abstracts only"
           >
             <p className="text-sm font-medium">Pending: {stats.pending}</p>
           </button>
@@ -501,6 +527,7 @@ function AbstractCard({ abstract, isExpanded, onToggle, onDecision }: AbstractCa
           <button
             onClick={onToggle}
             className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={isExpanded ? "Collapse abstract details" : "Expand abstract details"}
           >
             {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
@@ -568,7 +595,7 @@ function AbstractCard({ abstract, isExpanded, onToggle, onDecision }: AbstractCa
           {abstract.status !== 'include' && (
             <button
               onClick={() => onDecision(abstract.id, 'include')}
-              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors ${statusConfig.include.buttonClassName}`}
+              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${statusConfig.include.buttonClassName}`}
             >
               Include
             </button>
@@ -576,7 +603,7 @@ function AbstractCard({ abstract, isExpanded, onToggle, onDecision }: AbstractCa
           {abstract.status !== 'exclude' && (
             <button
               onClick={() => onDecision(abstract.id, 'exclude')}
-              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors ${statusConfig.exclude.buttonClassName}`}
+              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${statusConfig.exclude.buttonClassName}`}
             >
               Exclude
             </button>
@@ -584,7 +611,7 @@ function AbstractCard({ abstract, isExpanded, onToggle, onDecision }: AbstractCa
           {abstract.status !== 'maybe' && abstract.status !== 'pending' && (
             <button
               onClick={() => onDecision(abstract.id, 'maybe')}
-              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors ${statusConfig.maybe.buttonClassName}`}
+              className={`flex w-full items-center justify-center rounded-lg h-10 px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${statusConfig.maybe.buttonClassName}`}
             >
               Maybe
             </button>

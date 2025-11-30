@@ -31,6 +31,30 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.test
+*.env
+**/.env
+**/.env.*
+
+# Secret files
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.secrets
+**/*secret*
+**/*credential*
+**/*password*
+service-account*.json
+
+# API Keys
+*api_key*
+*apikey*
+*.keys
 
 # IDE
 .vscode/

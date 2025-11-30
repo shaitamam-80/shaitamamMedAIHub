@@ -6,18 +6,23 @@ Handles PubMed search query generation and execution
 import logging
 from uuid import UUID
 from typing import Optional, List
+import asyncio
 
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from pydantic import BaseModel, Field
 from app.api.models.schemas import QueryGenerateRequest, QueryGenerateResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.services.pubmed_service import pubmed_service
 from app.core.auth import get_current_user, UserPayload
+from app.core.exceptions import TranslationError, ValidationError, DatabaseError, convert_to_http_exception
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/query", tags=["query"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ============================================================================
@@ -70,7 +75,9 @@ class ResearchQuestionRequest(BaseModel):
 # ============================================================================
 
 @router.post("/generate", response_model=QueryGenerateResponse)
+@limiter.limit("20/minute")
 async def generate_query(
+    http_request: Request,
     request: QueryGenerateRequest,
     current_user: UserPayload = Depends(get_current_user)
 ):
@@ -100,37 +107,49 @@ async def generate_query(
             framework_data = project.get("framework_data", {})
 
         if not framework_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No framework data available. Please complete the Define tool first.",
-            )
+            raise ValidationError("No framework data available. Please complete the Define tool first.")
 
         # Get framework_type from project
         framework_type = project.get("framework_type", "PICO")
 
         # Generate comprehensive query strategy using AI
-        result = await ai_service.generate_pubmed_query(framework_data, framework_type)
+        try:
+            result = await ai_service.generate_pubmed_query(framework_data, framework_type)
+        except asyncio.TimeoutError:
+            logger.error(f"Query generation timed out for project {request.project_id}")
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Query generation timed out. Please try again with simpler framework data."
+            )
 
         # Save the focused query to database (primary query)
         focused_query = result.get("queries", {}).get("focused", "")
-        await db_service.save_query_string(
-            {
-                "project_id": str(request.project_id),
-                "query_text": focused_query,
-                "query_type": request.query_type,
-            }
-        )
+        try:
+            await db_service.save_query_string(
+                {
+                    "project_id": str(request.project_id),
+                    "query_text": focused_query,
+                    "query_type": request.query_type,
+                }
+            )
+        except Exception as db_error:
+            logger.error(f"Failed to save query string: {db_error}")
+            raise DatabaseError("Failed to save generated query to database")
 
         # Create analysis run record
-        await db_service.create_analysis_run(
-            {
-                "project_id": str(request.project_id),
-                "tool": "QUERY",
-                "status": "completed",
-                "results": result,
-                "config": {"framework_data": framework_data, "framework_type": framework_type},
-            }
-        )
+        try:
+            await db_service.create_analysis_run(
+                {
+                    "project_id": str(request.project_id),
+                    "tool": "QUERY",
+                    "status": "completed",
+                    "results": result,
+                    "config": {"framework_data": framework_data, "framework_type": framework_type},
+                }
+            )
+        except Exception as db_error:
+            logger.warning(f"Failed to create analysis run: {db_error}")
+            # Non-critical - continue anyway
 
         return QueryGenerateResponse(
             message=result.get("message", "Query generated successfully."),
@@ -143,11 +162,13 @@ async def generate_query(
 
     except HTTPException:
         raise
+    except (TranslationError, ValidationError, DatabaseError) as e:
+        raise convert_to_http_exception(e)
     except Exception as e:
-        logger.exception(f"Error generating query for project {request.project_id}: {e}")
+        logger.exception(f"Unexpected error generating query for project {request.project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while generating the query.",
+            detail="An unexpected error occurred while generating the query.",
         )
 
 
@@ -337,6 +358,30 @@ async def get_research_questions(
             project.get("framework_data", {})
         )
 
+        # Validate no Hebrew remains after translation
+        if ai_service._contains_hebrew(str(english_framework_data)):
+            logger.warning(f"Hebrew detected after translation for project {project_id}")
+            # Don't fail, but log - the existing validation below will handle it
+
+        # CRITICAL: Validate no Hebrew remains after translation
+        def contains_hebrew(text: str) -> bool:
+            """Check if text contains Hebrew characters"""
+            if not isinstance(text, str):
+                return False
+            return any('\u0590' <= char <= '\u05FF' for char in text)
+
+        # Check all framework data fields for Hebrew
+        hebrew_fields = [
+            key for key, value in english_framework_data.items()
+            if isinstance(value, str) and contains_hebrew(value)
+        ]
+
+        if hebrew_fields:
+            # Translation failed - raise clear error
+            raise TranslationError(
+                f"Translation failed: Hebrew characters remain in fields {', '.join(hebrew_fields)}. Please try again or ensure all text is in English."
+            )
+
         return {
             "project_id": str(project_id),
             "project_name": project.get("name", ""),
@@ -347,6 +392,8 @@ async def get_research_questions(
 
     except HTTPException:
         raise
+    except (TranslationError, ValidationError, DatabaseError) as e:
+        raise convert_to_http_exception(e)
     except Exception as e:
         logger.exception(f"Error getting research questions for project {project_id}: {e}")
         raise HTTPException(

@@ -33,6 +33,7 @@ import {
   type PubMedSearchResponse,
   type QueryHistoryItem,
 } from "@/lib/api";
+import { useBidiLayout } from "@/lib/hooks/useBidiLayout";
 import {
   ArrowRight,
   BookOpen,
@@ -64,6 +65,9 @@ export default function QueryPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>("select");
+
+  // Language detection for RTL support
+  const [detectedLanguage, setDetectedLanguage] = useState<'en' | 'he' | null>(null);
 
   // Research Questions State
   const [researchQuestions, setResearchQuestions] = useState<string[]>([]);
@@ -104,6 +108,9 @@ export default function QueryPage() {
   // Loading state for questions
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
+  // Use the RTL hook
+  const layout = useBidiLayout(detectedLanguage);
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -139,6 +146,13 @@ export default function QueryPage() {
       const questionsData = await apiClient.getResearchQuestions(projectId);
       setResearchQuestions(questionsData.research_questions || []);
       setFrameworkData(questionsData.framework_data || {});
+
+      // Detect language from framework data
+      if (questionsData.framework_data) {
+        const dataText = Object.values(questionsData.framework_data).join(' ');
+        const hasHebrew = /[\u0590-\u05FF]/.test(dataText);
+        setDetectedLanguage(hasHebrew ? 'he' : 'en');
+      }
 
       // Load query history
       const historyData = await apiClient.getQueryHistory(projectId);
@@ -264,7 +278,7 @@ export default function QueryPage() {
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" dir={layout.dir}>
       <Toaster position="top-right" />
 
       {/* Header */}

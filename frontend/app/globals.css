@@ -106,4 +106,27 @@
   .status-pending {
     @apply bg-slate-500/10 text-slate-400;
   }
+
+  /* Dark mode - improved contrast for WCAG compliance */
+  .dark .status-include {
+    @apply bg-emerald-500/20 text-emerald-300;
+  }
+  .dark .status-exclude {
+    @apply bg-red-500/20 text-red-300;
+  }
+  .dark .status-maybe {
+    @apply bg-amber-500/20 text-amber-300;
+  }
+  .dark .status-pending {
+    @apply bg-slate-500/20 text-slate-300;
+  }
+
+  /* Focus visible states for accessibility */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
 }

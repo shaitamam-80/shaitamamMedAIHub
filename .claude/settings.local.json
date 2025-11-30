@@ -30,7 +30,14 @@
       "Bash(del /f \"backend\\railway.json\")",
       "Bash(git restore:*)",
       "Bash(git checkout:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(railway link:*)",
+      "Bash(railway login:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git remote set-head:*)",
+      "Bash(git branch:*)",
+      "Bash(del /f \"c:\\Users\\shait\\OneDrive\\Documentos\\GitHub\\shaitamamMedAIHub\\.github\\workflows\\dependabot.yml\")"
     ],
     "deny": [],
     "ask": []

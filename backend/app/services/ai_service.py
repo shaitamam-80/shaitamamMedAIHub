@@ -75,7 +75,14 @@ class AIService:
 
         Returns:
             Model response
+
+        Raises:
+            asyncio.TimeoutError: If request exceeds timeout
+            ResourceExhausted: If API quota is exceeded (retried automatically)
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         async with self._semaphore:
             try:
                 return await asyncio.wait_for(
@@ -83,8 +90,13 @@ class AIService:
                     timeout=timeout_seconds
                 )
             except asyncio.TimeoutError:
-                import logging
-                logging.getLogger(__name__).error(f"AI request timed out after {timeout_seconds}s")
+                logger.error(f"AI request timed out after {timeout_seconds}s")
+                raise
+            except ResourceExhausted as e:
+                logger.warning(f"API quota exhausted, retry will occur: {e}")
+                raise  # Will be retried by @retry decorator
+            except Exception as e:
+                logger.error(f"Unexpected error during AI invocation: {type(e).__name__}: {e}")
                 raise
 
     def _extract_json(self, text: str, find_object: bool = True) -> Optional[Dict[str, Any]]:
@@ -98,6 +110,9 @@ class AIService:
         Returns:
             Parsed JSON object/array or None
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
             if find_object:
                 # Find first { and last }
@@ -114,7 +129,14 @@ class AIService:
 
             # Try parsing the whole text
             return json.loads(text)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON decode error: {e}. Text preview: {text[:200]}")
+            return None
+        except ValueError as e:
+            logger.warning(f"Value error during JSON extraction: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error during JSON extraction: {type(e).__name__}: {e}")
             return None
 
     async def extract_framework_data(
@@ -282,14 +304,28 @@ Example response format:
                                 # Last resort: transliterate or use generic placeholder
                                 result[key] = f"[{key} - see original]"
                                 logger.error(f"Could not translate field {key}, using placeholder")
+                        except asyncio.TimeoutError:
+                            logger.error(f"Single field translation timed out for {key}")
+                            result[key] = f"[{key} - translation timeout]"
                         except Exception as e:
-                            logger.error(f"Single field translation failed for {key}: {e}")
+                            logger.error(f"Single field translation failed for {key}: {type(e).__name__}: {e}")
                             result[key] = f"[{key} - see original]"
 
                 return result
-        except Exception as e:
-            logger.warning(f"Translation failed: {e}, attempting field-by-field translation")
-
+        except asyncio.TimeoutError:
+            logger.error("Batch translation timed out, attempting field-by-field translation")
+            # Fallback: translate each field individually
+            for key, value in fields_to_translate.items():
+                try:
+                    translated = await self._force_translate_single(value)
+                    if not self._contains_hebrew(translated):
+                        result[key] = translated
+                except asyncio.TimeoutError:
+                    logger.error(f"Individual translation timed out for {key}")
+                except Exception as e2:
+                    logger.error(f"Individual translation failed for {key}: {type(e2).__name__}: {e2}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Translation response was not valid JSON: {e}")
             # Fallback: translate each field individually
             for key, value in fields_to_translate.items():
                 try:
@@ -297,7 +333,17 @@ Example response format:
                     if not self._contains_hebrew(translated):
                         result[key] = translated
                 except Exception as e2:
-                    logger.error(f"Individual translation failed for {key}: {e2}")
+                    logger.error(f"Individual translation failed for {key}: {type(e2).__name__}: {e2}")
+        except Exception as e:
+            logger.error(f"Unexpected translation error: {type(e).__name__}: {e}")
+            # Fallback: translate each field individually
+            for key, value in fields_to_translate.items():
+                try:
+                    translated = await self._force_translate_single(value)
+                    if not self._contains_hebrew(translated):
+                        result[key] = translated
+                except Exception as e2:
+                    logger.error(f"Individual translation failed for {key}: {type(e2).__name__}: {e2}")
 
         return result
 
@@ -476,13 +522,57 @@ Generate professional PubMed queries now. Return ONLY the JSON object."""
         # Get response from Gemini with timeout
         try:
             response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=25)
-        except (asyncio.TimeoutError, Exception) as e:
+        except asyncio.TimeoutError:
             import logging
-            logging.getLogger(__name__).error(f"Query generation failed: {e}")
+            logger = logging.getLogger(__name__)
+            logger.error(f"Query generation timed out after 25s for framework {framework_type}")
+            # Return fallback immediately on timeout
+            fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+            return {
+                "message": "Query generated using fast fallback strategy (timeout).",
+                "concepts": [],
+                "queries": {
+                    "broad": fallback_query,
+                    "focused": fallback_query,
+                    "clinical_filtered": fallback_query
+                },
+                "toolbox": [
+                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
+                    {"label": "English Language Only", "query": "AND English[lang]"},
+                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
+                ],
+                "framework_type": framework_type,
+                "framework_data": english_framework_data
+            }
+        except ResourceExhausted as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"API quota exhausted during query generation: {e}")
+            fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+            return {
+                "message": "Query generated using fallback strategy (API quota exceeded).",
+                "concepts": [],
+                "queries": {
+                    "broad": fallback_query,
+                    "focused": fallback_query,
+                    "clinical_filtered": fallback_query
+                },
+                "toolbox": [
+                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
+                    {"label": "English Language Only", "query": "AND English[lang]"},
+                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
+                ],
+                "framework_type": framework_type,
+                "framework_data": english_framework_data
+            }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Query generation failed with unexpected error: {type(e).__name__}: {e}")
             # Return fallback immediately on error
             fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
             return {
-                "message": "Query generated using fast fallback strategy.",
+                "message": "Query generated using fallback strategy (error occurred).",
                 "concepts": [],
                 "queries": {
                     "broad": fallback_query,

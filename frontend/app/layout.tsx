@@ -33,6 +33,12 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-foreground px-4 py-2 rounded z-50"
+        >
+          Skip to main content
+        </a>
         <AuthProvider>
           <div className="flex h-screen overflow-hidden">
             {/* Persistent Sidebar */}
@@ -41,7 +47,7 @@ export default function RootLayout({
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto">
+            <main id="main-content" className="flex-1 overflow-y-auto">
               <ErrorBoundary>
                 {children}
                 <Toaster />

@@ -1,0 +1,306 @@
+{
+  "project": {
+    "name": "MedAI Hub",
+    "description": "AI-powered systematic literature review platform for medical researchers"
+  },
+  
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(backend/**)",
+      "Write(frontend/**)",
+      "Write(docs/**)",
+      "Write(.claude/**)",
+      "Bash(cd backend && python -m py_compile *)",
+      "Bash(cd backend && pytest *)",
+      "Bash(cd backend && python main.py)",
+      "Bash(cd frontend && npm install)",
+      "Bash(cd frontend && npm run build)",
+      "Bash(cd frontend && npm run dev)",
+      "Bash(cd frontend && npx tsc --noEmit)",
+      "Bash(git *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)"
+    ],
+    "deny": [
+      "Write(.env)",
+      "Write(.env.local)",
+      "Write(**/.env)",
+      "Write(**/.env.*)",
+      "Write(**/secrets/**)",
+      "Write(**/*secret*)",
+      "Write(**/*password*)",
+      "Write(**/*credential*)",
+      "Bash(rm -rf *)",
+      "Bash(rm -r *)",
+      "Bash(*SUPABASE*KEY*)",
+      "Bash(*GOOGLE_API_KEY*)",
+      "Bash(*SECRET*)",
+      "Bash(*PASSWORD*)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | bash)",
+      "Bash(eval *)"
+    ]
+  },
+
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "mkdir -p .claude/logs && echo '=== Session: '$(date '+%Y-%m-%d %H:%M:%S')' ===' >> .claude/logs/sessions.log"
+      }
+    ],
+
+    "preToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json, sys; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path',''); protected=['.env','.env.local','secrets/','password','credential','secret']; result=any(p in path.lower() for p in protected); sys.exit(2 if result else 0)\" 2>/dev/null || exit 0"
+          }
+        ]
+      }
+    ],
+
+    "postToolUse": [
+      {
+        "matcher": "Write(backend/**/*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd backend && python -m py_compile \"$TOOL_INPUT_FILE_PATH\" 2>&1 | head -5 || true"
+          },
+          {
+            "type": "command",
+            "command": "echo '[PYTHON] Syntax checked: '$TOOL_INPUT_FILE_PATH >> .claude/logs/activity.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(frontend/**/*.tsx)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd frontend && npx tsc --noEmit 2>&1 | head -10 || true"
+          },
+          {
+            "type": "command",
+            "command": "echo '[TSX] Type checked: '$TOOL_INPUT_FILE_PATH >> .claude/logs/activity.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(frontend/**/*.ts)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd frontend && npx tsc --noEmit 2>&1 | head -10 || true"
+          },
+          {
+            "type": "command",
+            "command": "echo '[TS] Type checked: '$TOOL_INPUT_FILE_PATH >> .claude/logs/activity.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(backend/app/api/routes/*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[ROUTE CHANGED] Update CLAUDE.md API Reference for: '$TOOL_INPUT_FILE_PATH >> .claude/logs/reminders.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(backend/app/api/models/schemas.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[SCHEMA CHANGED] Verify frontend types match: '$TOOL_INPUT_FILE_PATH >> .claude/logs/reminders.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(docs/schema.sql)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[DB SCHEMA CHANGED] Create migration script!' >> .claude/logs/reminders.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(frontend/lib/api.ts)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[API CLIENT CHANGED] Verify backend endpoints match' >> .claude/logs/reminders.log"
+          }
+        ]
+      }
+    ]
+  },
+
+  "agents": {
+    "orchestrator": {
+      "description": "Master coordinator for all agents",
+      "auto_trigger": [
+        "Complex multi-system requests",
+        "New feature requests",
+        "Multi-agent workflows"
+      ],
+      "priority": 1
+    },
+    "backend-agent": {
+      "description": "FastAPI, Python, API development",
+      "auto_trigger": [
+        "Write(backend/**/*.py)",
+        "Backend feature requests"
+      ]
+    },
+    "frontend-agent": {
+      "description": "Next.js, React, TypeScript development",
+      "auto_trigger": [
+        "Write(frontend/**/*.tsx)",
+        "Write(frontend/**/*.ts)",
+        "Frontend feature requests"
+      ]
+    },
+    "ui-ux-agent": {
+      "description": "Design, accessibility, user experience",
+      "auto_trigger": [
+        "New page or screen creation",
+        "UI improvement requests",
+        "Accessibility issues"
+      ]
+    },
+    "qa-agent": {
+      "description": "Code quality and review",
+      "auto_trigger": [
+        "Write(backend/app/api/routes/*.py)",
+        "Write(frontend/app/**/*.tsx)",
+        "After any implementation"
+      ]
+    },
+    "api-sync-agent": {
+      "description": "Backend/frontend synchronization",
+      "auto_trigger": [
+        "Write(backend/app/api/models/schemas.py)",
+        "Write(frontend/lib/api.ts)"
+      ]
+    },
+    "hebrew-validator": {
+      "description": "Hebrew content validation",
+      "auto_trigger": [
+        "Write(backend/app/api/routes/query.py)",
+        "Write(backend/app/services/ai_service.py)"
+      ]
+    },
+    "db-migration-agent": {
+      "description": "Database schema management",
+      "auto_trigger": [
+        "Write(docs/schema.sql)",
+        "Database change requests"
+      ]
+    },
+    "docs-agent": {
+      "description": "Documentation maintenance",
+      "auto_trigger": [
+        "After any feature completion",
+        "API changes",
+        "Schema changes"
+      ]
+    },
+    "deploy-checker": {
+      "description": "Deployment readiness verification",
+      "auto_trigger": [
+        "Before merge to main",
+        "Before merge to develop"
+      ]
+    },
+    "devops-agent": {
+      "description": "CI/CD, infrastructure, deployment operations",
+      "auto_trigger": [
+        "Deployment requests",
+        "Infrastructure changes",
+        "Production issues"
+      ]
+    },
+    "parallel-work-agent": {
+      "description": "Parallel development with Git Worktrees",
+      "auto_trigger": [
+        "Multiple independent tasks requested",
+        "Parallel feature development"
+      ]
+    }
+  },
+
+  "thinking_levels": {
+    "think": {
+      "description": "Basic reasoning for simple tasks",
+      "token_usage": "low",
+      "use_for": ["variable naming", "simple refactoring", "formatting"]
+    },
+    "think_hard": {
+      "description": "Deeper analysis for moderate complexity",
+      "token_usage": "medium",
+      "use_for": ["function implementation", "error handling", "API design"]
+    },
+    "think_harder": {
+      "description": "Thorough analysis for complex problems",
+      "token_usage": "high",
+      "use_for": ["debugging", "integration issues", "performance problems"]
+    },
+    "ultrathink": {
+      "description": "Maximum depth for critical decisions",
+      "token_usage": "very_high",
+      "use_for": ["architecture", "security", "database design", "major refactoring"]
+    }
+  },
+
+  "logging": {
+    "directory": ".claude/logs",
+    "files": {
+      "sessions": "sessions.log",
+      "activity": "activity.log",
+      "reminders": "reminders.log"
+    },
+    "thinking_logs": {
+      "pattern": "{agent-name}-{YYYY-MM-DD-HH-MM-SS}.md",
+      "location": ".claude/logs/"
+    }
+  },
+
+  "conventions": {
+    "branches": {
+      "main": "Production-ready code",
+      "develop": "Development integration",
+      "feature/*": "New features",
+      "fix/*": "Bug fixes",
+      "hotfix/*": "Urgent production fixes",
+      "task/*": "Parallel task branches"
+    },
+    "commits": {
+      "format": "{type}: {description}",
+      "types": ["feat", "fix", "docs", "refactor", "test", "chore"]
+    },
+    "documentation": {
+      "primary": "CLAUDE.md",
+      "update_triggers": [
+        "New API endpoint",
+        "Schema change",
+        "Environment variable",
+        "Significant bug fix"
+      ]
+    }
+  }
+}

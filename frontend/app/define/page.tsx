@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import ReactMarkdown from "react-markdown";
+import { LanguageSelector } from "./components/LanguageSelector";
+import { ChatMessage as ChatMessageComponent } from "./components/ChatMessage";
 
 // Helper function to parse markdown-like content into structured sections
 const parseAssistantMessage = (content: string) => {
@@ -45,60 +46,6 @@ const parseAssistantMessage = (content: string) => {
     }
   }
   return content;
-};
-
-// Component to render formatted message with proper markdown and RTL support
-const FormattedMessage = ({
-  content,
-  role,
-}: {
-  content: string;
-  role: string;
-}) => {
-  const parsedContent =
-    role === "assistant" ? parseAssistantMessage(content) : content;
-
-  return (
-    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-      <ReactMarkdown
-        components={{
-          h1: ({ children }) => (
-            <h1 className="text-lg font-bold mt-4 mb-2 text-primary">
-              {children}
-            </h1>
-          ),
-          h2: ({ children }) => (
-            <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>
-          ),
-          h4: ({ children }) => (
-            <h4 className="text-sm font-medium mt-2 mb-1 text-muted-foreground">
-              {children}
-            </h4>
-          ),
-          p: ({ children }) => <p className="my-1">{children}</p>,
-          strong: ({ children }) => <strong>{children}</strong>,
-          em: ({ children }) => <em>{children}</em>,
-          code: ({ children }) => (
-            <code className="bg-muted px-1 rounded text-xs">{children}</code>
-          ),
-          ul: ({ children }) => (
-            <ul className="my-2 list-disc list-inside space-y-1">{children}</ul>
-          ),
-          ol: ({ children }) => (
-            <ol className="my-2 list-decimal list-inside space-y-1">
-              {children}
-            </ol>
-          ),
-          li: ({ children }) => <li className="my-0.5">{children}</li>,
-        }}
-      >
-        {parsedContent}
-      </ReactMarkdown>
-    </div>
-  );
 };
 
 export default function DefinePage() {
@@ -1051,43 +998,7 @@ export default function DefinePage() {
           >
             {/* Welcome / Language Selection */}
             {messages.length === 0 && !preferredLanguage && (
-              <div className="w-full flex justify-center py-8 md:py-16">
-                <div className="rounded-xl bg-card border border-border p-6 md:p-8 shadow-lg max-w-md w-full">
-                  <div className="flex justify-center mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Sparkles className="h-6 w-6" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold mb-2 text-center">
-                    Welcome to MedAI Hub
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-6 text-center">
-                    I'll help you formulate your research question and extract
-                    the key components.
-                  </p>
-                  <p className="text-sm font-medium mb-4 text-center">
-                    Choose your preferred language:
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setPreferredLanguage("he")}
-                      className="h-auto py-4 flex flex-col gap-1 hover:border-primary hover:bg-primary/5"
-                    >
-                      <span className="text-2xl">🇮🇱</span>
-                      <span className="font-medium">עברית</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setPreferredLanguage("en")}
-                      className="h-auto py-4 flex flex-col gap-1 hover:border-primary hover:bg-primary/5"
-                    >
-                      <span className="text-2xl">🇺🇸</span>
-                      <span className="font-medium">English</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <LanguageSelector onSelect={setPreferredLanguage} />
             )}
 
             {/* Initial Greeting after Language Selection */}
@@ -1137,54 +1048,14 @@ export default function DefinePage() {
             )}
 
             {/* Chat Messages */}
-            {messages.map((message, index) => {
-              const isHebrew = preferredLanguage === "he";
-              const isUser = message.role === "user";
-
-              return (
-                <div
-                  key={index}
-                  className={`flex items-start gap-3 max-w-2xl w-full ${
-                    isHebrew
-                      ? isUser
-                        ? "self-end flex-row-reverse"
-                        : "self-start"
-                      : isUser
-                      ? "self-start"
-                      : "self-end flex-row-reverse"
-                  }`}
-                >
-                  {/* Avatar */}
-                  {isUser ? (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground mt-1">
-                      <span className="text-xs font-bold">
-                        {isHebrew ? "אני" : "Me"}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary mt-1">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-                  )}
-
-                  {/* Message Bubble */}
-                  <div
-                    className={`rounded-lg p-4 shadow-sm ${
-                      isUser
-                        ? `bg-primary text-primary-foreground ${
-                            isHebrew ? "rounded-tr-none" : "rounded-tl-none"
-                          }`
-                        : `bg-muted/50 border border-border ${
-                            isHebrew ? "rounded-tl-none" : "rounded-tr-none"
-                          }`
-                    }`}
-                    dir={isHebrew ? "rtl" : "ltr"}
-                  >
-                    <FormattedMessage content={message.content} role={message.role} />
-                  </div>
-                </div>
-              );
-            })}
+            {messages.map((message, index) => (
+              <ChatMessageComponent
+                key={index}
+                content={message.content}
+                role={message.role}
+                preferredLanguage={preferredLanguage}
+              />
+            ))}
 
             {/* Loading Indicator */}
             {isLoading && (
@@ -1232,7 +1103,7 @@ export default function DefinePage() {
                   : "Tell me about your research..."
               }
               disabled={isLoading || !selectedProjectId || !preferredLanguage}
-              className="min-h-[50px] max-h-[150px] resize-none bg-background border-border focus:ring-primary"
+              className="min-h-[50px] max-h-[150px] resize-none bg-background border-border focus:ring-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               rows={1}
             />
             <Button
@@ -1241,7 +1112,7 @@ export default function DefinePage() {
                 isLoading || !inputMessage.trim() || !selectedProjectId
               }
               size="icon"
-              className="h-[50px] w-[50px] shrink-0"
+              className="h-[50px] w-[50px] shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

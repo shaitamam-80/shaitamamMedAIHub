@@ -11,13 +11,14 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks, Depends, Query
 from app.api.models.schemas import (
     FileUploadResponse,
     AbstractResponse,
     AbstractUpdateDecision,
     BatchAnalysisRequest,
     BatchAnalysisResponse,
+    PaginatedAbstractsResponse,
 )
 from app.services.database import db_service
 from app.services.ai_service import ai_service
@@ -28,6 +29,31 @@ from app.core.auth import get_current_user, UserPayload
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/review", tags=["review"])
+
+# File upload constants
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+def validate_medline_content(content: bytes) -> bool:
+    """
+    Check if content looks like MEDLINE format
+
+    MEDLINE files should contain PMID tags which are the primary identifier
+    for PubMed records.
+
+    Args:
+        content: File content as bytes
+
+    Returns:
+        bool: True if content appears to be MEDLINE format
+    """
+    try:
+        # Decode first 2000 bytes for performance
+        text = content.decode('utf-8', errors='replace')[:2000]
+        # MEDLINE files should have PMID tags
+        return 'PMID-' in text or 'PMID -' in text
+    except Exception:
+        return False
 
 
 @router.post("/upload", response_model=FileUploadResponse)
@@ -76,7 +102,6 @@ async def upload_medline_file(
         file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
 
         # Read file in chunks to validate size before saving
-        MAX_SIZE = settings.MAX_UPLOAD_SIZE
         chunks = []
         total_size = 0
 
@@ -85,15 +110,22 @@ async def upload_medline_file(
             if not chunk:
                 break
             total_size += len(chunk)
-            if total_size > MAX_SIZE:
+            if total_size > MAX_FILE_SIZE:
                 raise HTTPException(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"File exceeds maximum size of {MAX_SIZE // (1024*1024)}MB",
+                    detail=f"File exceeds maximum size of {MAX_FILE_SIZE // (1024*1024)}MB",
                 )
             chunks.append(chunk)
 
         content = b"".join(chunks)
         file_size = len(content)
+
+        # Validate MEDLINE content format
+        if not validate_medline_content(content):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid MEDLINE format. File must contain PMID records.",
+            )
 
         # Save file
         async with aiofiles.open(file_path, "wb") as f:
@@ -181,13 +213,15 @@ async def parse_medline_file(file_path: str, project_id: str, file_id: str):
         ).eq("id", file_id).execute()
 
 
-@router.get("/abstracts/{project_id}", response_model=List[AbstractResponse])
+@router.get("/abstracts/{project_id}", response_model=PaginatedAbstractsResponse)
 async def get_abstracts(
     project_id: UUID,
-    filter_status: str = None,
+    filter_status: str = Query(None, description="Filter by status: pending, included, excluded, maybe"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     current_user: UserPayload = Depends(get_current_user),
 ):
-    """Get all abstracts for a project, optionally filtered by status"""
+    """Get abstracts for a project with pagination, optionally filtered by status"""
     try:
         # Verify project exists and ownership
         project = await db_service.get_project(project_id)
@@ -200,8 +234,24 @@ async def get_abstracts(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
-        abstracts = await db_service.get_abstracts_by_project(project_id, filter_status)
-        return abstracts
+        # Get total count for pagination metadata
+        total = await db_service.count_abstracts_by_project(project_id, filter_status)
+
+        # Get paginated abstracts
+        abstracts = await db_service.get_abstracts_by_project(
+            project_id, status=filter_status, limit=limit, offset=offset
+        )
+
+        # Calculate has_more
+        has_more = (offset + limit) < total
+
+        return PaginatedAbstractsResponse(
+            items=abstracts,
+            total=total,
+            limit=limit,
+            offset=offset,
+            has_more=has_more
+        )
     except HTTPException:
         raise
     except Exception as e:

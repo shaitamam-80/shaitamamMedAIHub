@@ -181,16 +181,34 @@ class DatabaseService:
         return response.data or []
 
     async def get_abstracts_by_project(
-        self, project_id: UUID, status: Optional[str] = None
+        self, project_id: UUID, status: Optional[str] = None, limit: Optional[int] = None, offset: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        """Get abstracts for a project, optionally filtered by status"""
+        """Get abstracts for a project, optionally filtered by status with pagination"""
         query = self.client.table("abstracts").select("*").eq("project_id", str(project_id))
 
         if status:
             query = query.eq("status", status)
 
+        # Add pagination
+        if limit is not None:
+            query = query.limit(limit)
+        if offset is not None:
+            query = query.range(offset, offset + (limit or 100) - 1)
+
         response = query.order("created_at", desc=False).execute()
         return response.data or []
+
+    async def count_abstracts_by_project(
+        self, project_id: UUID, status: Optional[str] = None
+    ) -> int:
+        """Get total count of abstracts for a project"""
+        query = self.client.table("abstracts").select("id", count="exact").eq("project_id", str(project_id))
+
+        if status:
+            query = query.eq("status", status)
+
+        response = query.execute()
+        return response.count if hasattr(response, 'count') and response.count is not None else 0
 
     async def update_abstract_decision(
         self, abstract_id: UUID, decision_data: Dict[str, Any]

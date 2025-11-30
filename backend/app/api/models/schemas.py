@@ -60,7 +60,23 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    name: str = Field(..., min_length=1, max_length=255, examples=["Systematic Review on Exercise for Depression"])
+    description: Optional[str] = Field(None, examples=["A systematic review investigating exercise interventions for elderly patients with depression"])
+    framework_type: Optional[str] = Field(
+        None,
+        max_length=50,
+        description="Research framework type: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER",
+        examples=["PICO"]
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Exercise Interventions for Depression",
+                "description": "Investigating the effectiveness of exercise programs in treating depression in elderly populations",
+                "framework_type": "PICO"
+            }
+        }
 
 
 class ProjectUpdate(BaseModel):
@@ -91,9 +107,19 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     project_id: UUID
-    message: str
-    framework_type: Optional[str] = "PICO"
-    language: Optional[str] = "en"  # "en" or "he"
+    message: str = Field(..., examples=["I want to study the effects of exercise on depression in elderly patients"])
+    framework_type: Optional[str] = Field(default="PICO", examples=["PICO"])
+    language: Optional[str] = Field(default="en", examples=["en"], pattern="^(en|he)$")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "project_id": "123e4567-e89b-12d3-a456-426614174000",
+                "message": "I want to investigate whether exercise programs reduce depression symptoms in elderly patients compared to standard care",
+                "framework_type": "PICO",
+                "language": "en"
+            }
+        }
 
 
 class FinerScore(BaseModel):
@@ -148,8 +174,27 @@ class FinerAssessmentResponse(BaseModel):
 
 class QueryGenerateRequest(BaseModel):
     project_id: UUID
-    framework_data: Dict[str, Any]
-    query_type: str = Field(default="boolean", pattern="^(boolean|mesh|advanced)$")
+    framework_data: Dict[str, Any] = Field(..., examples=[{
+        "P": "Elderly patients with depression",
+        "I": "Exercise programs",
+        "C": "Standard care",
+        "O": "Depression symptoms"
+    }])
+    query_type: str = Field(default="boolean", pattern="^(boolean|mesh|advanced)$", examples=["boolean"])
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "project_id": "123e4567-e89b-12d3-a456-426614174000",
+                "framework_data": {
+                    "P": "Elderly patients with depression",
+                    "I": "Exercise programs",
+                    "C": "Standard care or usual care",
+                    "O": "Depression symptoms or depressive symptoms"
+                },
+                "query_type": "boolean"
+            }
+        }
 
 
 class ConceptAnalysis(BaseModel):
@@ -196,7 +241,7 @@ class FileUploadResponse(BaseModel):
 # ============================================================================
 
 class AbstractBase(BaseModel):
-    pmid: str
+    pmid: str = Field(..., pattern=r"^[0-9]{1,10}$", description="PubMed ID (1-10 digits)")
     title: Optional[str] = None
     abstract: Optional[str] = None
     authors: Optional[str] = None
@@ -223,6 +268,15 @@ class AbstractResponse(AbstractBase):
 class AbstractUpdateDecision(BaseModel):
     decision: str = Field(..., pattern="^(include|exclude|maybe)$")
     human_decision: Optional[str] = Field(None, pattern="^(include|exclude)$")
+
+
+class PaginatedAbstractsResponse(BaseModel):
+    """Paginated response for abstracts"""
+    items: List[AbstractResponse]
+    total: int = Field(..., description="Total number of abstracts in database")
+    limit: int = Field(..., description="Maximum items per page")
+    offset: int = Field(..., description="Number of items skipped")
+    has_more: bool = Field(..., description="Whether there are more items to fetch")
 
 
 # ============================================================================
@@ -258,8 +312,28 @@ class AnalysisRunResponse(AnalysisRunBase):
 class BatchAnalysisRequest(BaseModel):
     project_id: UUID
     file_id: UUID
-    criteria: Optional[Dict[str, Any]] = None  # Inclusion/exclusion criteria
-    batch_size: int = Field(default=10, ge=1, le=50)
+    criteria: Optional[Dict[str, Any]] = Field(None, examples=[{
+        "P": "Elderly patients with depression",
+        "I": "Exercise programs",
+        "C": "Standard care",
+        "O": "Depression symptoms"
+    }])
+    batch_size: int = Field(default=10, ge=1, le=50, examples=[10])
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "project_id": "123e4567-e89b-12d3-a456-426614174000",
+                "file_id": "987e6543-e21b-12d3-a456-426614174000",
+                "criteria": {
+                    "P": "Elderly patients with depression",
+                    "I": "Exercise programs",
+                    "C": "Standard care",
+                    "O": "Depression symptoms"
+                },
+                "batch_size": 10
+            }
+        }
 
 
 class BatchAnalysisResponse(BaseModel):

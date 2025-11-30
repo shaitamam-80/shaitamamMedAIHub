@@ -263,6 +263,33 @@ def test_client(app_with_mocks):
 
 
 # ============================================================================
+# Additional Fixtures (QA Agent additions)
+# ============================================================================
+
+@pytest.fixture
+def client():
+    """Simple test client without dependency overrides"""
+    from fastapi.testclient import TestClient
+    from main import app
+    return TestClient(app)
+
+
+@pytest.fixture
+def mock_auth_user():
+    """Mock auth user for testing"""
+    return {
+        "id": "test-user-id",
+        "email": "test@example.com"
+    }
+
+
+@pytest.fixture
+def auth_headers():
+    """Auth headers for API requests"""
+    return {"Authorization": "Bearer test-token"}
+
+
+# ============================================================================
 # Utility Functions
 # ============================================================================
 
