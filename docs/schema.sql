@@ -15,7 +15,20 @@ CREATE TABLE IF NOT EXISTS projects (
     framework_type VARCHAR(50), -- e.g., 'PICO', 'CoCoPop', 'PEO', 'SPIDER', etc.
     framework_data JSONB, -- Dynamic JSON data based on framework type
     user_id UUID, -- For multi-tenancy (add foreign key to auth.users if using Supabase Auth)
-    CONSTRAINT valid_framework_type CHECK (framework_type IN ('PICO', 'CoCoPop', 'PEO', 'SPIDER', 'SPICE', 'ECLIPSE', 'FINER'))
+    CONSTRAINT valid_framework_type CHECK (framework_type IN (
+        -- Core PICO family
+        'PICO', 'PICOT', 'PICOS', 'PICOC', 'PICOTS', 'PICOT-D', 'PICOTS-ComTeC',
+        -- JBI Standards
+        'CoCoPop', 'PEO', 'PECO', 'PFO', 'PIRD', 'PCC', 'PICo',
+        -- Qualitative
+        'SPIDER', 'SPICE',
+        -- Policy/Complex
+        'ECLIPSE', 'CIMO',
+        -- Specialized
+        'BeHEMoTh', 'PerSPEcTiF',
+        -- Legacy
+        'FINER'
+    ))
 );
 
 -- Files Table
