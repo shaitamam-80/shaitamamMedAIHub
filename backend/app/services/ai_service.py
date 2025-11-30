@@ -45,9 +45,12 @@ class AIService:
     def gemini_flash(self) -> ChatGoogleGenerativeAI:
         """Lazy initialization of Gemini Flash model"""
         if self._gemini_flash is None:
+            api_key = settings.GOOGLE_API_KEY
+            if not api_key:
+                raise ValueError("GOOGLE_API_KEY is not set. Please configure it in environment variables.")
             self._gemini_flash = ChatGoogleGenerativeAI(
                 model=settings.GEMINI_FLASH_MODEL,
-                google_api_key=settings.GOOGLE_API_KEY,
+                google_api_key=api_key,
                 temperature=settings.TEMPERATURE,
                 max_tokens=settings.MAX_TOKENS,
             )

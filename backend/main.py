@@ -61,6 +61,18 @@ async def health_check():
     return {"status": "healthy", "service": "MedAI Hub Backend"}
 
 
+@app.get("/debug/env")
+async def debug_env():
+    """Debug endpoint to check environment variables (temporary)"""
+    return {
+        "google_api_key_set": bool(settings.GOOGLE_API_KEY),
+        "google_api_key_length": len(settings.GOOGLE_API_KEY) if settings.GOOGLE_API_KEY else 0,
+        "google_api_key_prefix": settings.GOOGLE_API_KEY[:10] + "..." if settings.GOOGLE_API_KEY and len(settings.GOOGLE_API_KEY) > 10 else "NOT SET",
+        "supabase_url_set": bool(settings.SUPABASE_URL),
+        "supabase_key_set": bool(settings.SUPABASE_KEY),
+    }
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler to ensure CORS headers are included in error responses"""
