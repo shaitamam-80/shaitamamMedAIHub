@@ -37,7 +37,9 @@
       "Bash(git pull:*)",
       "Bash(git remote set-head:*)",
       "Bash(git branch:*)",
-      "Bash(del /f \"c:\\Users\\shait\\OneDrive\\Documentos\\GitHub\\shaitamamMedAIHub\\.github\\workflows\\dependabot.yml\")"
+      "Bash(del /f \"c:\\Users\\shait\\OneDrive\\Documentos\\GitHub\\shaitamamMedAIHub\\.github\\workflows\\dependabot.yml\")",
+      "Bash(gh pr list:*)",
+      "Bash(where:*)"
     ],
     "deny": [],
     "ask": []
