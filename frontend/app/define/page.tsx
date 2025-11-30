@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   AlertTriangle,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -427,45 +428,80 @@ export default function DefinePage() {
   };
 
   // Extract research questions from chat messages
+  // Focus on finding actual formulated questions, not explanatory text
   const extractQuestionsFromChat = (): string[] => {
     const questions: string[] = [];
-    const questionPatterns = [
-      // English patterns
-      /(?:Broad\s*Formulation|Focused\s*Formulation|Research\s*Question|Formulated\s*Question)[:\s]*[""]?([^"""\n]+(?:\n[^"""\n]+)?)/gi,
-      /(?:^|\n)\*\*(?:Broad|Focused|Research|Formulated)\s+(?:Formulation|Question)\*\*[:\s]*([^\n]+)/gi,
-      // Hebrew patterns
-      /(?:ניסוח\s*רחב|ניסוח\s*ממוקד|שאלת\s*המחקר|שאלת\s*מחקר)[:\s]*[""]?([^"""\n]+(?:\n[^"""\n]+)?)/gi,
-    ];
 
     messages.forEach((msg) => {
       if (msg.role === "assistant") {
         const content = parseAssistantMessage(msg.content);
 
-        questionPatterns.forEach((pattern) => {
+        // Hebrew: Look for questions in quotes after formulation labels
+        // Pattern: "שאלה" or quoted text after ניסוח רחב/ממוקד
+        const hebrewQuotedPatterns = [
+          // Questions in Hebrew quotes after labels
+          /"([^"]+\?[^"]*)"/g,
+          /"([^"]+\?[^"]*)"/g,
+        ];
+
+        // English: Look for questions in quotes
+        const englishQuotedPatterns = [
+          /"([^"]+\?[^"]*)"/g,
+        ];
+
+        // Determine language based on content
+        const isHebrew = /[\u0590-\u05FF]/.test(content);
+        const patterns = isHebrew ? hebrewQuotedPatterns : englishQuotedPatterns;
+
+        patterns.forEach((pattern) => {
           let match;
           const regex = new RegExp(pattern.source, pattern.flags);
           while ((match = regex.exec(content)) !== null) {
-            const question = match[1].trim();
-            if (question && question.length > 20 && !questions.includes(question)) {
+            let question = match[1].trim();
+
+            // Clean up the question - remove leading/trailing punctuation
+            question = question.replace(/^[\s\-–—:]+/, "").replace(/[\s\-–—:]+$/, "");
+
+            // Validate: Must be a substantial question (30+ chars), end with ?, and not be English translation marker
+            const isValidQuestion =
+              question.length >= 30 &&
+              question.endsWith("?") &&
+              !question.toLowerCase().startsWith("what is the") && // Skip if it's English in Hebrew mode
+              !question.includes("English Translation") &&
+              !question.includes("🔤") &&
+              !questions.some((q) => q === question || q.includes(question) || question.includes(q));
+
+            if (isValidQuestion) {
               questions.push(question);
             }
           }
         });
 
-        // Also look for questions ending with "?" that are longer sentences
-        const questionMarkMatches = content.match(/[^.!?\n]{30,}\?/g);
-        if (questionMarkMatches) {
-          questionMarkMatches.forEach((q: string) => {
-            const cleaned = q.trim();
-            if (cleaned && !questions.includes(cleaned)) {
-              questions.push(cleaned);
+        // Fallback: If no quoted questions found and content is Hebrew,
+        // look for lines starting with common question words
+        if (questions.length === 0 && isHebrew) {
+          const lines = content.split("\n");
+          lines.forEach((line: string) => {
+            const trimmed = line.trim();
+            // Hebrew questions often start with: מהי, מהו, האם, כיצד, מה, איך
+            if (
+              /^[""]?(מהי|מהו|האם|כיצד|מה|איך|בקרב)/.test(trimmed) &&
+              trimmed.includes("?") &&
+              trimmed.length >= 30 &&
+              trimmed.length <= 500 // Not too long (avoid paragraphs)
+            ) {
+              const question = trimmed.replace(/^[""]/, "").replace(/[""]$/, "").trim();
+              if (!questions.includes(question)) {
+                questions.push(question);
+              }
             }
           });
         }
       }
     });
 
-    return questions;
+    // Limit to max 5 questions to avoid overwhelming the user
+    return questions.slice(0, 5);
   };
 
   // Handle opening FINER dialog - auto-extract questions
@@ -554,6 +590,26 @@ export default function DefinePage() {
           : "Failed to assess research questions"
       );
     }
+  };
+
+  // Send question with FINER suggestions back to chat for revision
+  const handleSendForRevision = (question: string, result: FinerAssessmentResponse) => {
+    // Build a message with the question and suggestions
+    const suggestionsText = result.suggestions.join("\n- ");
+    const revisionMessage = preferredLanguage === "he"
+      ? `אני רוצה לשפר את שאלת המחקר הבאה על סמך הערכת FINER:\n\nשאלה: "${question}"\n\nהמלצות לשיפור:\n- ${suggestionsText}\n\nאנא עזור לי לנסח מחדש את השאלה בהתאם להמלצות אלו.`
+      : `I want to improve the following research question based on FINER assessment:\n\nQuestion: "${question}"\n\nSuggestions for improvement:\n- ${suggestionsText}\n\nPlease help me reformulate the question according to these suggestions.`;
+
+    // Close FINER dialog
+    setShowFinerDialog(false);
+
+    // Set the message in the input and send it
+    setInputMessage(revisionMessage);
+
+    // Small delay to allow state update, then send
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
   };
 
   const getScoreColor = (score: string) => {
@@ -942,6 +998,21 @@ export default function DefinePage() {
                                 <li key={idx}>{suggestion}</li>
                               ))}
                             </ul>
+
+                            {/* Send for Revision Button - only show if overall is revise or reconsider */}
+                            {(result.overall === "revise" || result.overall === "reconsider") && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSendForRevision(question, result)}
+                                className="mt-3 gap-2"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                                {preferredLanguage === "he"
+                                  ? "שלח לתיקון בצ'אט"
+                                  : "Send for revision in chat"}
+                              </Button>
+                            )}
                           </div>
                         )}
 
