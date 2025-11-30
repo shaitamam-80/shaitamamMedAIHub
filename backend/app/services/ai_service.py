@@ -17,7 +17,9 @@ from app.core.prompts import (
     get_extraction_prompt,
     get_query_system_prompt,
     get_finer_assessment_prompt,
-    FRAMEWORK_SCHEMAS
+    get_hedge_for_framework,
+    FRAMEWORK_SCHEMAS,
+    VALIDATED_HEDGES
 )
 
 
@@ -335,36 +337,52 @@ Text: {text}""")
             if value  # Only include non-empty values
         ])
 
-        # Use a simpler, more focused prompt for better JSON generation
-        simple_prompt = f"""You are a PubMed search expert. Generate search queries for this {framework_type} research framework:
+        # Get recommended hedge for this framework type
+        hedge = get_hedge_for_framework(framework_type)
+        hedge_info = ""
+        if hedge:
+            hedge_info = f"""
+For the clinical_filtered query, use this validated filter:
+{hedge['name']}: {hedge['query']}
+(Source: {hedge['citation']})"""
+
+        # Use a focused prompt that emphasizes JSON output
+        query_prompt = f"""You are a PubMed search expert. Create search queries for this {framework_type} framework:
 
 {framework_text}
 
-Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+IMPORTANT: Return ONLY valid JSON. No markdown code blocks, no explanations outside JSON.
+
+JSON Structure Required:
 {{
-  "message": "Brief explanation of the search strategy",
+  "message": "Brief description of the search strategy (1-2 sentences)",
   "concepts": [
-    {{"component": "P", "terms": ["term1[tiab]", "term2[Mesh]"]}}
+    {{"component": "P", "terms": ["elderly[tiab]", "aged[tiab]", "\\"Aged\\"[Mesh]"]}}
   ],
   "queries": {{
-    "broad": "PubMed query with OR operators for high recall",
-    "focused": "PubMed query with AND operators for precision",
-    "clinical_filtered": "Focused query AND (randomized controlled trial[pt] OR clinical trial[pt])"
+    "broad": "(population terms) AND (intervention terms)",
+    "focused": "(population terms) AND (intervention terms) AND (outcome terms)",
+    "clinical_filtered": "focused query AND clinical trial filter"
   }},
   "toolbox": [
-    {{"label": "Limit to 5 years", "query": "AND (2020:2025[dp])"}}
+    {{"label": "Limit to Last 5 Years", "query": "AND (2020:2025[dp])"}},
+    {{"label": "English Only", "query": "AND English[lang]"}},
+    {{"label": "Exclude Animals", "query": "NOT (animals[mh] NOT humans[mh])"}}
   ]
 }}
 
-Rules for queries:
-1. Use [tiab] for title/abstract, [Mesh] for MeSH terms
-2. Group synonyms with OR: (term1[tiab] OR term2[tiab])
-3. Combine concepts with AND
-4. Include truncation where appropriate: child*
-5. Quote multi-word phrases: "heart failure"[tiab]"""
+Query Building Rules:
+1. Each concept = (synonym1[tiab] OR synonym2[tiab] OR "MeSH Term"[Mesh])
+2. Combine concepts with AND
+3. Use truncation: child* (matches child, children, childhood)
+4. Quote multi-word terms: "heart failure"[tiab]
+5. Boolean operators MUST be UPPERCASE: AND, OR, NOT
+{hedge_info}
+
+Generate professional PubMed queries now. Return ONLY the JSON object."""
 
         messages = [
-            HumanMessage(content=simple_prompt)
+            HumanMessage(content=query_prompt)
         ]
 
         # Get response from Gemini (using flash for speed)
