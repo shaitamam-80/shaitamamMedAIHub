@@ -120,8 +120,10 @@ export default function DefinePage() {
   const [showProtocol, setShowProtocol] = useState(false);
   const [showFinerDialog, setShowFinerDialog] = useState(false);
   const [finerQuestion, setFinerQuestion] = useState("");
-  const [finerResult, setFinerResult] = useState<FinerAssessmentResponse | null>(null);
+  const [finerResults, setFinerResults] = useState<Map<string, FinerAssessmentResponse>>(new Map());
   const [isFinerLoading, setIsFinerLoading] = useState(false);
+  const [extractedQuestions, setExtractedQuestions] = useState<string[]>([]);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load projects and frameworks on mount
@@ -323,6 +325,37 @@ export default function DefinePage() {
       lines.push(``);
     });
 
+    // Add FINER Assessment Results if available
+    if (finerResults.size > 0) {
+      lines.push(`## FINER Quality Assessment`);
+      lines.push(``);
+
+      let questionNum = 1;
+      finerResults.forEach((result, question) => {
+        lines.push(`### Assessment ${questionNum}: ${question}`);
+        lines.push(``);
+        lines.push(`**Overall Recommendation:** ${result.overall.toUpperCase()}`);
+        lines.push(``);
+        lines.push(`| Criterion | Score | Reason |`);
+        lines.push(`|-----------|-------|--------|`);
+        lines.push(`| Feasible | ${result.F.score} | ${result.F.reason} |`);
+        lines.push(`| Interesting | ${result.I.score} | ${result.I.reason} |`);
+        lines.push(`| Novel | ${result.N.score} | ${result.N.reason} |`);
+        lines.push(`| Ethical | ${result.E.score} | ${result.E.reason} |`);
+        lines.push(`| Relevant | ${result.R.score} | ${result.R.reason} |`);
+        lines.push(``);
+
+        if (result.suggestions && result.suggestions.length > 0) {
+          lines.push(`**Suggestions for Improvement:**`);
+          result.suggestions.forEach((suggestion, idx) => {
+            lines.push(`${idx + 1}. ${suggestion}`);
+          });
+          lines.push(``);
+        }
+        questionNum++;
+      });
+    }
+
     if (messages.length > 0) {
       lines.push(`## Conversation History`);
       lines.push(``);
@@ -393,35 +426,134 @@ export default function DefinePage() {
     }
   };
 
+  // Extract research questions from chat messages
+  const extractQuestionsFromChat = (): string[] => {
+    const questions: string[] = [];
+    const questionPatterns = [
+      // English patterns
+      /(?:Broad\s*Formulation|Focused\s*Formulation|Research\s*Question|Formulated\s*Question)[:\s]*[""]?([^"""\n]+(?:\n[^"""\n]+)?)/gi,
+      /(?:^|\n)\*\*(?:Broad|Focused|Research|Formulated)\s+(?:Formulation|Question)\*\*[:\s]*([^\n]+)/gi,
+      // Hebrew patterns
+      /(?:ניסוח\s*רחב|ניסוח\s*ממוקד|שאלת\s*המחקר|שאלת\s*מחקר)[:\s]*[""]?([^"""\n]+(?:\n[^"""\n]+)?)/gi,
+    ];
+
+    messages.forEach((msg) => {
+      if (msg.role === "assistant") {
+        const content = parseAssistantMessage(msg.content);
+
+        questionPatterns.forEach((pattern) => {
+          let match;
+          const regex = new RegExp(pattern.source, pattern.flags);
+          while ((match = regex.exec(content)) !== null) {
+            const question = match[1].trim();
+            if (question && question.length > 20 && !questions.includes(question)) {
+              questions.push(question);
+            }
+          }
+        });
+
+        // Also look for questions ending with "?" that are longer sentences
+        const questionMarkMatches = content.match(/[^.!?\n]{30,}\?/g);
+        if (questionMarkMatches) {
+          questionMarkMatches.forEach((q: string) => {
+            const cleaned = q.trim();
+            if (cleaned && !questions.includes(cleaned)) {
+              questions.push(cleaned);
+            }
+          });
+        }
+      }
+    });
+
+    return questions;
+  };
+
+  // Handle opening FINER dialog - auto-extract questions
+  const handleOpenFinerDialog = (open: boolean) => {
+    setShowFinerDialog(open);
+    if (open) {
+      // Auto-extract questions when dialog opens
+      const extracted = extractQuestionsFromChat();
+      setExtractedQuestions(extracted);
+      // Pre-select all extracted questions
+      setSelectedQuestions(new Set(extracted));
+      // Clear previous results when opening fresh
+      setFinerResults(new Map());
+      setFinerQuestion("");
+    }
+  };
+
+  // Toggle question selection
+  const toggleQuestionSelection = (question: string) => {
+    setSelectedQuestions((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(question)) {
+        newSet.delete(question);
+      } else {
+        newSet.add(question);
+      }
+      return newSet;
+    });
+  };
+
   const handleFinerAssessment = async () => {
-    if (!selectedProjectId || !finerQuestion.trim()) return;
+    if (!selectedProjectId) return;
+
+    // Gather questions to assess (selected extracted + manual input)
+    const questionsToAssess: string[] = [];
+
+    // Add selected extracted questions
+    selectedQuestions.forEach((q) => questionsToAssess.push(q));
+
+    // Add manual question if provided and not already included
+    if (finerQuestion.trim() && !questionsToAssess.includes(finerQuestion.trim())) {
+      questionsToAssess.push(finerQuestion.trim());
+    }
+
+    if (questionsToAssess.length === 0) {
+      toast.error(
+        preferredLanguage === "he"
+          ? "אנא בחר או הזן שאלת מחקר להערכה"
+          : "Please select or enter a research question to assess"
+      );
+      return;
+    }
 
     setIsFinerLoading(true);
-    setFinerResult(null);
+    const newResults = new Map<string, FinerAssessmentResponse>();
 
-    try {
-      const result = await apiClient.assessFiner(
-        selectedProjectId,
-        finerQuestion.trim(),
-        selectedFramework,
-        frameworkData,
-        preferredLanguage || "en"
-      );
-      setFinerResult(result);
+    // Assess each question
+    for (const question of questionsToAssess) {
+      try {
+        const result = await apiClient.assessFiner(
+          selectedProjectId,
+          question,
+          selectedFramework,
+          frameworkData,
+          preferredLanguage || "en"
+        );
+        newResults.set(question, result);
+      } catch (error) {
+        console.error(`Failed to assess question: ${question}`, error);
+      }
+    }
+
+    setFinerResults(newResults);
+    setIsFinerLoading(false);
+
+    if (newResults.size > 0) {
       toast.success(
         preferredLanguage === "he"
-          ? "הערכת FINER הושלמה!"
-          : "FINER assessment completed!"
+          ? `הושלמו ${newResults.size} הערכות FINER!`
+          : `Completed ${newResults.size} FINER assessment(s)!`
       );
-    } catch (error) {
+    } else {
       toast.error(
         preferredLanguage === "he"
           ? "שגיאה בביצוע הערכת FINER"
-          : "Failed to assess research question"
+          : "Failed to assess research questions"
       );
     }
-
-    setIsFinerLoading(false);
   };
 
   const getScoreColor = (score: string) => {
@@ -629,12 +761,7 @@ export default function DefinePage() {
           </Dialog>
 
           {/* FINER Assessment Button & Dialog */}
-          <Dialog open={showFinerDialog} onOpenChange={(open) => {
-            setShowFinerDialog(open);
-            if (!open) {
-              setFinerResult(null);
-            }
-          }}>
+          <Dialog open={showFinerDialog} onOpenChange={handleOpenFinerDialog}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -647,7 +774,7 @@ export default function DefinePage() {
                 <span className="hidden md:inline">FINER</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col" dir={preferredLanguage === "he" ? "rtl" : "ltr"}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" dir={preferredLanguage === "he" ? "rtl" : "ltr"}>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <ClipboardCheck className="h-5 w-5 text-primary" />
@@ -659,31 +786,79 @@ export default function DefinePage() {
                 {/* Description */}
                 <p className="text-sm text-muted-foreground">
                   {preferredLanguage === "he"
-                    ? "הערך את איכות שאלת המחקר שלך לפי קריטריוני FINER: ישימות, עניין, חדשנות, אתיקה ורלוונטיות."
-                    : "Evaluate your research question quality using FINER criteria: Feasible, Interesting, Novel, Ethical, and Relevant."}
+                    ? "הערך את איכות שאלות המחקר שלך לפי קריטריוני FINER: ישימות, עניין, חדשנות, אתיקה ורלוונטיות."
+                    : "Evaluate your research question(s) quality using FINER criteria: Feasible, Interesting, Novel, Ethical, and Relevant."}
                 </p>
 
-                {/* Research Question Input */}
+                {/* Extracted Questions Section */}
+                {extractedQuestions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      {preferredLanguage === "he"
+                        ? `שאלות שזוהו מהשיחה (${extractedQuestions.length}):`
+                        : `Questions detected from chat (${extractedQuestions.length}):`}
+                    </Label>
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
+                      {extractedQuestions.map((question, idx) => (
+                        <label
+                          key={idx}
+                          className={`flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 ${
+                            selectedQuestions.has(question) ? "bg-primary/10" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedQuestions.has(question)}
+                            onChange={() => toggleQuestionSelection(question)}
+                            className="mt-1 h-4 w-4 rounded border-border"
+                          />
+                          <span className="text-sm flex-1">{question}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQuestions(new Set(extractedQuestions))}
+                        className="text-primary hover:underline"
+                      >
+                        {preferredLanguage === "he" ? "בחר הכל" : "Select All"}
+                      </button>
+                      <span className="text-muted-foreground">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQuestions(new Set())}
+                        className="text-primary hover:underline"
+                      >
+                        {preferredLanguage === "he" ? "נקה בחירה" : "Clear Selection"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Research Question Input */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">
-                    {preferredLanguage === "he" ? "שאלת המחקר" : "Research Question"}
+                    {preferredLanguage === "he"
+                      ? extractedQuestions.length > 0 ? "או הוסף שאלה ידנית:" : "שאלת המחקר"
+                      : extractedQuestions.length > 0 ? "Or add a question manually:" : "Research Question"}
                   </Label>
                   <Textarea
                     value={finerQuestion}
                     onChange={(e) => setFinerQuestion(e.target.value)}
                     placeholder={
                       preferredLanguage === "he"
-                        ? "הדבק או כתוב את שאלת המחקר שברצונך להעריך..."
-                        : "Paste or type the research question you want to evaluate..."
+                        ? "הדבק או כתוב שאלת מחקר נוספת להערכה..."
+                        : "Paste or type an additional research question to evaluate..."
                     }
-                    className="min-h-[100px] resize-none text-sm"
+                    className="min-h-[80px] resize-none text-sm"
                   />
                 </div>
 
                 {/* Assess Button */}
                 <Button
                   onClick={handleFinerAssessment}
-                  disabled={isFinerLoading || !finerQuestion.trim()}
+                  disabled={isFinerLoading || (selectedQuestions.size === 0 && !finerQuestion.trim())}
                   className="w-full"
                 >
                   {isFinerLoading ? (
@@ -694,69 +869,88 @@ export default function DefinePage() {
                   ) : (
                     <>
                       <ClipboardCheck className="h-4 w-4 mr-2" />
-                      {preferredLanguage === "he" ? "בצע הערכת FINER" : "Run FINER Assessment"}
+                      {preferredLanguage === "he"
+                        ? `בצע הערכת FINER (${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0)} שאלות)`
+                        : `Run FINER Assessment (${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0)} question${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0) !== 1 ? "s" : ""})`}
                     </>
                   )}
                 </Button>
 
-                {/* FINER Results */}
-                {finerResult && (
-                  <div className="space-y-4 pt-4 border-t">
-                    {/* Overall Score */}
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">
-                        {preferredLanguage === "he" ? "המלצה כללית:" : "Overall:"}
-                      </span>
-                      <Badge className={`${getOverallColor(finerResult.overall)} text-sm px-3 py-1`}>
-                        {finerResult.overall === "proceed"
-                          ? preferredLanguage === "he" ? "✅ המשך" : "✅ Proceed"
-                          : finerResult.overall === "revise"
-                          ? preferredLanguage === "he" ? "⚠️ תקן" : "⚠️ Revise"
-                          : preferredLanguage === "he" ? "❌ שקול מחדש" : "❌ Reconsider"}
-                      </Badge>
-                    </div>
-
-                    {/* Individual Scores */}
-                    <div className="space-y-3">
-                      {[
-                        { key: "F", label: preferredLanguage === "he" ? "ישימות (Feasible)" : "Feasible", data: finerResult.F },
-                        { key: "I", label: preferredLanguage === "he" ? "עניין (Interesting)" : "Interesting", data: finerResult.I },
-                        { key: "N", label: preferredLanguage === "he" ? "חדשנות (Novel)" : "Novel", data: finerResult.N },
-                        { key: "E", label: preferredLanguage === "he" ? "אתיקה (Ethical)" : "Ethical", data: finerResult.E },
-                        { key: "R", label: preferredLanguage === "he" ? "רלוונטיות (Relevant)" : "Relevant", data: finerResult.R },
-                      ].map(({ key, label, data }) => (
-                        <div key={key} className="rounded-lg border p-3 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">{label}</span>
-                            <div className="flex items-center gap-1.5">
-                              {getScoreIcon(data.score)}
-                              <span className={`text-sm font-medium ${getScoreColor(data.score)}`}>
-                                {data.score === "high"
-                                  ? preferredLanguage === "he" ? "גבוה" : "High"
-                                  : data.score === "medium"
-                                  ? preferredLanguage === "he" ? "בינוני" : "Medium"
-                                  : preferredLanguage === "he" ? "נמוך" : "Low"}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{data.reason}</p>
+                {/* FINER Results - Multiple Questions */}
+                {finerResults.size > 0 && (
+                  <div className="space-y-6 pt-4 border-t">
+                    {Array.from(finerResults.entries()).map(([question, result], questionIdx) => (
+                      <div key={questionIdx} className="space-y-4">
+                        {/* Question Header */}
+                        <div className="flex items-start gap-2 bg-muted/50 rounded-lg p-3">
+                          <Badge variant="outline" className="shrink-0 mt-0.5">
+                            {preferredLanguage === "he" ? `שאלה ${questionIdx + 1}` : `Q${questionIdx + 1}`}
+                          </Badge>
+                          <p className="text-sm font-medium flex-1">{question}</p>
                         </div>
-                      ))}
-                    </div>
 
-                    {/* Suggestions */}
-                    {finerResult.suggestions && finerResult.suggestions.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="font-medium text-sm">
-                          {preferredLanguage === "he" ? "הצעות לשיפור:" : "Suggestions:"}
-                        </span>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                          {finerResult.suggestions.map((suggestion, idx) => (
-                            <li key={idx}>{suggestion}</li>
+                        {/* Overall Score */}
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">
+                            {preferredLanguage === "he" ? "המלצה כללית:" : "Overall:"}
+                          </span>
+                          <Badge className={`${getOverallColor(result.overall)} text-sm px-3 py-1`}>
+                            {result.overall === "proceed"
+                              ? preferredLanguage === "he" ? "✅ המשך" : "✅ Proceed"
+                              : result.overall === "revise"
+                              ? preferredLanguage === "he" ? "⚠️ תקן" : "⚠️ Revise"
+                              : preferredLanguage === "he" ? "❌ שקול מחדש" : "❌ Reconsider"}
+                          </Badge>
+                        </div>
+
+                        {/* Individual Scores */}
+                        <div className="space-y-3">
+                          {[
+                            { key: "F", label: preferredLanguage === "he" ? "ישימות (Feasible)" : "Feasible", data: result.F },
+                            { key: "I", label: preferredLanguage === "he" ? "עניין (Interesting)" : "Interesting", data: result.I },
+                            { key: "N", label: preferredLanguage === "he" ? "חדשנות (Novel)" : "Novel", data: result.N },
+                            { key: "E", label: preferredLanguage === "he" ? "אתיקה (Ethical)" : "Ethical", data: result.E },
+                            { key: "R", label: preferredLanguage === "he" ? "רלוונטיות (Relevant)" : "Relevant", data: result.R },
+                          ].map(({ key, label, data }) => (
+                            <div key={key} className="rounded-lg border p-3 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-sm">{label}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {getScoreIcon(data.score)}
+                                  <span className={`text-sm font-medium ${getScoreColor(data.score)}`}>
+                                    {data.score === "high"
+                                      ? preferredLanguage === "he" ? "גבוה" : "High"
+                                      : data.score === "medium"
+                                      ? preferredLanguage === "he" ? "בינוני" : "Medium"
+                                      : preferredLanguage === "he" ? "נמוך" : "Low"}
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{data.reason}</p>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
+
+                        {/* Suggestions */}
+                        {result.suggestions && result.suggestions.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="font-medium text-sm">
+                              {preferredLanguage === "he" ? "הצעות לשיפור:" : "Suggestions:"}
+                            </span>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                              {result.suggestions.map((suggestion, idx) => (
+                                <li key={idx}>{suggestion}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Separator between questions */}
+                        {questionIdx < finerResults.size - 1 && (
+                          <hr className="border-border" />
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>
