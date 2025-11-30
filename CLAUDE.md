@@ -492,7 +492,57 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ## Recent Changes Log
 
-### 2025-11-30
+### 2025-11-30 (Session 2) - Query Tool Hebrew Translation Fix
+
+#### Branch Reorganization
+
+- Renamed branches to human-readable names: `develop` (development) and `main` (production)
+- Deleted old auto-generated branch names (`claude/code-review-senior-*`, `claude/scaffold-medai-hub-*`)
+- Set GitHub default branch to `develop`
+- Updated Railway deployment to use `develop` branch
+
+#### Query Tool - Hebrew to English Translation
+
+**Problem**: Framework data (P, I, C, O) was displaying in Hebrew in the Query Tool, but PubMed requires English queries.
+
+**Solution**: Implemented multi-layer Hebrew translation and validation:
+
+1. **Batch Translation** (`_translate_framework_data`):
+   - Translates all Hebrew fields in ONE API call for performance
+   - Explicit instruction: "Do NOT include any Hebrew characters"
+   - Falls back to field-by-field translation if batch fails
+
+2. **Single Field Translation** (`_force_translate_single`):
+   - Dedicated method for stubborn Hebrew fields
+   - Used as fallback when batch translation misses fields
+   - 10-second timeout per field
+
+3. **Final Query Validation**:
+   - Checks generated queries for Hebrew characters
+   - If Hebrew detected, auto-generates clean English fallback query
+   - Logs error for debugging
+
+**Files Modified**:
+
+- `backend/app/services/ai_service.py` - Translation methods and validation
+- `backend/app/api/routes/query.py` - Added translation call in `get_research_questions`
+
+#### Performance Optimizations
+
+- Reduced retry attempts from 3 to 2 for faster failure
+- Added 25-second timeout for query generation
+- Added 10-second timeout for single field translation
+- Batch translation (one API call instead of 4)
+
+#### Fallback Query Generation
+
+Added `_generate_fallback_query()` method that creates proper PubMed queries when AI fails:
+
+- Maps framework keys to population, intervention, comparison, outcome roles
+- Generates Boolean queries with proper `[tiab]` tags
+- Used automatically on timeout, parse error, or Hebrew detection
+
+### 2025-11-30 (Session 1)
 
 - Fixed Railway deployment (switched from Railpack to Dockerfile)
 - Added lazy initialization for `ai_service` and `db_service` to avoid build-time env var issues
