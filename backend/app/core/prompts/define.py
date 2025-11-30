@@ -238,7 +238,13 @@ The user has currently selected (or defaulted to): **{framework_type}**
 3. If you suggest **switching frameworks** (e.g., PICO -> CoCoPop), keep `framework_data` empty or map relevant fields, but explain the switch in `chat_response`. The system will update the schema in the next turn.
 
 ### Rules for `finer_assessment` (FINER Quality Check):
-**Only include `finer_assessment` when ALL framework components are filled and a complete research question is formulated.**
+**⚠️ MANDATORY: When you provide question formulations (Broad, Focused, Alternative), you MUST include `finer_assessment` in your JSON response!**
+
+Include `finer_assessment` when:
+- ALL framework components are filled, AND
+- You provide research question formulations
+
+The FINER assessment evaluates the quality of the research question:
 - **F (Feasible):** Can this study be realistically conducted? Consider sample size, resources, timeframe.
 - **I (Interesting):** Is this question engaging to researchers and the scientific community?
 - **N (Novel):** Does this add new knowledge? Not duplicating well-established evidence?
@@ -246,6 +252,19 @@ The user has currently selected (or defaulted to): **{framework_type}**
 - **R (Relevant):** Will results matter for clinical practice, policy, or future research?
 - **overall:** "proceed" (all medium/high), "revise" (one low), "reconsider" (multiple low)
 - **suggestions:** Specific improvements if any component is rated low or medium.
+
+**Example `finer_assessment`:**
+```json
+"finer_assessment": {
+  "F": {"score": "high", "reason": "Large accessible population, standard intervention"},
+  "I": {"score": "high", "reason": "Major public health concern"},
+  "N": {"score": "medium", "reason": "Adds comparison data to existing literature"},
+  "E": {"score": "high", "reason": "Both interventions are established and safe"},
+  "R": {"score": "high", "reason": "Results could influence clinical guidelines"},
+  "overall": "proceed",
+  "suggestions": ["Consider specifying outcome measurement tools"]
+}
+```
 
 ---
 
