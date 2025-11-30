@@ -209,12 +209,21 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "response": "I understand you want to study...",
+  "message": "I understand you want to study...",
   "framework_data": {
-    "population": "Elderly patients with depression",
-    "intervention": "Exercise",
-    "comparison": null,
-    "outcome": "Depression symptoms"
+    "P": "Elderly patients with depression",
+    "I": "Exercise",
+    "C": "Standard care",
+    "O": "Depression symptoms"
+  },
+  "finer_assessment": {
+    "F": {"score": "high", "reason": "Large elderly population available for recruitment"},
+    "I": {"score": "high", "reason": "Depression in elderly is a major public health concern"},
+    "N": {"score": "medium", "reason": "Adds to existing evidence on exercise interventions"},
+    "E": {"score": "high", "reason": "Low-risk intervention with minimal ethical concerns"},
+    "R": {"score": "high", "reason": "Results could inform clinical guidelines"},
+    "overall": "proceed",
+    "suggestions": ["Consider specifying exercise type (aerobic, resistance, etc.)"]
   }
 }
 ```
@@ -491,6 +500,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 - Updated database constraint to support additional frameworks: PFO, PICOT, PICOC
 - Removed temporary debug endpoint `/debug/env`
 - Removed Research Framework selection from project creation form (AI auto-detects framework type)
+- **Added FINER Assessment**: AI now evaluates research questions using FINER criteria (Feasible, Interesting, Novel, Ethical, Relevant) when a complete question is formulated
 
 ### 2024-11-27
 

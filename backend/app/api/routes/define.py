@@ -81,6 +81,7 @@ async def chat(
         # Extract parts
         ai_response = ai_result.get("chat_response", "")
         extracted_data = ai_result.get("framework_data", {})
+        finer_assessment = ai_result.get("finer_assessment")
 
         # Save AI response (only the chat_response text, not the full JSON)
         await db_service.save_message(
@@ -105,6 +106,7 @@ async def chat(
             message=ai_response,
             framework_data=extracted_data if extracted_data else None,
             extracted_fields=extracted_data if extracted_data else None,
+            finer_assessment=finer_assessment,
         )
 
     except HTTPException:

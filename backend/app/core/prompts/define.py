@@ -219,6 +219,15 @@ The user has currently selected (or defaulted to): **{framework_type}**
   "chat_response": "Your conversational message here (in Markdown). Include Analysis, Framework Rationale, etc.",
   "framework_data": {{
     {', '.join([f'"{comp}": "extracted value or empty string"' for comp in components])}
+  }},
+  "finer_assessment": {{
+    "F": {{"score": "high|medium|low", "reason": "Brief explanation"}},
+    "I": {{"score": "high|medium|low", "reason": "Brief explanation"}},
+    "N": {{"score": "high|medium|low", "reason": "Brief explanation"}},
+    "E": {{"score": "high|medium|low", "reason": "Brief explanation"}},
+    "R": {{"score": "high|medium|low", "reason": "Brief explanation"}},
+    "overall": "proceed|revise|reconsider",
+    "suggestions": ["Optional improvement suggestion 1", "Optional improvement suggestion 2"]
   }}
 }}
 ```
@@ -227,6 +236,16 @@ The user has currently selected (or defaulted to): **{framework_type}**
 1. Use the **exact component keys** for the *currently active* framework: {', '.join([f'"{c}"' for c in components])}
 2. Use **empty string `""`** if component is not yet defined.
 3. If you suggest **switching frameworks** (e.g., PICO -> CoCoPop), keep `framework_data` empty or map relevant fields, but explain the switch in `chat_response`. The system will update the schema in the next turn.
+
+### Rules for `finer_assessment` (FINER Quality Check):
+**Only include `finer_assessment` when ALL framework components are filled and a complete research question is formulated.**
+- **F (Feasible):** Can this study be realistically conducted? Consider sample size, resources, timeframe.
+- **I (Interesting):** Is this question engaging to researchers and the scientific community?
+- **N (Novel):** Does this add new knowledge? Not duplicating well-established evidence?
+- **E (Ethical):** Can this be conducted ethically? Consider vulnerable populations, risks.
+- **R (Relevant):** Will results matter for clinical practice, policy, or future research?
+- **overall:** "proceed" (all medium/high), "revise" (one low), "reconsider" (multiple low)
+- **suggestions:** Specific improvements if any component is rated low or medium.
 
 ---
 

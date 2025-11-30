@@ -326,6 +326,63 @@ FRAMEWORK_CHEAT_SHEET = """
 | Health Equity | "disparity", "inequality" | PerSPEcTiF | Per-S-P-E-c-Ti-F |
 """
 
+# FINER Assessment Schema - Research Question Quality Evaluation
+FINER_ASSESSMENT_SCHEMA = {
+    "name": "FINER",
+    "description": "Research Question Quality Assessment Framework",
+    "use_case": "Evaluate whether a research question is well-formulated and worth pursuing",
+    "components": {
+        "F": {
+            "name": "Feasible",
+            "description": "Can this study be realistically conducted?",
+            "criteria": [
+                "Adequate number of subjects available",
+                "Technical expertise and resources available",
+                "Affordable in time and money",
+                "Manageable in scope"
+            ]
+        },
+        "I": {
+            "name": "Interesting",
+            "description": "Is this question genuinely interesting to the researcher and field?",
+            "criteria": [
+                "Researcher is genuinely curious about the answer",
+                "Findings would be engaging to the scientific community",
+                "Results could influence clinical practice or policy"
+            ]
+        },
+        "N": {
+            "name": "Novel",
+            "description": "Does this study add something new?",
+            "criteria": [
+                "Confirms, refutes, or extends previous findings",
+                "Provides new methodology or approach",
+                "Studies new population or setting",
+                "Not duplicating existing well-established evidence"
+            ]
+        },
+        "E": {
+            "name": "Ethical",
+            "description": "Can this study be conducted ethically?",
+            "criteria": [
+                "Risks to subjects are acceptable and minimized",
+                "Benefits outweigh risks",
+                "Informed consent is obtainable",
+                "Vulnerable populations are protected"
+            ]
+        },
+        "R": {
+            "name": "Relevant",
+            "description": "Will the results matter?",
+            "criteria": [
+                "Results will advance scientific knowledge",
+                "Findings could influence clinical practice",
+                "Results could guide health policy"
+            ]
+        }
+    }
+}
+
 # Cross-Type Questions Guidance
 CROSS_TYPE_GUIDANCE = """
 When a question spans multiple types (e.g., "prevalence AND effectiveness"):

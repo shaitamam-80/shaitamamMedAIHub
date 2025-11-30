@@ -96,10 +96,28 @@ class ChatRequest(BaseModel):
     language: Optional[str] = "en"  # "en" or "he"
 
 
+class FinerScore(BaseModel):
+    """Single FINER component score"""
+    score: str = Field(..., pattern="^(high|medium|low)$")
+    reason: str
+
+
+class FinerAssessment(BaseModel):
+    """FINER research question quality assessment"""
+    F: Optional[FinerScore] = Field(None, description="Feasible - Can this study be conducted?")
+    I: Optional[FinerScore] = Field(None, description="Interesting - Is this engaging to researchers?")
+    N: Optional[FinerScore] = Field(None, description="Novel - Does this add new knowledge?")
+    E: Optional[FinerScore] = Field(None, description="Ethical - Can this be conducted ethically?")
+    R: Optional[FinerScore] = Field(None, description="Relevant - Will results matter?")
+    overall: Optional[str] = Field(None, pattern="^(proceed|revise|reconsider)$")
+    suggestions: Optional[List[str]] = None
+
+
 class ChatResponse(BaseModel):
     message: str
     framework_data: Optional[Dict[str, Any]] = None
     extracted_fields: Optional[Dict[str, str]] = None
+    finer_assessment: Optional[FinerAssessment] = None
 
 
 # ============================================================================
