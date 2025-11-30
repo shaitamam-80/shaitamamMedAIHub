@@ -120,6 +120,28 @@ class ChatResponse(BaseModel):
     finer_assessment: Optional[FinerAssessment] = None
 
 
+class FinerAssessmentRequest(BaseModel):
+    """Request for FINER assessment of a research question"""
+    project_id: UUID
+    research_question: str = Field(..., min_length=10, description="The research question to evaluate")
+    framework_type: Optional[str] = "PICO"
+    framework_data: Optional[Dict[str, Any]] = None
+    language: Optional[str] = "en"  # "en" or "he"
+
+
+class FinerAssessmentResponse(BaseModel):
+    """Response containing FINER assessment results"""
+    F: FinerScore = Field(..., description="Feasible - Can this study be conducted?")
+    I: FinerScore = Field(..., description="Interesting - Is this engaging to researchers?")
+    N: FinerScore = Field(..., description="Novel - Does this add new knowledge?")
+    E: FinerScore = Field(..., description="Ethical - Can this be conducted ethically?")
+    R: FinerScore = Field(..., description="Relevant - Will results matter?")
+    overall: str = Field(..., pattern="^(proceed|revise|reconsider)$")
+    suggestions: List[str] = Field(default_factory=list)
+    research_question: str
+    framework_type: str
+
+
 # ============================================================================
 # Query Tool Models
 # ============================================================================

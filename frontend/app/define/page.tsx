@@ -11,8 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { apiClient, ChatMessage, FrameworkSchema, Project } from "@/lib/api";
+import { apiClient, ChatMessage, FrameworkSchema, Project, FinerAssessmentResponse } from "@/lib/api";
 import {
+  CheckCircle2,
   Download,
   FileText,
   Loader2,
@@ -20,6 +21,9 @@ import {
   Send,
   Sparkles,
   Trash2,
+  ClipboardCheck,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -114,6 +118,10 @@ export default function DefinePage() {
     "he" | "en" | null
   >(null);
   const [showProtocol, setShowProtocol] = useState(false);
+  const [showFinerDialog, setShowFinerDialog] = useState(false);
+  const [finerQuestion, setFinerQuestion] = useState("");
+  const [finerResult, setFinerResult] = useState<FinerAssessmentResponse | null>(null);
+  const [isFinerLoading, setIsFinerLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load projects and frameworks on mount
@@ -385,6 +393,76 @@ export default function DefinePage() {
     }
   };
 
+  const handleFinerAssessment = async () => {
+    if (!selectedProjectId || !finerQuestion.trim()) return;
+
+    setIsFinerLoading(true);
+    setFinerResult(null);
+
+    try {
+      const result = await apiClient.assessFiner(
+        selectedProjectId,
+        finerQuestion.trim(),
+        selectedFramework,
+        frameworkData,
+        preferredLanguage || "en"
+      );
+      setFinerResult(result);
+      toast.success(
+        preferredLanguage === "he"
+          ? "הערכת FINER הושלמה!"
+          : "FINER assessment completed!"
+      );
+    } catch (error) {
+      toast.error(
+        preferredLanguage === "he"
+          ? "שגיאה בביצוע הערכת FINER"
+          : "Failed to assess research question"
+      );
+    }
+
+    setIsFinerLoading(false);
+  };
+
+  const getScoreColor = (score: string) => {
+    switch (score) {
+      case "high":
+        return "text-green-600 dark:text-green-400";
+      case "medium":
+        return "text-yellow-600 dark:text-yellow-400";
+      case "low":
+        return "text-red-600 dark:text-red-400";
+      default:
+        return "text-muted-foreground";
+    }
+  };
+
+  const getScoreIcon = (score: string) => {
+    switch (score) {
+      case "high":
+        return <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />;
+      case "medium":
+        return <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
+      case "low":
+        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
+      default:
+        return null;
+    }
+  };
+
+  const getOverallColor = (overall: string) => {
+    switch (overall) {
+      case "proceed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "revise":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+      case "reconsider":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
   const currentFrameworkSchema = frameworks[selectedFramework];
   const extractedFieldsCount = Object.keys(frameworkData).filter(
     (k) => frameworkData[k]
@@ -546,6 +624,141 @@ export default function DefinePage() {
                   <Download className="h-4 w-4 mr-2" />
                   {preferredLanguage === "he" ? "ייצא" : "Export"}
                 </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* FINER Assessment Button & Dialog */}
+          <Dialog open={showFinerDialog} onOpenChange={(open) => {
+            setShowFinerDialog(open);
+            if (!open) {
+              setFinerResult(null);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!selectedProjectId}
+                className="gap-2"
+                title="FINER Assessment"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                <span className="hidden md:inline">FINER</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col" dir={preferredLanguage === "he" ? "rtl" : "ltr"}>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                  {preferredLanguage === "he" ? "הערכת FINER" : "FINER Assessment"}
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto space-y-4 py-4">
+                {/* Description */}
+                <p className="text-sm text-muted-foreground">
+                  {preferredLanguage === "he"
+                    ? "הערך את איכות שאלת המחקר שלך לפי קריטריוני FINER: ישימות, עניין, חדשנות, אתיקה ורלוונטיות."
+                    : "Evaluate your research question quality using FINER criteria: Feasible, Interesting, Novel, Ethical, and Relevant."}
+                </p>
+
+                {/* Research Question Input */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {preferredLanguage === "he" ? "שאלת המחקר" : "Research Question"}
+                  </Label>
+                  <Textarea
+                    value={finerQuestion}
+                    onChange={(e) => setFinerQuestion(e.target.value)}
+                    placeholder={
+                      preferredLanguage === "he"
+                        ? "הדבק או כתוב את שאלת המחקר שברצונך להעריך..."
+                        : "Paste or type the research question you want to evaluate..."
+                    }
+                    className="min-h-[100px] resize-none text-sm"
+                  />
+                </div>
+
+                {/* Assess Button */}
+                <Button
+                  onClick={handleFinerAssessment}
+                  disabled={isFinerLoading || !finerQuestion.trim()}
+                  className="w-full"
+                >
+                  {isFinerLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      {preferredLanguage === "he" ? "מעריך..." : "Assessing..."}
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      {preferredLanguage === "he" ? "בצע הערכת FINER" : "Run FINER Assessment"}
+                    </>
+                  )}
+                </Button>
+
+                {/* FINER Results */}
+                {finerResult && (
+                  <div className="space-y-4 pt-4 border-t">
+                    {/* Overall Score */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {preferredLanguage === "he" ? "המלצה כללית:" : "Overall:"}
+                      </span>
+                      <Badge className={`${getOverallColor(finerResult.overall)} text-sm px-3 py-1`}>
+                        {finerResult.overall === "proceed"
+                          ? preferredLanguage === "he" ? "✅ המשך" : "✅ Proceed"
+                          : finerResult.overall === "revise"
+                          ? preferredLanguage === "he" ? "⚠️ תקן" : "⚠️ Revise"
+                          : preferredLanguage === "he" ? "❌ שקול מחדש" : "❌ Reconsider"}
+                      </Badge>
+                    </div>
+
+                    {/* Individual Scores */}
+                    <div className="space-y-3">
+                      {[
+                        { key: "F", label: preferredLanguage === "he" ? "ישימות (Feasible)" : "Feasible", data: finerResult.F },
+                        { key: "I", label: preferredLanguage === "he" ? "עניין (Interesting)" : "Interesting", data: finerResult.I },
+                        { key: "N", label: preferredLanguage === "he" ? "חדשנות (Novel)" : "Novel", data: finerResult.N },
+                        { key: "E", label: preferredLanguage === "he" ? "אתיקה (Ethical)" : "Ethical", data: finerResult.E },
+                        { key: "R", label: preferredLanguage === "he" ? "רלוונטיות (Relevant)" : "Relevant", data: finerResult.R },
+                      ].map(({ key, label, data }) => (
+                        <div key={key} className="rounded-lg border p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{label}</span>
+                            <div className="flex items-center gap-1.5">
+                              {getScoreIcon(data.score)}
+                              <span className={`text-sm font-medium ${getScoreColor(data.score)}`}>
+                                {data.score === "high"
+                                  ? preferredLanguage === "he" ? "גבוה" : "High"
+                                  : data.score === "medium"
+                                  ? preferredLanguage === "he" ? "בינוני" : "Medium"
+                                  : preferredLanguage === "he" ? "נמוך" : "Low"}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{data.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Suggestions */}
+                    {finerResult.suggestions && finerResult.suggestions.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="font-medium text-sm">
+                          {preferredLanguage === "he" ? "הצעות לשיפור:" : "Suggestions:"}
+                        </span>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                          {finerResult.suggestions.map((suggestion, idx) => (
+                            <li key={idx}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </DialogContent>
           </Dialog>

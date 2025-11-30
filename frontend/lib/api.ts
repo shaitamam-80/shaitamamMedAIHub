@@ -110,6 +110,23 @@ export interface ChatResponse {
   extracted_fields?: Record<string, string>;
 }
 
+export interface FinerScore {
+  score: "high" | "medium" | "low";
+  reason: string;
+}
+
+export interface FinerAssessmentResponse {
+  F: FinerScore;
+  I: FinerScore;
+  N: FinerScore;
+  E: FinerScore;
+  R: FinerScore;
+  overall: "proceed" | "revise" | "reconsider";
+  suggestions: string[];
+  research_question: string;
+  framework_type: string;
+}
+
 export interface BatchAnalysisResponse {
   status: string;
   message: string;
@@ -234,6 +251,27 @@ export const apiClient = {
 
   clearConversation: async (projectId: string): Promise<void> => {
     await client.delete(`/api/v1/define/conversation/${projectId}`);
+  },
+
+  // ========================================================================
+  // Define - FINER Assessment
+  // ========================================================================
+
+  assessFiner: async (
+    projectId: string,
+    researchQuestion: string,
+    frameworkType?: string,
+    frameworkData?: Record<string, string>,
+    language: string = "en"
+  ): Promise<FinerAssessmentResponse> => {
+    const response = await client.post("/api/v1/define/finer-assessment", {
+      project_id: projectId,
+      research_question: researchQuestion,
+      framework_type: frameworkType,
+      framework_data: frameworkData,
+      language,
+    });
+    return response.data;
   },
 
   // ========================================================================

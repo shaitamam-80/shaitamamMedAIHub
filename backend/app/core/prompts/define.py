@@ -219,54 +219,14 @@ The user has currently selected (or defaulted to): **{framework_type}**
   "chat_response": "Your conversational message here (in Markdown). Include Analysis, Framework Rationale, etc.",
   "framework_data": {{
     {', '.join([f'"{comp}": "extracted value or empty string"' for comp in components])}
-  }},
-  "finer_assessment": {{
-    "F": {{"score": "high|medium|low", "reason": "Brief explanation"}},
-    "I": {{"score": "high|medium|low", "reason": "Brief explanation"}},
-    "N": {{"score": "high|medium|low", "reason": "Brief explanation"}},
-    "E": {{"score": "high|medium|low", "reason": "Brief explanation"}},
-    "R": {{"score": "high|medium|low", "reason": "Brief explanation"}},
-    "overall": "proceed|revise|reconsider",
-    "suggestions": ["Optional improvement suggestion 1", "Optional improvement suggestion 2"]
   }}
 }}
 ```
-
-**⚠️ IMPORTANT:** The `finer_assessment` field is **REQUIRED** whenever you provide research question formulations (Broad, Focused, Alternative). Do NOT omit it!
 
 ### Rules for `framework_data`:
 1. Use the **exact component keys** for the *currently active* framework: {', '.join([f'"{c}"' for c in components])}
 2. Use **empty string `""`** if component is not yet defined.
 3. If you suggest **switching frameworks** (e.g., PICO -> CoCoPop), keep `framework_data` empty or map relevant fields, but explain the switch in `chat_response`. The system will update the schema in the next turn.
-
-### Rules for `finer_assessment` (FINER Quality Check):
-**⚠️ MANDATORY: When you provide question formulations (Broad, Focused, Alternative), you MUST include `finer_assessment` in your JSON response!**
-
-Include `finer_assessment` when:
-- ALL framework components are filled, AND
-- You provide research question formulations
-
-The FINER assessment evaluates the quality of the research question:
-- **F (Feasible):** Can this study be realistically conducted? Consider sample size, resources, timeframe.
-- **I (Interesting):** Is this question engaging to researchers and the scientific community?
-- **N (Novel):** Does this add new knowledge? Not duplicating well-established evidence?
-- **E (Ethical):** Can this be conducted ethically? Consider vulnerable populations, risks.
-- **R (Relevant):** Will results matter for clinical practice, policy, or future research?
-- **overall:** "proceed" (all medium/high), "revise" (one low), "reconsider" (multiple low)
-- **suggestions:** Specific improvements if any component is rated low or medium.
-
-**Example `finer_assessment`:**
-```json
-"finer_assessment": {{
-  "F": {{"score": "high", "reason": "Large accessible population, standard intervention"}},
-  "I": {{"score": "high", "reason": "Major public health concern"}},
-  "N": {{"score": "medium", "reason": "Adds comparison data to existing literature"}},
-  "E": {{"score": "high", "reason": "Both interventions are established and safe"}},
-  "R": {{"score": "high", "reason": "Results could influence clinical guidelines"}},
-  "overall": "proceed",
-  "suggestions": ["Consider specifying outcome measurement tools"]
-}}
-```
 
 ---
 
@@ -394,3 +354,119 @@ def get_response_template(complexity_level: str = "standard") -> str:
 4. **Refinement:** [Clarifying questions if needed]
 5. **Formulation:** [When ready - Broad, Focused, Alternative versions with English translations]
 """
+
+
+def get_finer_assessment_prompt(
+    research_question: str,
+    framework_type: str,
+    framework_data: Dict[str, Any],
+    language: str = "en"
+) -> str:
+    """
+    Returns the system prompt for FINER assessment of a research question.
+
+    Args:
+        research_question: The formulated research question to evaluate
+        framework_type: The framework used (PICO, CoCoPop, etc.)
+        framework_data: The extracted framework components
+        language: Response language ("en" or "he")
+
+    Returns:
+        System prompt for FINER evaluation
+    """
+
+    framework_text = "\n".join([
+        f"- **{key}:** {value}"
+        for key, value in framework_data.items()
+        if value
+    ])
+
+    language_instruction = ""
+    if language == "he":
+        language_instruction = """
+## שפה
+ענה בעברית. הסבר כל קריטריון בצורה ברורה ותמציתית.
+"""
+
+    return f"""# ROLE: Research Question Quality Assessor (FINER Framework)
+
+You are an expert in evaluating research questions using the FINER criteria framework.
+Your task is to assess the quality of a research question and provide actionable feedback.
+
+## FINER Framework Criteria
+
+Evaluate each criterion on a scale of: **high**, **medium**, or **low**
+
+### F - Feasible
+Can this study be realistically conducted?
+- Adequate number of subjects available
+- Technical expertise and resources available
+- Affordable in time and money
+- Manageable in scope
+
+### I - Interesting
+Is this question genuinely interesting?
+- Researcher curiosity about the answer
+- Engaging to the scientific community
+- Potential to influence clinical practice or policy
+
+### N - Novel
+Does this study add something new?
+- Confirms, refutes, or extends previous findings
+- Provides new methodology or approach
+- Studies new population or setting
+- Not duplicating well-established evidence
+
+### E - Ethical
+Can this study be conducted ethically?
+- Risks to subjects are acceptable and minimized
+- Benefits outweigh risks
+- Informed consent is obtainable
+- Vulnerable populations are protected
+
+### R - Relevant
+Will the results matter?
+- Advances scientific knowledge
+- Could influence clinical practice
+- Could guide health policy
+
+---
+
+## Research Question to Evaluate
+
+**Framework:** {framework_type}
+
+**Components:**
+{framework_text}
+
+**Question:** {research_question}
+
+---
+{language_instruction}
+## OUTPUT FORMAT
+
+Return your assessment as a JSON object:
+
+```json
+{{
+  "F": {{"score": "high|medium|low", "reason": "Brief explanation (1-2 sentences)"}},
+  "I": {{"score": "high|medium|low", "reason": "Brief explanation (1-2 sentences)"}},
+  "N": {{"score": "high|medium|low", "reason": "Brief explanation (1-2 sentences)"}},
+  "E": {{"score": "high|medium|low", "reason": "Brief explanation (1-2 sentences)"}},
+  "R": {{"score": "high|medium|low", "reason": "Brief explanation (1-2 sentences)"}},
+  "overall": "proceed|revise|reconsider",
+  "suggestions": ["Specific improvement suggestion 1", "Specific improvement suggestion 2"]
+}}
+```
+
+### Rules for `overall`:
+- **"proceed"**: All scores are medium or high - question is ready for systematic review
+- **"revise"**: One score is low - question needs minor adjustments
+- **"reconsider"**: Multiple scores are low - question needs significant rework
+
+### Rules for `suggestions`:
+- Provide 1-3 specific, actionable suggestions
+- Focus on how to improve any low or medium scores
+- If all scores are high, suggest optional enhancements
+
+Return ONLY the JSON object, no additional text."""

@@ -6,7 +6,13 @@ Handles research question formulation with AI chat
 import logging
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.api.models.schemas import ChatRequest, ChatResponse, FrameworkSchemaResponse
+from app.api.models.schemas import (
+    ChatRequest,
+    ChatResponse,
+    FrameworkSchemaResponse,
+    FinerAssessmentRequest,
+    FinerAssessmentResponse,
+)
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.core.auth import get_current_user, UserPayload
@@ -174,4 +180,65 @@ async def clear_conversation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while clearing the conversation.",
+        )
+
+
+@router.post("/finer-assessment", response_model=FinerAssessmentResponse)
+async def assess_finer(
+    request: FinerAssessmentRequest,
+    current_user: UserPayload = Depends(get_current_user)
+):
+    """
+    Evaluate a research question using the FINER criteria.
+
+    FINER assesses:
+    - **F**easible: Can this study be realistically conducted?
+    - **I**nteresting: Is this question engaging to researchers?
+    - **N**ovel: Does this add new knowledge?
+    - **E**thical: Can this be conducted ethically?
+    - **R**elevant: Will results matter for practice/policy?
+
+    Returns scores (high/medium/low) for each criterion,
+    an overall recommendation (proceed/revise/reconsider),
+    and specific suggestions for improvement.
+    """
+    try:
+        # Verify project exists and user has access
+        project = await db_service.get_project(request.project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+        # Get framework data from request or project
+        framework_type = request.framework_type or project.get("framework_type", "PICO")
+        framework_data = request.framework_data or project.get("framework_data", {})
+        language = request.language or "en"
+
+        # Call AI service to assess FINER
+        result = await ai_service.assess_finer(
+            research_question=request.research_question,
+            framework_type=framework_type,
+            framework_data=framework_data,
+            language=language
+        )
+
+        # Add metadata to response
+        result["research_question"] = request.research_question
+        result["framework_type"] = framework_type
+
+        return FinerAssessmentResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in FINER assessment for project {request.project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while assessing the research question.",
         )

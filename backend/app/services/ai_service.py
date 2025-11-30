@@ -16,6 +16,7 @@ from app.core.prompts import (
     get_define_system_prompt,
     get_extraction_prompt,
     get_query_system_prompt,
+    get_finer_assessment_prompt,
     FRAMEWORK_SCHEMAS
 )
 
@@ -259,6 +260,55 @@ Return the complete JSON structure as specified in your instructions."""
                 "toolbox": [],
                 "framework_type": framework_type,
                 "framework_data": framework_data
+            }
+
+    async def assess_finer(
+        self,
+        research_question: str,
+        framework_type: str,
+        framework_data: Dict[str, Any],
+        language: str = "en"
+    ) -> Dict[str, Any]:
+        """
+        Evaluate a research question using the FINER criteria.
+
+        Args:
+            research_question: The formulated research question to evaluate
+            framework_type: The framework used (PICO, CoCoPop, etc.)
+            framework_data: The extracted framework components
+            language: Response language ("en" or "he")
+
+        Returns:
+            Dict with FINER scores, overall assessment, and suggestions
+        """
+        # Get the FINER assessment prompt
+        prompt = get_finer_assessment_prompt(
+            research_question=research_question,
+            framework_type=framework_type,
+            framework_data=framework_data,
+            language=language
+        )
+
+        messages = [HumanMessage(content=prompt)]
+
+        # Get response from Gemini Flash (fast evaluation)
+        response = await self._invoke_with_retry(self.gemini_flash, messages)
+
+        # Parse JSON response
+        result = self._extract_json(response.content, find_object=True)
+
+        if result and "F" in result and "overall" in result:
+            return result
+        else:
+            # Fallback if parsing fails
+            return {
+                "F": {"score": "medium", "reason": "Unable to fully assess feasibility"},
+                "I": {"score": "medium", "reason": "Unable to fully assess interest"},
+                "N": {"score": "medium", "reason": "Unable to fully assess novelty"},
+                "E": {"score": "high", "reason": "No obvious ethical concerns"},
+                "R": {"score": "medium", "reason": "Unable to fully assess relevance"},
+                "overall": "revise",
+                "suggestions": ["Please try again with a clearer research question"]
             }
 
     async def analyze_abstract_batch(

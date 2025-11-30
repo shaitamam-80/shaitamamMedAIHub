@@ -10,7 +10,8 @@ Implements the "Systematic Review Question Architect" methodology
 from .define import (
     get_define_system_prompt,
     get_extraction_prompt,
-    get_response_template
+    get_response_template,
+    get_finer_assessment_prompt
 )
 
 # Query tool exports
@@ -54,6 +55,7 @@ __all__ = [
     "get_define_system_prompt",
     "get_extraction_prompt",
     "get_response_template",
+    "get_finer_assessment_prompt",
 
     # Query tool
     "get_query_system_prompt",
