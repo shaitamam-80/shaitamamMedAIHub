@@ -332,11 +332,16 @@ async def get_research_questions(
                             if match not in questions:
                                 questions.append(match)
 
+        # Translate framework_data to English (PubMed requires English)
+        english_framework_data = await ai_service._translate_framework_data(
+            project.get("framework_data", {})
+        )
+
         return {
             "project_id": str(project_id),
             "project_name": project.get("name", ""),
             "framework_type": project.get("framework_type", "PICO"),
-            "framework_data": project.get("framework_data", {}),
+            "framework_data": english_framework_data,
             "research_questions": questions[:5]  # Max 5 questions
         }
 
