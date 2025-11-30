@@ -133,6 +133,60 @@ export interface BatchAnalysisResponse {
   total_abstracts: number;
 }
 
+// ============================================================================
+// PubMed Search Types
+// ============================================================================
+
+export interface PubMedArticle {
+  pmid: string;
+  title: string;
+  authors: string;
+  journal: string;
+  pubdate: string;
+  doi?: string;
+  pubtype?: string[];
+}
+
+export interface PubMedSearchResponse {
+  count: number;
+  returned: number;
+  articles: PubMedArticle[];
+  query: string;
+}
+
+export interface QueryValidationResponse {
+  valid: boolean;
+  count: number;
+  query_translation: string;
+  errors: string[];
+}
+
+export interface ResearchQuestionsResponse {
+  project_id: string;
+  project_name: string;
+  framework_type: string;
+  framework_data: Record<string, string>;
+  research_questions: string[];
+}
+
+export interface PubMedAbstractResponse {
+  pmid: string;
+  title: string;
+  abstract: string;
+  authors: string;
+  journal: string;
+  year: string;
+  keywords: string[];
+}
+
+export interface QueryHistoryItem {
+  id: string;
+  project_id: string;
+  query_text: string;
+  query_type: string;
+  created_at: string;
+}
+
 // Create axios instance
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -286,10 +340,61 @@ export const apiClient = {
     return response.data;
   },
 
+  generateQueryFromQuestion: async (
+    projectId: string,
+    researchQuestion: string,
+    frameworkType?: string
+  ): Promise<QueryGenerateResponse> => {
+    const response = await client.post("/api/v1/query/generate-from-question", {
+      project_id: projectId,
+      research_question: researchQuestion,
+      framework_type: frameworkType,
+    });
+    return response.data;
+  },
+
   getQueryHistory: async (
     projectId: string
-  ): Promise<QueryGenerateResponse[]> => {
+  ): Promise<{ queries: QueryHistoryItem[] }> => {
     const response = await client.get(`/api/v1/query/history/${projectId}`);
+    return response.data;
+  },
+
+  getResearchQuestions: async (
+    projectId: string
+  ): Promise<ResearchQuestionsResponse> => {
+    const response = await client.get(
+      `/api/v1/query/research-questions/${projectId}`
+    );
+    return response.data;
+  },
+
+  // ========================================================================
+  // Query - PubMed Search Execution
+  // ========================================================================
+
+  executePubMedSearch: async (
+    query: string,
+    maxResults: number = 20,
+    sort: "relevance" | "date" = "relevance"
+  ): Promise<PubMedSearchResponse> => {
+    const response = await client.post("/api/v1/query/execute", {
+      query,
+      max_results: maxResults,
+      sort,
+    });
+    return response.data;
+  },
+
+  validateQuery: async (query: string): Promise<QueryValidationResponse> => {
+    const response = await client.post("/api/v1/query/validate", {
+      query,
+    });
+    return response.data;
+  },
+
+  getPubMedAbstract: async (pmid: string): Promise<PubMedAbstractResponse> => {
+    const response = await client.get(`/api/v1/query/abstract/${pmid}`);
     return response.data;
   },
 
