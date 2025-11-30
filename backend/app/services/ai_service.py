@@ -228,6 +228,9 @@ Text: {text}""")
 
     async def _translate_framework_data(self, framework_data: Dict[str, Any]) -> Dict[str, Any]:
         """Translate all Hebrew values in framework_data to English in ONE API call"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         # Find which fields need translation
         fields_to_translate = {
             key: value for key, value in framework_data.items()
@@ -237,12 +240,15 @@ Text: {text}""")
         if not fields_to_translate:
             return framework_data.copy()
 
+        logger.info(f"Translating {len(fields_to_translate)} Hebrew fields to English")
+
         # Translate all fields in one API call
         fields_text = "\n".join([f"{key}: {value}" for key, value in fields_to_translate.items()])
 
         messages = [
             HumanMessage(content=f"""Translate these Hebrew medical research terms to English.
 Return ONLY a JSON object with the same keys and English translations.
+Do NOT include any Hebrew characters in your response.
 
 {fields_text}
 
@@ -250,20 +256,64 @@ Example response format:
 {{"population": "Adults with diabetes", "intervention": "Exercise therapy"}}""")
         ]
 
+        result = framework_data.copy()
+
         try:
             response = await self._invoke_with_retry(self.gemini_flash, messages)
             translations = self._extract_json(response.content, find_object=True)
 
             if translations:
                 # Merge translations with original data
-                result = framework_data.copy()
                 result.update(translations)
+
+                # Verify no Hebrew remains - if it does, translate field by field
+                still_hebrew = {k: v for k, v in result.items()
+                               if isinstance(v, str) and self._contains_hebrew(v)}
+
+                if still_hebrew:
+                    logger.warning(f"Hebrew still present after batch translation: {list(still_hebrew.keys())}")
+                    # Force translate each remaining Hebrew field
+                    for key, value in still_hebrew.items():
+                        try:
+                            translated = await self._force_translate_single(value)
+                            if not self._contains_hebrew(translated):
+                                result[key] = translated
+                            else:
+                                # Last resort: transliterate or use generic placeholder
+                                result[key] = f"[{key} - see original]"
+                                logger.error(f"Could not translate field {key}, using placeholder")
+                        except Exception as e:
+                            logger.error(f"Single field translation failed for {key}: {e}")
+                            result[key] = f"[{key} - see original]"
+
                 return result
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Translation failed, using original: {e}")
+            logger.warning(f"Translation failed: {e}, attempting field-by-field translation")
 
-        return framework_data.copy()
+            # Fallback: translate each field individually
+            for key, value in fields_to_translate.items():
+                try:
+                    translated = await self._force_translate_single(value)
+                    if not self._contains_hebrew(translated):
+                        result[key] = translated
+                except Exception as e2:
+                    logger.error(f"Individual translation failed for {key}: {e2}")
+
+        return result
+
+    async def _force_translate_single(self, hebrew_text: str) -> str:
+        """Force translate a single Hebrew text to English"""
+        messages = [
+            HumanMessage(content=f"""Translate this Hebrew text to English medical terminology.
+Return ONLY the English translation. No Hebrew characters allowed.
+
+Hebrew: {hebrew_text}
+
+English translation:""")
+        ]
+
+        response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=10)
+        return response.content.strip()
 
     def _generate_fallback_query(self, framework_data: Dict[str, Any], framework_type: str) -> str:
         """
@@ -474,6 +524,26 @@ Generate professional PubMed queries now. Return ONLY the JSON object."""
                 if "clinical_filtered" not in queries:
                     queries["clinical_filtered"] = ""
                 result["queries"] = queries
+
+            # CRITICAL: Validate that no Hebrew characters are in the queries
+            # PubMed only supports English - Hebrew in queries will cause errors
+            has_hebrew_in_query = False
+            for query_type, query_text in queries.items():
+                if isinstance(query_text, str) and self._contains_hebrew(query_text):
+                    has_hebrew_in_query = True
+                    import logging
+                    logging.getLogger(__name__).error(f"Hebrew detected in {query_type} query - using fallback")
+                    break
+
+            if has_hebrew_in_query:
+                # Generate clean English-only fallback query
+                fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+                result["queries"] = {
+                    "broad": fallback_query,
+                    "focused": fallback_query,
+                    "clinical_filtered": fallback_query
+                }
+                result["message"] = "Query regenerated to ensure English-only terms for PubMed compatibility."
 
             return result
         else:
