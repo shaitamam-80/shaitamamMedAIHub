@@ -27,7 +27,10 @@
       "Bash(del /f backendnul)",
       "Bash(del /f frontendnul)",
       "Bash(del /f \".claude\\DEGINE.TXT\")",
-      "Bash(del /f \"backend\\railway.json\")"
+      "Bash(del /f \"backend\\railway.json\")",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git revert:*)"
     ],
     "deny": [],
     "ask": []
