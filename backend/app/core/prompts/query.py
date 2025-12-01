@@ -290,10 +290,19 @@ def get_query_system_prompt(framework_type: str = "PICO") -> str:
         for comp in components
     ])
 
-    # Build hedge examples
+    # Build hedge examples - ONLY include relevant hedges for this framework
+    # This reduces token count from ~3000 to ~300
+    relevant_hedges = set()
+    if recommended_hedge:
+        relevant_hedges.add(recommended_hedge)
+    # Always include RCT and SR for clinical filtering
+    relevant_hedges.add("RCT_COCHRANE")
+    relevant_hedges.add("OBSERVATIONAL_SIGN")
+
     hedge_list = "\n".join([
-        f"**{key}**: {hedge['name']}\n`{hedge['query']}`\n*Source: {hedge['citation']}*\n*Use: {hedge['use_case']}*\n"
+        f"**{key}**: {hedge['name']}\n`{hedge['query']}`\n*Source: {hedge['citation']}*"
         for key, hedge in VALIDATED_HEDGES.items()
+        if key in relevant_hedges
     ])
 
     # Check if this is a comparison framework (has C component)
@@ -450,118 +459,38 @@ Generate three distinct strategies with **specific names and use cases**:
 
 ---
 
-## PART 3: RICH TOOLBOX (15+ Filters)
+## PART 3: TOOLBOX (15+ Filters)
 
-Generate a comprehensive toolbox organized by **category** with specific query modifiers:
-
-### Category: Age Filters
-- **Adults (19+ years)**: `AND (adult[mh] OR "young adult"[mh] OR "middle aged"[mh] OR aged[mh])`
-- **Children (<18 years)**: `AND (child[mh] OR adolescent[mh] OR infant[mh] OR pediatric*[tiab])`
-- **Elderly (65+ years)**: `AND ("aged"[mh] OR elderly[tiab] OR geriatric*[tiab])`
-- **Infants (<2 years)**: `AND (infant[mh] OR newborn[mh] OR neonat*[tiab])`
-
-### Category: Article Type Filters
-- **Systematic Reviews/Meta-Analyses**: `AND (systematic review[pt] OR meta-analysis[pt] OR "systematic review"[tiab])`
-- **Randomized Controlled Trials**: `AND (randomized controlled trial[pt] OR randomized[tiab] OR randomised[tiab])`
-- **Clinical Guidelines**: `AND (guideline[pt] OR "practice guideline"[pt] OR recommendation*[tiab])`
-- **Observational Studies**: `AND (cohort studies[mh] OR case-control studies[mh] OR observational[tiab])`
-- **Case Reports/Series**: `AND (case reports[pt] OR "case report"[tiab] OR "case series"[tiab])`
-
-### Category: Publication Date Filters
-- **Recent (Last 5 Years)**: `AND ("2020/01/01"[Date - Publication] : "3000"[Date - Publication])`
-- **Last Decade (10 Years)**: `AND ("2015/01/01"[Date - Publication] : "3000"[Date - Publication])`
-- **Historical (Before 2000)**: `AND ("1800/01/01"[Date - Publication] : "1999/12/31"[Date - Publication])`
-- **Specific Year Range**: `AND ("YYYY/01/01"[Date - Publication] : "YYYY/12/31"[Date - Publication])`
-
-### Category: Language & Availability
-- **English Language Only**: `AND English[lang]`
-- **Free Full Text Available**: `AND free full text[sb]`
-- **Abstract Available**: `AND hasabstract[text]`
-- **PubMed Central Articles**: `AND pmc[sb]`
-
-### Category: Study Design Filters
-- **Human Studies Only**: `NOT (animals[mh] NOT humans[mh])`
-- **Clinical Trials (All Phases)**: `AND clinical trial[pt]`
-- **Comparative Studies**: `AND comparative study[pt]`
-
-### Category: Advanced Search Techniques
-- **Focus on Title Words**: `[Replace [tiab] with [ti] in main query for higher precision]`
-- **Major MeSH Topics Only**: `[Add :majr to MeSH terms - e.g., "Diabetes Mellitus"[Mesh:majr]]`
-- **Proximity Search (2 words)**: `[Replace phrase with "term1 term2"[tiab:~2]]`
-- **Proximity Search (5 words)**: `[Replace phrase with "term1 term2"[tiab:~5]]`
+Generate toolbox filters in these categories:
+- **Age**: Adults, Children, Elderly, Infants
+- **Article Type**: Systematic Reviews, RCTs, Guidelines, Observational, Case Reports
+- **Date**: Last 5 years, Last 10 years
+- **Language**: English only, Free full text
+- **Study Design**: Human only, Clinical trials
 
 ---
 
 ## PART 4: OUTPUT FORMAT
 
-Return a JSON object with this **EXACT** structure:
+Return a JSON object with this structure:
 
 ```json
 {{
-  "report_intro": "This search strategy report presents comprehensive PubMed queries for [research question]. Using the {framework_type} framework, we developed three distinct search strategies tailored to different research needs: comprehensive systematic review searches (Strategy A), focused comparison studies (Strategy B), and clinically-filtered RCT evidence (Strategy C). All strategies were built using validated MeSH terms, controlled vocabulary, and evidence-based methodological filters.",
-
+  "report_intro": "Brief introduction to the search strategy report",
   "concepts": [
-    {{
-      "concept": "Human-readable concept description",
-      "component_key": "P",
-      "free_text_terms": ["term1[tiab]", "term2[tiab]", "..."],
-      "mesh_terms": ['"MeSH Term"[Mesh]', "..."],
-      "mesh_queries": {{
-        "broad": "MeSH query with explosion",
-        "focused": "MeSH query with [majr]",
-        "no_explosion": "MeSH query with [noexp]"
-      }}
-    }}
+    {{"concept": "Description", "component_key": "P", "free_text_terms": ["term[tiab]"], "mesh_terms": ['"MeSH"[Mesh]'], "mesh_queries": {{"broad": "...", "focused": "...", "no_explosion": "..."}}}}
   ],
-
   "strategies": {{
-    "comprehensive": {{
-      "name": "Strategy A: Comprehensive Query (High Sensitivity)",
-      "purpose": "Systematic reviews requiring maximum recall",
-      "formula": {'(P AND O AND I) OR (P AND O AND C)' if has_comparison else '(P AND I AND O)'},
-      "query": "Complete PubMed query string",
-      "expected_yield": "1000-5000+ results",
-      "use_cases": ["Systematic reviews", "Scoping reviews", "Evidence mapping"]
-    }},
-    "direct": {{
-      "name": "Strategy B: Direct Comparison Query (High Specificity)",
-      "purpose": "Head-to-head comparison studies",
-      "formula": {'P AND I AND C AND O (with majr tags)' if has_comparison else '(P[majr]) AND (I[tiab]) AND (O[majr])'},
-      "query": "Complete PubMed query string",
-      "expected_yield": "100-500 results",
-      "use_cases": {['Direct comparison studies', 'Comparative effectiveness research'] if has_comparison else ['Balanced reviews', 'Rapid reviews']}
-    }},
-    "clinical": {{
-      "name": "Strategy C: Clinically Filtered Query (RCT-Focused)",
-      "purpose": "High-quality intervention evidence",
-      "formula": "Strategy B + RCT hedge + animal exclusion",
-      "query_broad": "Strategy B + RCT hedge",
-      "query_narrow": "Strategy B + RCT hedge + English + Last 10 years",
-      "hedge_applied": "{recommended_hedge if recommended_hedge else 'OBSERVATIONAL_SIGN'}",
-      "hedge_citation": "Cochrane Handbook 2019 / SIGN / Haynes et al.",
-      "expected_yield": "50-300 results",
-      "use_cases": ["Clinical guidelines", "GRADE evidence", "HTA reports"]
-    }}
+    "comprehensive": {{"name": "Strategy A", "purpose": "...", "formula": "...", "query": "FULL PUBMED QUERY", "expected_yield": "...", "use_cases": [...]}},
+    "direct": {{"name": "Strategy B", "purpose": "...", "formula": "...", "query": "FULL PUBMED QUERY", "expected_yield": "...", "use_cases": [...]}},
+    "clinical": {{"name": "Strategy C", "purpose": "...", "formula": "...", "query": "FULL PUBMED QUERY", "query_broad": "...", "query_narrow": "...", "hedge_applied": "...", "expected_yield": "...", "use_cases": [...]}}
   }},
-
-  "toolbox": [
-    {{
-      "category": "Age Filters",
-      "label": "Adults (19+ years)",
-      "query": 'AND (adult[mh] OR "young adult"[mh] OR "middle aged"[mh] OR aged[mh])',
-      "description": "Limit results to adult populations only"
-    }},
-    {{
-      "category": "Article Type",
-      "label": "Systematic Reviews/Meta-Analyses",
-      "query": "AND (systematic review[pt] OR meta-analysis[pt])",
-      "description": "Retrieve only systematic reviews and meta-analyses"
-    }}
-  ],
-
-  "formatted_report": "[Full markdown report with sections for Introduction, Concept Analysis table, all three strategies, Toolbox categories, and Validation Checklist]"
+  "toolbox": [{{"category": "Age Filters", "label": "Adults", "query": "AND ...", "description": "..."}}],
+  "formatted_report": "Full markdown report"
 }}
 ```
+
+**CRITICAL**: Each strategy MUST have a complete, executable `query` field with actual PubMed search syntax.
 
 ---
 
@@ -586,20 +515,7 @@ Before returning, verify:
 
 ---
 
-## Report Writing Guidelines
-
-The `formatted_report` field must be **publication-ready markdown** with:
-
-1. **Professional tone** - Write for research teams and information specialists
-2. **Clear structure** - Use headings, tables, code blocks
-3. **Concept table** - 4-column table showing all search concepts
-4. **Strategy sections** - Each strategy gets its own section with purpose, formula, query, and use cases
-5. **Toolbox sections** - Organize by category with clear descriptions
-6. **Validation notes** - Include checklist showing query quality verification
-
----
-
-Now generate the complete professional search strategy report!
+Now generate the complete JSON response!
 """
 
 

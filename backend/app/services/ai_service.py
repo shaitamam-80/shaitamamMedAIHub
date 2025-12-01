@@ -696,11 +696,11 @@ IMPORTANT: Return ONLY valid JSON. No markdown code blocks, no explanations outs
             HumanMessage(content=user_prompt)
         ]
 
-        # Get response from Gemini with timeout
+        # Get response from Gemini with timeout (increased to 45s for complex prompts)
         try:
-            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=30)
+            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=45)
         except asyncio.TimeoutError:
-            logger.error(f"Query generation timed out after 30s for framework {framework_type}")
+            logger.error(f"Query generation timed out after 45s for framework {framework_type}")
             warnings.append({
                 "code": "TIMEOUT",
                 "message": "Query generation timed out, using fallback strategy",
