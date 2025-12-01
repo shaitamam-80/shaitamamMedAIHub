@@ -486,11 +486,11 @@ English translation:""")
         Generate a proper PubMed query from framework data when AI fails.
         Creates Boolean query with proper structure based on framework type.
         """
-        # Map common framework keys to their role
-        population_keys = ['population', 'P', 'patient', 'participants', 'condition', 'Co']
-        intervention_keys = ['intervention', 'I', 'exposure', 'E', 'phenomenon', 'Ph']
-        comparison_keys = ['comparison', 'C', 'control']
-        outcome_keys = ['outcome', 'O', 'result', 'evaluation', 'Ev']
+        import re
+        import logging
+        logger = logging.getLogger(__name__)
+
+        logger.info(f"Generating fallback query for {framework_type} with data: {list(framework_data.keys())}")
 
         def extract_search_terms(value: str) -> list:
             """Extract meaningful search terms from a value."""
@@ -508,31 +508,55 @@ English translation:""")
             # If it's a short phrase (likely a concept), use it directly
             if len(clean_value) < 80:
                 # Remove parenthetical abbreviations for cleaner search
-                import re
                 clean_value = re.sub(r'\s*\([^)]*\)\s*', ' ', clean_value).strip()
                 if clean_value:
                     terms.append(clean_value)
 
             return terms
 
-        # Collect terms by category
+        def matches_category(key: str, exact_keys: list, partial_keys: list) -> bool:
+            """Check if key matches category by exact match or partial match."""
+            key_upper = key.strip().upper()
+            key_lower = key.strip().lower()
+
+            # Exact match for single letter keys
+            if key_upper in exact_keys:
+                return True
+
+            # Partial match for longer keys
+            for pk in partial_keys:
+                if pk.lower() in key_lower:
+                    return True
+
+            return False
+
+        # Collect terms by category using better matching
         population_terms = []
         intervention_terms = []
         comparison_terms = []
         outcome_terms = []
 
         for key, value in framework_data.items():
-            key_lower = key.lower()
             extracted = extract_search_terms(value)
+            if not extracted:
+                continue
 
-            if any(pk.lower() in key_lower for pk in population_keys):
+            # Population: P, population, patient, participants, sample
+            if matches_category(key, ['P'], ['population', 'patient', 'participant', 'sample', 'condition']):
                 population_terms.extend(extracted)
-            elif any(ik.lower() in key_lower for ik in intervention_keys):
+                logger.debug(f"Population match: {key} -> {extracted}")
+            # Intervention: I, intervention, exposure, treatment
+            elif matches_category(key, ['I', 'E'], ['intervention', 'exposure', 'treatment', 'phenomenon']):
                 intervention_terms.extend(extracted)
-            elif any(ck.lower() in key_lower for ck in comparison_keys):
+                logger.debug(f"Intervention match: {key} -> {extracted}")
+            # Comparison: C, comparison, control, comparator
+            elif matches_category(key, ['C'], ['comparison', 'control', 'comparator']):
                 comparison_terms.extend(extracted)
-            elif any(ok.lower() in key_lower for ok in outcome_keys):
+                logger.debug(f"Comparison match: {key} -> {extracted}")
+            # Outcome: O, outcome, result
+            elif matches_category(key, ['O'], ['outcome', 'result', 'evaluation']):
                 outcome_terms.extend(extracted)
+                logger.debug(f"Outcome match: {key} -> {extracted}")
 
         # Build query parts
         query_parts = []
@@ -554,15 +578,24 @@ English translation:""")
             query_parts.append(f'({o_query})')
 
         if query_parts:
-            return " AND ".join(query_parts)
+            final_query = " AND ".join(query_parts)
+            logger.info(f"Generated fallback query with {len(query_parts)} parts: {final_query[:200]}...")
+            return final_query
         else:
             # Last resort: use any non-empty values
+            logger.warning(f"No categorized terms found, using last resort for framework_data values")
             all_terms = []
-            for value in framework_data.values():
-                if value and isinstance(value, str) and len(value.strip()) < 50:
-                    all_terms.append(f'"{value.strip()}"[tiab]')
+            for key, value in framework_data.items():
+                if value and isinstance(value, str) and len(value.strip()) < 80 and len(value.strip()) > 2:
+                    # Skip keys that are likely metadata
+                    if key.lower() not in ['research_question', 'framework_type', 'project_id']:
+                        all_terms.append(f'"{value.strip()}"[tiab]')
+                        logger.info(f"Last resort term from {key}: {value[:50]}")
             if all_terms:
-                return " AND ".join(all_terms[:3])
+                final_query = " AND ".join(all_terms[:4])
+                logger.info(f"Last resort query: {final_query}")
+                return final_query
+            logger.error("Could not generate any fallback query - no usable terms found")
             return ""
 
     async def generate_pubmed_query(
