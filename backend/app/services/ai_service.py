@@ -361,6 +361,40 @@ English translation:""")
         response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=10)
         return response.content.strip()
 
+    async def translate_framework_to_english(
+        self,
+        framework_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Public method for translating framework data to English.
+
+        This is a lightweight method for use with the new programmatic
+        query builder that only needs translation, not full query generation.
+
+        Args:
+            framework_data: Dict with framework components (may contain Hebrew)
+
+        Returns:
+            Dict with all values translated to English
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Find which fields need translation
+        fields_to_translate = {
+            key: value for key, value in framework_data.items()
+            if isinstance(value, str) and self._contains_hebrew(value)
+        }
+
+        if not fields_to_translate:
+            logger.info("No Hebrew detected, returning original framework data")
+            return framework_data.copy()
+
+        logger.info(f"Translating {len(fields_to_translate)} Hebrew fields to English")
+
+        # Use batch translation for efficiency
+        return await self._translate_framework_data(framework_data)
+
     def _build_fallback_response(
         self,
         fallback_query: str,

@@ -20,6 +20,7 @@ from app.api.models.schemas import QueryGenerateRequest, QueryGenerateResponse
 from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.services.pubmed_service import pubmed_service
+from app.services.query_builder import query_builder
 from app.core.auth import get_current_user, UserPayload
 from app.core.exceptions import TranslationError, ValidationError, DatabaseError, convert_to_http_exception
 
@@ -99,8 +100,8 @@ async def generate_query(
     """
     Generate PubMed boolean search query from framework data
 
-    Takes the framework data (e.g., PICO fields) and generates
-    an optimized PubMed search query using AI.
+    Uses programmatic query building with MeSH expansion from NCBI API.
+    Translates Hebrew to English if needed using AI.
     """
     try:
         # Verify project exists
@@ -127,14 +128,26 @@ async def generate_query(
         # Get framework_type from project
         framework_type = project.get("framework_type", "PICO")
 
-        # Generate comprehensive query strategy using AI
+        # Step 1: Translate Hebrew to English if needed (fast, ~5 seconds)
         try:
-            result = await ai_service.generate_pubmed_query(framework_data, framework_type)
-        except asyncio.TimeoutError:
-            logger.error(f"Query generation timed out for project {request.project_id}")
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="Query generation timed out. Please try again with simpler framework data."
+            english_framework_data = await ai_service.translate_framework_to_english(framework_data)
+            logger.info(f"Framework data translated for project {request.project_id}")
+        except Exception as translate_error:
+            logger.warning(f"Translation failed, using original data: {translate_error}")
+            english_framework_data = framework_data
+
+        # Step 2: Build query using programmatic MeSH expansion (no AI, ~5 seconds)
+        try:
+            result = await query_builder.build_query_strategy(
+                english_framework_data, framework_type
+            )
+            logger.info(f"Query built successfully for project {request.project_id}")
+        except Exception as build_error:
+            logger.error(f"Query builder failed: {build_error}")
+            # Fallback to AI-based generation if MeSH API fails
+            logger.info("Falling back to AI-based query generation")
+            result = await ai_service.generate_pubmed_query(
+                english_framework_data, framework_type
             )
 
         # Save the focused query to database (primary query)
@@ -159,7 +172,11 @@ async def generate_query(
                     "tool": "QUERY",
                     "status": "completed",
                     "results": result,
-                    "config": {"framework_data": framework_data, "framework_type": framework_type},
+                    "config": {
+                        "framework_data": english_framework_data,
+                        "framework_type": framework_type,
+                        "method": "mesh_expansion"  # Track which method was used
+                    },
                 }
             )
         except Exception as db_error:
@@ -172,7 +189,7 @@ async def generate_query(
             queries=result.get("queries", {"broad": "", "focused": "", "clinical_filtered": ""}),
             toolbox=result.get("toolbox", []),
             framework_type=framework_type,
-            framework_data=framework_data
+            framework_data=english_framework_data
         )
 
     except HTTPException:

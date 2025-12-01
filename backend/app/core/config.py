@@ -51,8 +51,9 @@ class Settings(BaseSettings):
 
     # NCBI PubMed API Settings
     # With API key: 10 requests/second, without: 3 requests/second
+    # Get API key from: https://www.ncbi.nlm.nih.gov/account/settings/
     NCBI_API_KEY: Optional[str] = None
-    NCBI_EMAIL: Optional[str] = None  # Required by NCBI for identification
+    NCBI_EMAIL: str = "medaihub@shaitamam.com"  # Required by NCBI for identification
 
     class Config:
         env_file = ".env"
