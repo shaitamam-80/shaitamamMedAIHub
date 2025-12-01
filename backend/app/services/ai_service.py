@@ -454,6 +454,7 @@ English translation:""")
                     "name": "Same as Comprehensive (Fallback)",
                     "purpose": "Simplified search",
                     "formula": "Same as comprehensive",
+                    "query": fallback_query,
                     "query_broad": fallback_query,
                     "query_narrow": fallback_query,
                     "expected_yield": "Variable",
