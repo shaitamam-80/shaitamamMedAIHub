@@ -559,7 +559,7 @@ Return a JSON object with this **EXACT** structure:
     }}
   ],
 
-  "formatted_report": "# PubMed Search Strategy Report\\n\\n## Introduction\\n[report_intro text]\\n\\n## Concept Analysis\\n\\n| Concept | Component | Free-Text Terms | MeSH Terms |\\n|---------|-----------|-----------------|------------|\\n| ... | ... | ... | ... |\\n\\n## Search Strategies\\n\\n### Strategy A: Comprehensive Query\\n**Purpose:** ...\\n**Formula:** ...\\n**Query:**\\n```\\n[query string]\\n```\\n\\n### Strategy B: Direct Comparison Query\\n...\\n\\n### Strategy C: Clinically Filtered Query\\n...\\n\\n## Toolbox\\n\\n### Age Filters\\n- **Adults**: ...\\n- **Children**: ...\\n\\n## Validation Checklist\\n- [x] Boolean operators uppercase\\n- [x] MeSH terms properly quoted\\n- [x] Field tags lowercase\\n- [x] Parentheses balanced\\n"
+  "formatted_report": "# PubMed Search Strategy Report\n\n## Introduction\n[report_intro text]\n\n## Concept Analysis\n\n| Concept | Component | Free-Text Terms | MeSH Terms |\n|---------|-----------|-----------------|------------|\n| ... | ... | ... | ... |\n\n## Search Strategies\n\n### Strategy A: Comprehensive Query\n**Purpose:** ...\n**Formula:** ...\n**Query:**\n```\n[query string]\n```\n\n### Strategy B: Direct Comparison Query\n...\n\n### Strategy C: Clinically Filtered Query\n...\n\n## Toolbox\n\n### Age Filters\n- **Adults**: ...\n- **Children**: ...\n\n## Validation Checklist\n- [x] Boolean operators uppercase\n- [x] MeSH terms properly quoted\n- [x] Field tags lowercase\n- [x] Parentheses balanced\n"
 }}
 ```
 
