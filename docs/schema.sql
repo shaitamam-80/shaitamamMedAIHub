@@ -129,3 +129,95 @@ CREATE TRIGGER update_projects_updated_at
     BEFORE UPDATE ON projects
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- SCREENING CRITERIA TABLE (GEMS v3.1)
+-- Stores PICOS eligibility criteria for each project's screening
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS screening_criteria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+
+    -- Review mode: systematic, scoping, quick
+    review_mode VARCHAR(50) NOT NULL DEFAULT 'systematic',
+
+    -- PICOS criteria stored as JSONB for flexibility
+    population_criteria JSONB DEFAULT '{
+        "ageGroups": ["adults"],
+        "sex": "all",
+        "specialConditions": [],
+        "exclusions": []
+    }'::jsonb,
+
+    intervention_criteria JSONB DEFAULT '{
+        "entity": "",
+        "mustAppearInAbstract": true,
+        "excludeSurgical": false
+    }'::jsonb,
+
+    comparator_criteria JSONB DEFAULT '{
+        "required": false,
+        "type": "any",
+        "entity": ""
+    }'::jsonb,
+
+    outcome_criteria JSONB DEFAULT '{
+        "entity": "",
+        "requiresQuantitative": true,
+        "acceptsQualitative": false,
+        "minimumFollowUp": "",
+        "excludeDiagnostics": false
+    }'::jsonb,
+
+    study_design_criteria JSONB DEFAULT '{
+        "humanOnly": true,
+        "allowedTypes": ["rct", "cohort", "case_control"],
+        "qualityPack": true,
+        "qualityPackCodes": ["S-Ex2", "S-Ex3", "S-Ex9", "S-Ex10", "S-Ex11"]
+    }'::jsonb,
+
+    -- Screening statistics
+    total_screened INT DEFAULT 0,
+    rule_excluded INT DEFAULT 0,
+    ai_included INT DEFAULT 0,
+    ai_excluded INT DEFAULT 0,
+    ai_maybe INT DEFAULT 0,
+    human_validated INT DEFAULT 0,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for fast lookup by project
+CREATE INDEX IF NOT EXISTS idx_screening_criteria_project_id
+ON screening_criteria(project_id);
+
+-- Ensure one criteria set per project (can be updated but not duplicated)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_screening_criteria_unique_project
+ON screening_criteria(project_id);
+
+-- Trigger to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_screening_criteria_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_screening_criteria_updated ON screening_criteria;
+CREATE TRIGGER trigger_screening_criteria_updated
+    BEFORE UPDATE ON screening_criteria
+    FOR EACH ROW
+    EXECUTE FUNCTION update_screening_criteria_timestamp();
+
+-- Comment on table
+COMMENT ON TABLE screening_criteria IS 'GEMS v3.1 - Stores PICOS eligibility criteria for systematic screening';
+COMMENT ON COLUMN screening_criteria.review_mode IS 'Review type: systematic (2-stage), scoping (AI-only), quick (AI+synthesis)';
+COMMENT ON COLUMN screening_criteria.population_criteria IS 'P - Population criteria (age, sex, conditions)';
+COMMENT ON COLUMN screening_criteria.intervention_criteria IS 'I - Intervention criteria';
+COMMENT ON COLUMN screening_criteria.comparator_criteria IS 'C - Comparator criteria';
+COMMENT ON COLUMN screening_criteria.outcome_criteria IS 'O - Outcome criteria';
+COMMENT ON COLUMN screening_criteria.study_design_criteria IS 'S - Study design criteria and quality pack';

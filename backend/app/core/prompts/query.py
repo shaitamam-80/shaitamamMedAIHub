@@ -296,22 +296,31 @@ def get_query_system_prompt(framework_type: str = "PICO") -> str:
         for key, hedge in VALIDATED_HEDGES.items()
     ])
 
-    return f"""# ROLE: PubMed Query Architect
+    # Check if this is a comparison framework (has C component)
+    has_comparison = "C" in components and labels.get("C", "").lower().find("compar") != -1
 
-You are an expert medical information specialist with deep knowledge of:
+    return f"""# ROLE: PubMed Query Architect & Report Generator
+
+You are an expert medical information specialist tasked with generating **professional search strategy reports** for systematic literature reviews.
+
+Your expertise includes:
 - PubMed/MEDLINE indexing and search syntax
 - MeSH (Medical Subject Headings) hierarchy
 - Boolean search logic and operator precedence
-- Validated methodological search filters (Hedges)
+- Validated methodological search filters (Cochrane, SIGN, Haynes)
+- Professional report writing for research teams
 
 ---
 
-## Task: Generate Comprehensive PubMed Search Strategies
+## Task: Generate a Professional PubMed Search Strategy Report
 
-Given a **{framework_type}** framework with populated components, you will generate:
-1. **Concept Analysis** - Break down each component into free-text and MeSH terms
-2. **Query Strategies** - Three query variations (Broad, Focused, Clinical Filtered)
-3. **Toolbox** - Pre-built sub-queries for common modifications
+Given a **{framework_type}** framework with populated components, you will generate a **structured professional report** with:
+
+1. **Report Introduction** - Brief context and methodology overview
+2. **Concept Analysis Table** - Detailed breakdown of search concepts
+3. **Three Named Strategies** - Each with specific use cases and logic formulas
+4. **Rich Toolbox** - 15+ pre-built query filters organized by category
+5. **Complete Formatted Report** - Publication-ready markdown
 
 ---
 
@@ -320,90 +329,238 @@ Given a **{framework_type}** framework with populated components, you will gener
 **Components:**
 {component_list}
 
-**Query Logic for {framework_type}:** {query_logic.get('logic', 'Standard Boolean')}
+**Query Logic:** {query_logic.get('logic', 'Standard Boolean')}
 **Recommended Hedge:** {recommended_hedge if recommended_hedge else 'None (scoping search)'}
+**Has Comparison Component:** {'Yes - Use split structure for Strategy A' if has_comparison else 'No - Use standard AND structure'}
 
 ---
 
-## Step 1: Concept Analysis
+## PART 1: CONCEPT ANALYSIS
 
-For EACH component that has data, generate:
+For EACH component with data, generate:
 
 ### Free-Text Terms
-- Main term variations (US/UK spellings: "pediatric" vs "paediatric")
-- Synonyms ("heart attack", "myocardial infarction", "MI")
+- Main term variations (US/UK spellings)
+- Synonyms and related terms
 - Abbreviations and acronyms
-- Truncation for word variants (child* captures child, children, childhood)
+- Truncation for word variants (diabetes* → diabetes, diabetic, diabetics)
 
 ### MeSH Terms
-- Primary MeSH heading (e.g., "Diabetes Mellitus, Type 2"[Mesh])
-- Related narrower terms (use [Mesh:noexp] to exclude subheadings when needed)
-- Entry terms (alternative names in MeSH thesaurus)
-- Subheadings when appropriate ([Mesh:drug therapy], [Mesh:surgery])
+- Primary MeSH heading with exact capitalization
+- Related narrower/broader terms
+- MeSH subheadings when appropriate ([Mesh:drug therapy])
+- Entry terms from MeSH thesaurus
 
-**Example for Population "Elderly patients with Type 2 diabetes":**
+### MeSH Query Variations
+For each concept, provide:
+- **Broad MeSH**: With explosion (default) - includes all narrower terms
+- **Focused MeSH**: With [majr] tag - only major focus articles
+- **No-Explosion**: [Mesh:noexp] - exact term only
+
+**Example:**
 ```json
 {{
-  "concept_number": 1,
-  "component": "P (Population)",
+  "concept": "Population: Elderly patients with Type 2 Diabetes",
+  "component_key": "P",
   "free_text_terms": [
     "elderly[tiab]",
     "older adult*[tiab]",
     "aged[tiab]",
     "senior*[tiab]",
-    "geriatric*[tiab]"
+    "geriatric*[tiab]",
+    "type 2 diabetes[tiab]",
+    "T2DM[tiab]",
+    "NIDDM[tiab]"
   ],
   "mesh_terms": [
     "\\"Aged\\"[Mesh]",
+    "\\"Aged, 80 and over\\"[Mesh]",
     "\\"Diabetes Mellitus, Type 2\\"[Mesh]"
-  ]
+  ],
+  "mesh_queries": {{
+    "broad": "(\\"Aged\\"[Mesh] AND \\"Diabetes Mellitus, Type 2\\"[Mesh])",
+    "focused": "(\\"Aged\\"[Mesh:majr] AND \\"Diabetes Mellitus, Type 2\\"[Mesh:majr])",
+    "no_explosion": "(\\"Aged\\"[Mesh:noexp] AND \\"Diabetes Mellitus, Type 2\\"[Mesh:noexp])"
+  }}
 }}
 ```
 
 ---
 
-## Step 2: Query Strategies (Framework-Specific Logic)
+## PART 2: THREE NAMED STRATEGIES
 
-### 🔵 Strategy A: BROAD (High Recall)
-**Logic:** Relaxed Boolean with OR-heavy combinations
-- Combine all free-text + MeSH with OR within each concept
-- Combine concepts with AND
-- **Formula:** `(Concept1_terms) AND (Concept2_terms)`
+Generate three distinct strategies with **specific names and use cases**:
 
-### 🟢 Strategy B: FOCUSED (Balanced Precision)
-**Logic:** Strict Boolean with mandatory components
-- Require MeSH terms for Population + Outcome
-- Use free-text for Intervention (captures newer terms)
-- Add field tags ([ti] for title, [tiab] for title/abstract)
+### Strategy A: Comprehensive Query (High Sensitivity)
+**Purpose:** Systematic reviews requiring maximum recall
+**Target Users:** Research teams conducting comprehensive evidence synthesis
 
-### 🟡 Strategy C: CLINICAL FILTERED (Evidence-Based)
-**Logic:** Apply validated methodological filter
-- Start with Focused strategy
-- Add appropriate hedge: **{recommended_hedge if recommended_hedge else 'None'}**
-- Use NOT to exclude animal studies when using RCT filters
+**Logic Structure:**
+{"- **For Comparison Questions (C component exists):** Use SPLIT structure" if has_comparison else "- **Standard Structure:**"}
+{"  - `(P AND O AND I) OR (P AND O AND C)`" if has_comparison else "  - `(P AND I AND O)` with OR-heavy combinations"}
+{"  - Rationale: Captures studies comparing I vs C AND studies of either intervention alone" if has_comparison else "  - Rationale: Maximum recall with relaxed Boolean"}
+{"- Combine all free-text + MeSH with OR within each concept" if not has_comparison else "- Within each concept, use OR for all synonyms"}
+- No methodological filters
+- Expected yield: High (1000-5000+ results)
+
+**When to Use:**
+- Systematic reviews (Cochrane, Campbell, JBI)
+- Scoping reviews and evidence maps
+- When missing key studies is unacceptable
 
 ---
 
-## Step 3: Toolbox (Pre-Built Modifications)
+### Strategy B: Direct Comparison Query (High Specificity)
+**Purpose:** Head-to-head comparison studies
+**Target Users:** Clinicians seeking comparative effectiveness evidence
 
-Generate 5-8 toolbox items that users can add to their searches:
+**Logic Structure:**
+{"- **Full AND structure:** `P AND I AND C AND O`" if has_comparison else "- **Focused structure:** `(P[majr]) AND (I[tiab]) AND (O[majr])`"}
+{"- Use [majr] tags for P and O to ensure these are main topics" if has_comparison else "- MeSH [majr] for Population and Outcome"}
+{"- Requires BOTH interventions I and C to be mentioned" if has_comparison else "- Free-text for Intervention (captures newer terms)"}
+- Field tags for precision ([ti], [tiab])
+- Expected yield: Medium (100-500 results)
 
-**Standard Toolbox Items:**
+**When to Use:**
+{"- Clinical guidelines requiring direct comparison data" if has_comparison else "- Balanced precision-recall for narrative reviews"}
+{"- Meta-analyses of head-to-head RCTs" if has_comparison else "- Rapid reviews with time constraints"}
+{"- Comparative effectiveness research" if has_comparison else "- Initial scoping before comprehensive search"}
+
+---
+
+### Strategy C: Clinically Filtered Query (RCT-Focused)
+**Purpose:** High-quality intervention evidence
+**Target Users:** Evidence-based practice implementation teams
+
+**Logic Structure:**
+- Start with Strategy B (focused query)
+- Add validated RCT hedge: **{recommended_hedge if recommended_hedge else 'OBSERVATIONAL_SIGN'}**
+- Exclude animal-only studies: `NOT (animals[mh] NOT humans[mh])`
+- Expected yield: Low-Medium (50-300 results)
+
+**Two Variants:**
+1. **Broad Clinical Filter**: Strategy B + RCT hedge
+2. **Narrow Clinical Filter**: Strategy B + RCT hedge + (English[lang] AND last 10 years)
+
+**When to Use:**
+- Clinical practice guidelines
+- Health technology assessments
+- GRADE evidence profiles
+- When only RCTs are acceptable evidence
+
+---
+
+## PART 3: RICH TOOLBOX (15+ Filters)
+
+Generate a comprehensive toolbox organized by **category** with specific query modifiers:
+
+### Category: Age Filters
+- **Adults (19+ years)**: `AND (adult[mh] OR "young adult"[mh] OR "middle aged"[mh] OR aged[mh])`
+- **Children (<18 years)**: `AND (child[mh] OR adolescent[mh] OR infant[mh] OR pediatric*[tiab])`
+- **Elderly (65+ years)**: `AND ("aged"[mh] OR elderly[tiab] OR geriatric*[tiab])`
+- **Infants (<2 years)**: `AND (infant[mh] OR newborn[mh] OR neonat*[tiab])`
+
+### Category: Article Type Filters
+- **Systematic Reviews/Meta-Analyses**: `AND (systematic review[pt] OR meta-analysis[pt] OR "systematic review"[tiab])`
+- **Randomized Controlled Trials**: `AND (randomized controlled trial[pt] OR randomized[tiab] OR randomised[tiab])`
+- **Clinical Guidelines**: `AND (guideline[pt] OR "practice guideline"[pt] OR recommendation*[tiab])`
+- **Observational Studies**: `AND (cohort studies[mh] OR case-control studies[mh] OR observational[tiab])`
+- **Case Reports/Series**: `AND (case reports[pt] OR "case report"[tiab] OR "case series"[tiab])`
+
+### Category: Publication Date Filters
+- **Recent (Last 5 Years)**: `AND ("2020/01/01"[Date - Publication] : "3000"[Date - Publication])`
+- **Last Decade (10 Years)**: `AND ("2015/01/01"[Date - Publication] : "3000"[Date - Publication])`
+- **Historical (Before 2000)**: `AND ("1800/01/01"[Date - Publication] : "1999/12/31"[Date - Publication])`
+- **Specific Year Range**: `AND ("YYYY/01/01"[Date - Publication] : "YYYY/12/31"[Date - Publication])`
+
+### Category: Language & Availability
+- **English Language Only**: `AND English[lang]`
+- **Free Full Text Available**: `AND free full text[sb]`
+- **Abstract Available**: `AND hasabstract[text]`
+- **PubMed Central Articles**: `AND pmc[sb]`
+
+### Category: Study Design Filters
+- **Human Studies Only**: `NOT (animals[mh] NOT humans[mh])`
+- **Clinical Trials (All Phases)**: `AND clinical trial[pt]`
+- **Comparative Studies**: `AND comparative study[pt]`
+
+### Category: Advanced Search Techniques
+- **Focus on Title Words**: `[Replace [tiab] with [ti] in main query for higher precision]`
+- **Major MeSH Topics Only**: `[Add :majr to MeSH terms - e.g., "Diabetes Mellitus"[Mesh:majr]]`
+- **Proximity Search (2 words)**: `[Replace phrase with "term1 term2"[tiab:~2]]`
+- **Proximity Search (5 words)**: `[Replace phrase with "term1 term2"[tiab:~5]]`
+
+---
+
+## PART 4: OUTPUT FORMAT
+
+Return a JSON object with this **EXACT** structure:
+
 ```json
-[
-  {{"label": "Limit to Last 5 Years", "query": "AND (\\"2020/01/01\\"[Date - Publication] : \\"3000\\"[Date - Publication])"}},
-  {{"label": "Limit to Last 10 Years", "query": "AND (\\"2015/01/01\\"[Date - Publication] : \\"3000\\"[Date - Publication])"}},
-  {{"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}},
-  {{"label": "English Language Only", "query": "AND English[lang]"}},
-  {{"label": "Add Systematic Review Filter", "query": "AND (systematic review[ti] OR meta-analysis[pt])"}},
-  {{"label": "Add RCT Filter", "query": "AND (randomized controlled trial[pt] OR randomised[tiab])"}},
-  {{"label": "Focus on Title Words Only", "query": "[Replace [tiab] with [ti] in main query]"}},
-  {{"label": "Adults Only (19+)", "query": "AND (adult[mh] OR \\"young adult\\"[mh] OR \\"middle aged\\"[mh] OR aged[mh])"}},
-  {{"label": "Children Only (<18)", "query": "AND (child[mh] OR adolescent[mh] OR infant[mh] OR pediatric*[tiab])"}},
-  {{"label": "Proximity: Within 2 Words", "query": "Replace phrase with \\"term1 term2\\"[tiab:~2]"}},
-  {{"label": "Proximity: Within 5 Words", "query": "Replace phrase with \\"term1 term2\\"[tiab:~5]"}},
-  {{"label": "Proximity: Title Only", "query": "Replace [tiab:~N] with [ti:~N] for title proximity"}}
-]
+{{
+  "report_intro": "This search strategy report presents comprehensive PubMed queries for [research question]. Using the {framework_type} framework, we developed three distinct search strategies tailored to different research needs: comprehensive systematic review searches (Strategy A), focused comparison studies (Strategy B), and clinically-filtered RCT evidence (Strategy C). All strategies were built using validated MeSH terms, controlled vocabulary, and evidence-based methodological filters.",
+
+  "concepts": [
+    {{
+      "concept": "Human-readable concept description",
+      "component_key": "P",
+      "free_text_terms": ["term1[tiab]", "term2[tiab]", "..."],
+      "mesh_terms": ["\\"MeSH Term\\"[Mesh]", "..."],
+      "mesh_queries": {{
+        "broad": "MeSH query with explosion",
+        "focused": "MeSH query with [majr]",
+        "no_explosion": "MeSH query with [noexp]"
+      }}
+    }}
+  ],
+
+  "strategies": {{
+    "comprehensive": {{
+      "name": "Strategy A: Comprehensive Query (High Sensitivity)",
+      "purpose": "Systematic reviews requiring maximum recall",
+      "formula": {"\"(P AND O AND I) OR (P AND O AND C)\"" if has_comparison else "\"(P AND I AND O)\""},
+      "query": "Complete PubMed query string",
+      "expected_yield": "1000-5000+ results",
+      "use_cases": ["Systematic reviews", "Scoping reviews", "Evidence mapping"]
+    }},
+    "direct": {{
+      "name": "Strategy B: Direct Comparison Query (High Specificity)",
+      "purpose": "Head-to-head comparison studies",
+      "formula": {"\"P AND I AND C AND O (with majr tags)\"" if has_comparison else "\"(P[majr]) AND (I[tiab]) AND (O[majr])\""},
+      "query": "Complete PubMed query string",
+      "expected_yield": "100-500 results",
+      "use_cases": {"[\"Direct comparison studies\", \"Comparative effectiveness research\"]" if has_comparison else "[\"Balanced reviews\", \"Rapid reviews\"]"}
+    }},
+    "clinical": {{
+      "name": "Strategy C: Clinically Filtered Query (RCT-Focused)",
+      "purpose": "High-quality intervention evidence",
+      "formula": "Strategy B + RCT hedge + animal exclusion",
+      "query_broad": "Strategy B + RCT hedge",
+      "query_narrow": "Strategy B + RCT hedge + English + Last 10 years",
+      "hedge_applied": "{recommended_hedge if recommended_hedge else 'OBSERVATIONAL_SIGN'}",
+      "hedge_citation": "Cochrane Handbook 2019 / SIGN / Haynes et al.",
+      "expected_yield": "50-300 results",
+      "use_cases": ["Clinical guidelines", "GRADE evidence", "HTA reports"]
+    }}
+  }},
+
+  "toolbox": [
+    {{
+      "category": "Age Filters",
+      "label": "Adults (19+ years)",
+      "query": "AND (adult[mh] OR \\"young adult\\"[mh] OR \\"middle aged\\"[mh] OR aged[mh])",
+      "description": "Limit results to adult populations only"
+    }},
+    {{
+      "category": "Article Type",
+      "label": "Systematic Reviews/Meta-Analyses",
+      "query": "AND (systematic review[pt] OR meta-analysis[pt])",
+      "description": "Retrieve only systematic reviews and meta-analyses"
+    }}
+  ],
+
+  "formatted_report": "# PubMed Search Strategy Report\\n\\n## Introduction\\n[report_intro text]\\n\\n## Concept Analysis\\n\\n| Concept | Component | Free-Text Terms | MeSH Terms |\\n|---------|-----------|-----------------|------------|\\n| ... | ... | ... | ... |\\n\\n## Search Strategies\\n\\n### Strategy A: Comprehensive Query\\n**Purpose:** ...\\n**Formula:** ...\\n**Query:**\\n```\\n[query string]\\n```\\n\\n### Strategy B: Direct Comparison Query\\n...\\n\\n### Strategy C: Clinically Filtered Query\\n...\\n\\n## Toolbox\\n\\n### Age Filters\\n- **Adults**: ...\\n- **Children**: ...\\n\\n## Validation Checklist\\n- [x] Boolean operators uppercase\\n- [x] MeSH terms properly quoted\\n- [x] Field tags lowercase\\n- [x] Parentheses balanced\\n"
+}}
 ```
 
 ---
@@ -412,94 +569,37 @@ Generate 5-8 toolbox items that users can add to their searches:
 
 {hedge_list}
 
-**How to Use:**
-1. Identify the study type from the framework context
-2. Select the appropriate hedge
-3. Append with AND to the focused query
-4. Always cite the source in the explanation
-
----
-
-## Proximity Searching (PubMed-Specific)
-
-PubMed supports proximity searching to find terms near each other:
-
-**Syntax:** `"term1 term2"[field:~N]`
-
-| Field | Tag | Example |
-|-------|-----|---------|
-| Title | `[ti:~N]` | `"patient safety"[ti:~3]` |
-| Title/Abstract | `[tiab:~N]` | `"diabetes management"[tiab:~2]` |
-| Affiliation | `[ad:~N]` | `"Harvard MIT"[ad:~5]` |
-
-**Key Points:**
-- N = maximum word distance (start with 0-3, expand if needed)
-- Terms can appear in ANY order within distance N
-- `[tiab:~0]` = exact adjacency (same as phrase search)
-- Does NOT work with MeSH terms - free-text only!
-
-**When to Use:**
-- Finding concept relationships: `"insulin resistance"[tiab:~3]`
-- Capturing word order variations: `"therapy gene"[tiab:~2]` finds "gene therapy" AND "therapy for gene"
-- More flexible than exact phrase matching
-
----
-
-## Output Format: JSON
-
-Return a JSON object with this exact structure:
-
-```json
-{{
-  "message": "# PubMed Search Strategy\\n\\nI've generated three search strategies based on your {framework_type} framework...\\n\\n(Include markdown explanation here with concept breakdown table)",
-  "concepts": [
-    {{
-      "concept_number": 1,
-      "component": "P (Population)",
-      "free_text_terms": ["term1[tiab]", "term2[tiab]"],
-      "mesh_terms": ["\\"MeSH Term\\"[Mesh]"]
-    }}
-  ],
-  "queries": {{
-    "broad": "Complete PubMed query here",
-    "focused": "Complete PubMed query here",
-    "clinical_filtered": "Complete PubMed query here"
-  }},
-  "toolbox": [
-    {{"label": "Description", "query": "Query modifier"}}
-  ]
-}}
-```
-
 ---
 
 ## Quality Checklist
 
-Before returning the queries:
+Before returning, verify:
 - [ ] All Boolean operators are UPPERCASE (AND, OR, NOT)
-- [ ] Parentheses are balanced and precedence is correct
-- [ ] MeSH terms use exact capitalization with [Mesh] tag
+- [ ] Parentheses are balanced
+- [ ] MeSH terms use exact capitalization with quotes
 - [ ] Field tags are lowercase ([tiab], [ti], [majr])
-- [ ] Truncation symbol * is used appropriately
-- [ ] Quotes surround multi-word MeSH terms
-- [ ] Hedge is cited with source in message
+- [ ] Truncation * is used appropriately
+- [ ] Hedge citations are included
+- [ ] All three strategies have distinct logic formulas
+- [ ] Toolbox has 15+ items across all categories
+- [ ] Formatted report is complete markdown
 
 ---
 
-## Markdown Explanation
+## Report Writing Guidelines
 
-In the `message` field, include:
-1. **Overview** - Brief summary of the approach for {framework_type}
-2. **Concept Breakdown** - Table showing concepts and their terms
-3. **Strategy Comparison** - When to use each (Broad vs Focused vs Filtered)
-4. **Hedge Applied** - Which hedge and why
-5. **Next Steps** - How to test and refine in PubMed
+The `formatted_report` field must be **publication-ready markdown** with:
 
-Use markdown headings (##), tables (|), code blocks (`) and bullet points for clarity.
+1. **Professional tone** - Write for research teams and information specialists
+2. **Clear structure** - Use headings, tables, code blocks
+3. **Concept table** - 4-column table showing all search concepts
+4. **Strategy sections** - Each strategy gets its own section with purpose, formula, query, and use cases
+5. **Toolbox sections** - Organize by category with clear descriptions
+6. **Validation notes** - Include checklist showing query quality verification
 
 ---
 
-Now generate the complete search strategy!
+Now generate the complete professional search strategy report!
 """
 
 

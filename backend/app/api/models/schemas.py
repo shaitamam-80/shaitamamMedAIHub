@@ -225,6 +225,85 @@ class QueryGenerateResponse(BaseModel):
 
 
 # ============================================================================
+# Enhanced Query Tool Models (V2)
+# ============================================================================
+
+class QueryStrategy(BaseModel):
+    """Single query strategy with full metadata"""
+    name: str  # "Comprehensive", "Direct Comparison", "Clinically Filtered"
+    goal: str  # Description of what this strategy achieves
+    logic: str  # Boolean logic formula shown to user
+    sensitivity: str  # "high" | "medium" | "low"
+    specificity: str  # "high" | "medium" | "low"
+    query: str  # The actual PubMed query
+    query_narrow: Optional[str] = None  # For clinical filtered - narrow variant
+
+
+class ConceptAnalysisV2(BaseModel):
+    """Concept breakdown with terms"""
+    concept: str  # "Population", "Intervention", etc.
+    component_key: str  # "P", "I", "C", "O"
+    free_text_terms: List[str]  # Terms with [tiab] tags
+    mesh_terms: List[str]  # MeSH suggestions (display names)
+    mesh_queries: List[str]  # MeSH in query format
+
+
+class ToolboxFilter(BaseModel):
+    """Pre-built filter for toolbox"""
+    category: str  # "Age", "Article Type", "Date", "Language"
+    label: str  # Human-readable label
+    query: str  # Query fragment to append
+    description: Optional[str] = None
+
+
+class TranslationStatus(BaseModel):
+    """Status of Hebrew to English translation"""
+    success: bool
+    fields_translated: List[str] = []
+    fields_failed: List[str] = []
+    method: str  # "batch" | "field_by_field" | "none_needed"
+
+
+class QueryWarning(BaseModel):
+    """Warning message for query generation"""
+    code: str  # "TRANSLATION_PARTIAL" | "TIMEOUT" | "FALLBACK_USED"
+    message: str
+    severity: str  # "info" | "warning" | "error"
+
+
+class QueryGenerateResponseV2(BaseModel):
+    """Enhanced response with professional report format"""
+    # Report header
+    report_title: str = "PubMed Query Generation Report"
+    report_intro: str  # Context paragraph about the search
+
+    # Concept analysis
+    concepts: List[ConceptAnalysisV2]
+
+    # Three strategies
+    strategies: Dict[str, QueryStrategy]  # "comprehensive", "direct", "clinical"
+
+    # Rich toolbox (15+ filters)
+    toolbox: List[ToolboxFilter]
+
+    # Formatted report (markdown)
+    formatted_report: str  # Complete markdown report for display
+
+    # Legacy compatibility
+    queries: Dict[str, str]  # broad/focused/clinical_filtered for backward compat
+    message: str  # Legacy message field
+
+    # Metadata
+    framework_type: str
+    framework_data: Dict[str, Any]
+    research_question: Optional[str] = None
+
+    # New fields for transparency
+    translation_status: Optional[TranslationStatus] = None
+    warnings: List[QueryWarning] = []
+
+
+# ============================================================================
 # File Upload Models
 # ============================================================================
 

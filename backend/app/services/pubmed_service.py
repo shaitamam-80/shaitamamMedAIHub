@@ -36,7 +36,8 @@ class PubMedService:
         self,
         query: str,
         max_results: int = 20,
-        sort: str = "relevance"
+        sort: str = "relevance",
+        retstart: int = 0
     ) -> Dict[str, Any]:
         """
         Execute a PubMed search query and return results.
@@ -45,6 +46,7 @@ class PubMedService:
             query: PubMed boolean search query
             max_results: Maximum number of results to return (default 20)
             sort: Sort order - "relevance" or "date"
+            retstart: Starting position for pagination (default 0)
 
         Returns:
             Dict with count, pmids, and article summaries
@@ -56,6 +58,7 @@ class PubMedService:
                 "db": "pubmed",
                 "term": query,
                 "retmax": max_results,
+                "retstart": retstart,
                 "retmode": "json",
                 "sort": "pub+date" if sort == "date" else "relevance",
                 "usehistory": "y"
@@ -272,6 +275,128 @@ class PubMedService:
                 "query_translation": "",
                 "errors": [str(e)]
             }
+
+    async def fetch_by_pmids(self, pmids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch full article details for a list of PMIDs.
+
+        Args:
+            pmids: List of PubMed IDs
+
+        Returns:
+            List of article dictionaries with full details
+        """
+        if not pmids:
+            return []
+
+        try:
+            # Use EFetch to get detailed XML for all PMIDs
+            efetch_url = f"{self.base_url}/efetch.fcgi"
+            efetch_params = self._add_auth_params({
+                "db": "pubmed",
+                "id": ",".join(pmids),
+                "retmode": "xml"
+            })
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(efetch_url, params=efetch_params)
+                response.raise_for_status()
+
+            # Parse XML response
+            root = ElementTree.fromstring(response.content)
+            articles = []
+
+            for article_elem in root.findall(".//PubmedArticle"):
+                try:
+                    # Extract PMID
+                    pmid_elem = article_elem.find(".//PMID")
+                    pmid = pmid_elem.text if pmid_elem is not None else ""
+
+                    # Extract title
+                    title_elem = article_elem.find(".//ArticleTitle")
+                    title = title_elem.text if title_elem is not None else ""
+
+                    # Extract abstract
+                    abstract_text = ""
+                    abstract_parts = article_elem.findall(".//Abstract/AbstractText")
+                    if abstract_parts:
+                        parts = []
+                        for part in abstract_parts:
+                            label = part.get("Label", "")
+                            text = part.text or ""
+                            if label:
+                                parts.append(f"{label}: {text}")
+                            else:
+                                parts.append(text)
+                        abstract_text = " ".join(parts)
+
+                    # Extract authors
+                    authors = []
+                    author_list = article_elem.findall(".//Author")
+                    for author in author_list:
+                        last_name = author.find("LastName")
+                        fore_name = author.find("ForeName")
+                        if last_name is not None:
+                            name = last_name.text or ""
+                            if fore_name is not None:
+                                name = f"{fore_name.text} {name}"
+                            authors.append(name)
+
+                    # Extract journal
+                    journal_elem = article_elem.find(".//Journal/Title")
+                    journal = journal_elem.text if journal_elem is not None else ""
+
+                    # Extract publication date
+                    pub_date = article_elem.find(".//PubDate")
+                    pubdate = ""
+                    if pub_date is not None:
+                        year = pub_date.find("Year")
+                        month = pub_date.find("Month")
+                        day = pub_date.find("Day")
+                        date_parts = []
+                        if year is not None and year.text:
+                            date_parts.append(year.text)
+                        if month is not None and month.text:
+                            date_parts.append(month.text)
+                        if day is not None and day.text:
+                            date_parts.append(day.text)
+                        pubdate = " ".join(date_parts)
+
+                    # Extract DOI
+                    doi = ""
+                    article_ids = article_elem.findall(".//ArticleId")
+                    for aid in article_ids:
+                        if aid.get("IdType") == "doi":
+                            doi = aid.text or ""
+                            break
+
+                    # Extract publication types
+                    pubtype = []
+                    pubtype_elems = article_elem.findall(".//PublicationType")
+                    for pt in pubtype_elems:
+                        if pt.text:
+                            pubtype.append(pt.text)
+
+                    articles.append({
+                        "pmid": pmid,
+                        "title": title,
+                        "abstract": abstract_text,
+                        "authors": ", ".join(authors) if authors else "",
+                        "journal": journal,
+                        "pubdate": pubdate,
+                        "doi": doi,
+                        "pubtype": pubtype
+                    })
+
+                except Exception as e:
+                    logger.warning(f"Error parsing article: {e}")
+                    continue
+
+            return articles
+
+        except Exception as e:
+            logger.exception(f"Error fetching PMIDs: {e}")
+            raise Exception(f"Failed to fetch articles: {str(e)}")
 
 
 # Global instance

@@ -361,6 +361,125 @@ English translation:""")
         response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=10)
         return response.content.strip()
 
+    def _build_fallback_response(
+        self,
+        fallback_query: str,
+        framework_type: str,
+        framework_data: Dict[str, Any],
+        translation_status: Dict[str, Any],
+        warnings: List[Dict[str, str]],
+        reason: str
+    ) -> Dict[str, Any]:
+        """
+        Build a standardized fallback response when AI generation fails.
+
+        Args:
+            fallback_query: The generated fallback query string
+            framework_type: Framework name
+            framework_data: Framework data
+            translation_status: Translation status dict
+            warnings: List of warning messages
+            reason: Reason for fallback (timeout, error, etc.)
+
+        Returns:
+            Complete response dict with V2 and legacy fields
+        """
+        reason_messages = {
+            "timeout": "Query generation timed out. Using simplified fallback strategy.",
+            "quota_exceeded": "API quota exceeded. Using simplified fallback strategy.",
+            "error": "An error occurred during generation. Using simplified fallback strategy.",
+            "hebrew_detected": "Hebrew characters detected in query. Using English-only fallback.",
+            "parse_failed": "Failed to parse AI response. Using simplified fallback strategy."
+        }
+
+        message = reason_messages.get(reason, "Using fallback query generation strategy.")
+
+        # Basic toolbox
+        basic_toolbox = [
+            {
+                "category": "Publication Date",
+                "label": "Last 5 Years",
+                "query": 'AND ("2020/01/01"[Date - Publication] : "3000"[Date - Publication])',
+                "description": "Limit to articles published in the last 5 years"
+            },
+            {
+                "category": "Language",
+                "label": "English Only",
+                "query": "AND English[lang]",
+                "description": "Limit to English language publications"
+            },
+            {
+                "category": "Study Design",
+                "label": "Exclude Animal Studies",
+                "query": "NOT (animals[mh] NOT humans[mh])",
+                "description": "Exclude animal-only studies"
+            },
+            {
+                "category": "Article Type",
+                "label": "Systematic Reviews",
+                "query": "AND (systematic review[pt] OR meta-analysis[pt])",
+                "description": "Limit to systematic reviews and meta-analyses"
+            },
+            {
+                "category": "Article Type",
+                "label": "Randomized Controlled Trials",
+                "query": "AND (randomized controlled trial[pt] OR randomized[tiab])",
+                "description": "Limit to RCTs"
+            }
+        ]
+
+        # Build V2 response structure
+        return {
+            # V2 fields
+            "report_intro": f"This is a simplified search strategy for your {framework_type} framework. {message}",
+            "concepts": [],  # No detailed concepts in fallback
+            "strategies": {
+                "comprehensive": {
+                    "name": "Fallback Query (Basic Boolean)",
+                    "purpose": "Simplified search when advanced generation fails",
+                    "formula": "Basic AND combination of framework components",
+                    "query": fallback_query,
+                    "expected_yield": "Variable",
+                    "use_cases": ["Emergency fallback", "Basic searches"]
+                },
+                "direct": {
+                    "name": "Same as Comprehensive (Fallback)",
+                    "purpose": "Simplified search",
+                    "formula": "Same as comprehensive",
+                    "query": fallback_query,
+                    "expected_yield": "Variable",
+                    "use_cases": ["Fallback mode"]
+                },
+                "clinical": {
+                    "name": "Same as Comprehensive (Fallback)",
+                    "purpose": "Simplified search",
+                    "formula": "Same as comprehensive",
+                    "query_broad": fallback_query,
+                    "query_narrow": fallback_query,
+                    "expected_yield": "Variable",
+                    "use_cases": ["Fallback mode"]
+                }
+            },
+            "toolbox": basic_toolbox,
+            "formatted_report": f"# Fallback Search Strategy\n\n{message}\n\n## Query\n\n```\n{fallback_query}\n```\n\nFor best results, please try regenerating with more specific framework data.",
+
+            # Legacy compatibility
+            "queries": {
+                "broad": fallback_query,
+                "focused": fallback_query,
+                "clinical_filtered": fallback_query
+            },
+            "message": message,
+
+            # Metadata
+            "framework_type": framework_type,
+            "framework_data": framework_data,
+
+            # Transparency
+            "translation_status": translation_status,
+            "warnings": warnings
+        }
+
     def _generate_fallback_query(self, framework_data: Dict[str, Any], framework_type: str) -> str:
         """
         Generate a proper PubMed query from framework data when AI fails.
@@ -458,143 +577,205 @@ English translation:""")
             framework_type: Framework name
 
         Returns:
-            Dict with message, concepts, queries, toolbox, framework_type, framework_data
+            Dict with V2 format (report_intro, concepts, strategies, toolbox, formatted_report)
+            AND legacy format (queries, message) for backward compatibility
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Track translation status for transparency
+        translation_status = {
+            "success": False,
+            "fields_translated": [],
+            "fields_failed": [],
+            "method": "none_needed"
+        }
+        warnings = []
 
         # Translate framework data to English if needed (PubMed requires English)
-        english_framework_data = await self._translate_framework_data(framework_data)
+        fields_needing_translation = [
+            key for key, value in framework_data.items()
+            if isinstance(value, str) and self._contains_hebrew(value)
+        ]
+
+        if fields_needing_translation:
+            try:
+                english_framework_data = await self._translate_framework_data(framework_data)
+
+                # Check which fields were successfully translated
+                successfully_translated = []
+                failed_translation = []
+
+                for key in fields_needing_translation:
+                    if key in english_framework_data:
+                        if self._contains_hebrew(str(english_framework_data[key])):
+                            failed_translation.append(key)
+                        else:
+                            successfully_translated.append(key)
+
+                translation_status = {
+                    "success": len(failed_translation) == 0,
+                    "fields_translated": successfully_translated,
+                    "fields_failed": failed_translation,
+                    "method": "batch" if successfully_translated else "failed"
+                }
+
+                if failed_translation:
+                    warnings.append({
+                        "code": "TRANSLATION_PARTIAL",
+                        "message": f"Some fields could not be translated to English: {', '.join(failed_translation)}",
+                        "severity": "warning"
+                    })
+            except Exception as e:
+                logger.error(f"Translation failed: {e}")
+                english_framework_data = framework_data
+                translation_status["method"] = "failed"
+                warnings.append({
+                    "code": "TRANSLATION_FAILED",
+                    "message": "Translation service failed, using original text",
+                    "severity": "error"
+                })
+        else:
+            english_framework_data = framework_data
+            translation_status["success"] = True
 
         # Build the request with translated data
         framework_text = "\n".join([
-            f"- {key}: {value}"
+            f"- **{key}**: {value}"
             for key, value in english_framework_data.items()
             if value  # Only include non-empty values
         ])
 
-        # Get recommended hedge for this framework type
-        hedge = get_hedge_for_framework(framework_type)
-        hedge_info = ""
-        if hedge:
-            hedge_info = f"""
-For the clinical_filtered query, use this validated filter:
-{hedge['name']}: {hedge['query']}
-(Source: {hedge['citation']})"""
+        # Use the new V2 prompt from query.py
+        system_prompt = get_query_system_prompt(framework_type)
 
-        # Use a focused prompt that emphasizes JSON output
-        query_prompt = f"""You are a PubMed search expert. Create search queries for this {framework_type} framework:
+        # Add the user's framework data to the prompt
+        user_prompt = f"""Generate a professional search strategy report for this {framework_type} framework:
 
 {framework_text}
 
-IMPORTANT: Return ONLY valid JSON. No markdown code blocks, no explanations outside JSON.
-
-JSON Structure Required:
-{{
-  "message": "Brief description of the search strategy (1-2 sentences)",
-  "concepts": [
-    {{"component": "P", "terms": ["elderly[tiab]", "aged[tiab]", "\\"Aged\\"[Mesh]"]}}
-  ],
-  "queries": {{
-    "broad": "(population terms) AND (intervention terms)",
-    "focused": "(population terms) AND (intervention terms) AND (outcome terms)",
-    "clinical_filtered": "focused query AND clinical trial filter"
-  }},
-  "toolbox": [
-    {{"label": "Limit to Last 5 Years", "query": "AND (2020:2025[dp])"}},
-    {{"label": "English Only", "query": "AND English[lang]"}},
-    {{"label": "Exclude Animals", "query": "NOT (animals[mh] NOT humans[mh])"}}
-  ]
-}}
-
-Query Building Rules:
-1. Each concept = (synonym1[tiab] OR synonym2[tiab] OR "MeSH Term"[Mesh])
-2. Combine concepts with AND
-3. Use truncation: child* (matches child, children, childhood)
-4. Quote multi-word terms: "heart failure"[tiab]
-5. Boolean operators MUST be UPPERCASE: AND, OR, NOT
-{hedge_info}
-
-Generate professional PubMed queries now. Return ONLY the JSON object."""
+Return a complete JSON object following the V2 structure with report_intro, concepts, strategies, toolbox, and formatted_report.
+IMPORTANT: Return ONLY valid JSON. No markdown code blocks, no explanations outside JSON."""
 
         messages = [
-            HumanMessage(content=query_prompt)
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt)
         ]
 
         # Get response from Gemini with timeout
         try:
-            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=25)
+            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=30)
         except asyncio.TimeoutError:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Query generation timed out after 25s for framework {framework_type}")
+            logger.error(f"Query generation timed out after 30s for framework {framework_type}")
+            warnings.append({
+                "code": "TIMEOUT",
+                "message": "Query generation timed out, using fallback strategy",
+                "severity": "warning"
+            })
             # Return fallback immediately on timeout
             fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
-            return {
-                "message": "Query generated using fast fallback strategy (timeout).",
-                "concepts": [],
-                "queries": {
-                    "broad": fallback_query,
-                    "focused": fallback_query,
-                    "clinical_filtered": fallback_query
-                },
-                "toolbox": [
-                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
-                    {"label": "English Language Only", "query": "AND English[lang]"},
-                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
-                ],
-                "framework_type": framework_type,
-                "framework_data": english_framework_data
-            }
+            return self._build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                translation_status, warnings, "timeout"
+            )
         except ResourceExhausted as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"API quota exhausted during query generation: {e}")
+            warnings.append({
+                "code": "QUOTA_EXCEEDED",
+                "message": "API quota exceeded, using fallback strategy",
+                "severity": "error"
+            })
             fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
-            return {
-                "message": "Query generated using fallback strategy (API quota exceeded).",
-                "concepts": [],
-                "queries": {
-                    "broad": fallback_query,
-                    "focused": fallback_query,
-                    "clinical_filtered": fallback_query
-                },
-                "toolbox": [
-                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
-                    {"label": "English Language Only", "query": "AND English[lang]"},
-                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
-                ],
-                "framework_type": framework_type,
-                "framework_data": english_framework_data
-            }
+            return self._build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                translation_status, warnings, "quota_exceeded"
+            )
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Query generation failed with unexpected error: {type(e).__name__}: {e}")
+            warnings.append({
+                "code": "UNEXPECTED_ERROR",
+                "message": f"Unexpected error: {type(e).__name__}",
+                "severity": "error"
+            })
             # Return fallback immediately on error
             fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
-            return {
-                "message": "Query generated using fallback strategy (error occurred).",
-                "concepts": [],
-                "queries": {
-                    "broad": fallback_query,
-                    "focused": fallback_query,
-                    "clinical_filtered": fallback_query
-                },
-                "toolbox": [
-                    {"label": "Limit to Last 5 Years", "query": 'AND (2020:2025[dp])'},
-                    {"label": "English Language Only", "query": "AND English[lang]"},
-                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
-                ],
-                "framework_type": framework_type,
-                "framework_data": english_framework_data
-            }
+            return self._build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                translation_status, warnings, "error"
+            )
 
         # Parse JSON response with robust extraction
         result = self._extract_json(response.content, find_object=True)
 
-        if result and "queries" in result:
+        # Try to parse V2 format first
+        if result and "strategies" in result:
+            # V2 format detected - process and add backward compatibility
+            logger.info("V2 format response detected")
+
+            # Extract strategies
+            strategies = result.get("strategies", {})
+            comprehensive = strategies.get("comprehensive", {})
+            direct = strategies.get("direct", {})
+            clinical = strategies.get("clinical", {})
+
+            # Build legacy queries dict for backward compatibility
+            legacy_queries = {
+                "broad": comprehensive.get("query", ""),
+                "focused": direct.get("query", ""),
+                "clinical_filtered": clinical.get("query_broad", clinical.get("query", ""))
+            }
+
+            # Validate no Hebrew in queries
+            has_hebrew_in_query = False
+            for query_type, query_text in legacy_queries.items():
+                if isinstance(query_text, str) and self._contains_hebrew(query_text):
+                    has_hebrew_in_query = True
+                    logger.error(f"Hebrew detected in {query_type} query - using fallback")
+                    warnings.append({
+                        "code": "HEBREW_DETECTED",
+                        "message": f"Hebrew characters detected in {query_type} query",
+                        "severity": "error"
+                    })
+                    break
+
+            if has_hebrew_in_query:
+                # Generate clean English-only fallback query
+                fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
+                return self._build_fallback_response(
+                    fallback_query, framework_type, english_framework_data,
+                    translation_status, warnings, "hebrew_detected"
+                )
+
+            # Build complete V2 response with legacy compatibility
+            return {
+                # V2 fields
+                "report_intro": result.get("report_intro", "Search strategy report generated successfully."),
+                "concepts": result.get("concepts", []),
+                "strategies": strategies,
+                "toolbox": result.get("toolbox", []),
+                "formatted_report": result.get("formatted_report", ""),
+
+                # Legacy compatibility fields
+                "queries": legacy_queries,
+                "message": result.get("report_intro", "Query strategy generated successfully.")[:200],  # Truncate for legacy
+
+                # Metadata
+                "framework_type": framework_type,
+                "framework_data": english_framework_data,
+                "research_question": framework_data.get("research_question"),
+
+                # New transparency fields
+                "translation_status": translation_status,
+                "warnings": warnings
+            }
+
+        # Try legacy format (old response structure)
+        elif result and "queries" in result:
+            logger.info("Legacy format response detected, converting to V2")
+
             # Ensure framework_type and framework_data are included
             result["framework_type"] = framework_type
-            result["framework_data"] = english_framework_data  # Use English version
+            result["framework_data"] = english_framework_data
 
             # Ensure required fields exist
             if "message" not in result:
@@ -615,14 +796,17 @@ Generate professional PubMed queries now. Return ONLY the JSON object."""
                     queries["clinical_filtered"] = ""
                 result["queries"] = queries
 
-            # CRITICAL: Validate that no Hebrew characters are in the queries
-            # PubMed only supports English - Hebrew in queries will cause errors
+            # Validate no Hebrew in queries
             has_hebrew_in_query = False
             for query_type, query_text in queries.items():
                 if isinstance(query_text, str) and self._contains_hebrew(query_text):
                     has_hebrew_in_query = True
-                    import logging
-                    logging.getLogger(__name__).error(f"Hebrew detected in {query_type} query - using fallback")
+                    logger.error(f"Hebrew detected in {query_type} query - using fallback")
+                    warnings.append({
+                        "code": "HEBREW_DETECTED",
+                        "message": f"Hebrew characters detected in {query_type} query",
+                        "severity": "error"
+                    })
                     break
 
             if has_hebrew_in_query:
@@ -634,33 +818,33 @@ Generate professional PubMed queries now. Return ONLY the JSON object."""
                     "clinical_filtered": fallback_query
                 }
                 result["message"] = "Query regenerated to ensure English-only terms for PubMed compatibility."
+                warnings.append({
+                    "code": "FALLBACK_USED",
+                    "message": "Fallback query used due to Hebrew detection",
+                    "severity": "warning"
+                })
+
+            # Add transparency fields
+            result["translation_status"] = translation_status
+            result["warnings"] = warnings
 
             return result
+
         else:
-            # Log the raw response for debugging
-            import logging
-            logger = logging.getLogger(__name__)
+            # Failed to parse - use fallback
             logger.error(f"Failed to parse query response: {response.content[:500] if response.content else 'Empty response'}")
+            warnings.append({
+                "code": "PARSE_FAILED",
+                "message": "Failed to parse AI response, using fallback",
+                "severity": "error"
+            })
 
             # Generate fallback query from framework data
             fallback_query = self._generate_fallback_query(english_framework_data, framework_type)
-
-            return {
-                "message": "Query generated using simplified strategy. For best results, try regenerating.",
-                "concepts": [],
-                "queries": {
-                    "broad": fallback_query,
-                    "focused": fallback_query,
-                    "clinical_filtered": fallback_query
-                },
-                "toolbox": [
-                    {"label": "Limit to Last 5 Years", "query": 'AND ("2020/01/01"[Date - Publication] : "3000"[Date - Publication])'},
-                    {"label": "English Language Only", "query": "AND English[lang]"},
-                    {"label": "Exclude Animal Studies", "query": "NOT (animals[mh] NOT humans[mh])"}
-                ],
-                "framework_type": framework_type,
-                "framework_data": english_framework_data
-            }
+            return self._build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                translation_status, warnings, "parse_failed"
+            )
 
     async def assess_finer(
         self,

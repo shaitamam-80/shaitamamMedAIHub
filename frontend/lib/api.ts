@@ -78,6 +78,7 @@ export interface FileUploadResponse {
   created_at: string;
 }
 
+// Legacy V1 types (for backward compatibility)
 export interface ConceptAnalysis {
   concept_number: number;
   component: string;
@@ -94,6 +95,8 @@ export interface QueryStrategies {
 export interface ToolboxItem {
   label: string;
   query: string;
+  category?: string;
+  description?: string;
 }
 
 export interface QueryGenerateResponse {
@@ -103,6 +106,101 @@ export interface QueryGenerateResponse {
   toolbox: ToolboxItem[];
   framework_type: string;
   framework_data: Record<string, unknown>;
+}
+
+// ============================================================================
+// V2 Query Types (Professional Report Format)
+// ============================================================================
+
+export interface ConceptAnalysisV2 {
+  concept: string;
+  component_key: string;
+  free_text_terms: string[];
+  mesh_terms: string[];
+  mesh_queries?: {
+    broad?: string;
+    focused?: string;
+    no_explosion?: string;
+  };
+}
+
+export interface QueryStrategy {
+  name: string;
+  purpose: string;
+  formula: string;
+  query: string;
+  query_narrow?: string;
+  expected_yield: string;
+  use_cases: string[];
+  hedge_applied?: string;
+  hedge_citation?: string;
+}
+
+export interface ToolboxFilter {
+  category: string;
+  label: string;
+  query: string;
+  description?: string;
+}
+
+export interface TranslationStatus {
+  success: boolean;
+  fields_translated: string[];
+  fields_failed: string[];
+  method: string;
+}
+
+export interface QueryWarning {
+  code: string;
+  message: string;
+  severity: "info" | "warning" | "error";
+}
+
+export interface QueryGenerateResponseV2 {
+  // V2 fields
+  report_title?: string;
+  report_intro: string;
+  concepts: ConceptAnalysisV2[];
+  strategies: {
+    comprehensive: QueryStrategy;
+    direct: QueryStrategy;
+    clinical: QueryStrategy;
+  };
+  toolbox: ToolboxFilter[];
+  formatted_report: string;
+
+  // Legacy compatibility
+  queries: QueryStrategies;
+  message: string;
+
+  // Metadata
+  framework_type: string;
+  framework_data: Record<string, unknown>;
+  research_question?: string;
+
+  // Transparency
+  translation_status?: TranslationStatus;
+  warnings: QueryWarning[];
+}
+
+// ============================================================================
+// PubMed Search Types (V2 with pagination)
+// ============================================================================
+
+export interface PubMedSearchResponseV2 {
+  count: number;
+  returned: number;
+  page: number;
+  total_pages: number;
+  articles: PubMedArticle[];
+  query: string;
+}
+
+export interface MedlineExportRequest {
+  query: string;
+  pmids?: string[];
+  max_results?: number;
+  format?: "medline" | "csv";
 }
 
 export interface ChatResponse {
@@ -369,6 +467,20 @@ export const apiClient = {
     return response.data;
   },
 
+  // V2: Generate query with professional report format
+  generateQueryV2: async (
+    projectId: string,
+    researchQuestion: string,
+    frameworkType?: string
+  ): Promise<QueryGenerateResponseV2> => {
+    const response = await client.post("/api/v1/query/generate-from-question", {
+      project_id: projectId,
+      research_question: researchQuestion,
+      framework_type: frameworkType,
+    });
+    return response.data;
+  },
+
   // ========================================================================
   // Query - PubMed Search Execution
   // ========================================================================
@@ -386,6 +498,22 @@ export const apiClient = {
     return response.data;
   },
 
+  // V2: Search with pagination
+  executePubMedSearchPaginated: async (
+    query: string,
+    page: number = 1,
+    maxResults: number = 20,
+    sort: "relevance" | "date" = "relevance"
+  ): Promise<PubMedSearchResponseV2> => {
+    const response = await client.post("/api/v1/query/execute", {
+      query,
+      max_results: maxResults,
+      page,
+      sort,
+    });
+    return response.data;
+  },
+
   validateQuery: async (query: string): Promise<QueryValidationResponse> => {
     const response = await client.post("/api/v1/query/validate", {
       query,
@@ -395,6 +523,28 @@ export const apiClient = {
 
   getPubMedAbstract: async (pmid: string): Promise<PubMedAbstractResponse> => {
     const response = await client.get(`/api/v1/query/abstract/${pmid}`);
+    return response.data;
+  },
+
+  // V2: Export to MEDLINE or CSV format
+  exportResults: async (
+    query: string,
+    pmids?: string[],
+    maxResults: number = 100,
+    format: "medline" | "csv" = "medline"
+  ): Promise<Blob> => {
+    const response = await client.post(
+      "/api/v1/query/export",
+      {
+        query,
+        pmids,
+        max_results: maxResults,
+        format,
+      },
+      {
+        responseType: "blob",
+      }
+    );
     return response.data;
   },
 

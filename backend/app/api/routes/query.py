@@ -7,8 +7,12 @@ import logging
 from uuid import UUID
 from typing import Optional, List
 import asyncio
+from datetime import datetime
+import csv
+import io
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel, Field
@@ -32,7 +36,8 @@ limiter = Limiter(key_func=get_remote_address)
 class PubMedSearchRequest(BaseModel):
     """Request to execute a PubMed search"""
     query: str = Field(..., min_length=3, description="PubMed search query")
-    max_results: int = Field(default=20, ge=1, le=100, description="Max results to return")
+    max_results: int = Field(default=20, ge=1, le=100, description="Max results per page")
+    page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
     sort: str = Field(default="relevance", pattern="^(relevance|date)$")
 
 
@@ -48,9 +53,11 @@ class PubMedArticle(BaseModel):
 
 
 class PubMedSearchResponse(BaseModel):
-    """Response from PubMed search"""
+    """Response from PubMed search with pagination"""
     count: int = Field(..., description="Total matching articles")
-    returned: int = Field(..., description="Number of articles returned")
+    returned: int = Field(..., description="Number of articles in this page")
+    page: int = Field(..., description="Current page number")
+    total_pages: int = Field(..., description="Total pages available")
     articles: List[PubMedArticle]
     query: str
 
@@ -68,6 +75,14 @@ class ResearchQuestionRequest(BaseModel):
     project_id: UUID
     research_question: str = Field(..., min_length=10, description="Research question text")
     framework_type: Optional[str] = None
+
+
+class MedlineExportRequest(BaseModel):
+    """Request to export search results"""
+    query: str = Field(..., description="PubMed query to export")
+    pmids: Optional[List[str]] = Field(default=None, description="Specific PMIDs to export (if None, export from query)")
+    max_results: int = Field(default=100, ge=1, le=500, description="Max articles to export")
+    format: str = Field(default="medline", pattern="^(medline|csv)$", description="Export format")
 
 
 # ============================================================================
@@ -208,21 +223,31 @@ async def execute_pubmed_search(
     current_user: UserPayload = Depends(get_current_user)
 ):
     """
-    Execute a PubMed search query and return results.
+    Execute a PubMed search query and return paginated results.
 
     This allows running queries directly from the app without
     leaving to PubMed's website.
     """
     try:
+        # Calculate offset for pagination
+        offset = (request.page - 1) * request.max_results
+
         result = await pubmed_service.search(
             query=request.query,
             max_results=request.max_results,
-            sort=request.sort
+            sort=request.sort,
+            retstart=offset
         )
 
+        # Calculate total pages
+        total_count = result["count"]
+        total_pages = (total_count + request.max_results - 1) // request.max_results
+
         return PubMedSearchResponse(
-            count=result["count"],
+            count=total_count,
             returned=result["returned"],
+            page=request.page,
+            total_pages=total_pages,
             articles=[PubMedArticle(**article) for article in result["articles"]],
             query=result["query"]
         )
@@ -483,4 +508,171 @@ async def generate_query_from_question(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while generating the query.",
+        )
+
+
+# ============================================================================
+# Helper Functions for MEDLINE Export
+# ============================================================================
+
+def format_as_medline(articles: List[dict]) -> str:
+    """Format articles as MEDLINE text"""
+    output = []
+
+    for article in articles:
+        lines = []
+
+        # PMID
+        if article.get("pmid"):
+            lines.append(f"PMID- {article['pmid']}")
+
+        # Title (may be multi-line)
+        if article.get("title"):
+            title = article["title"]
+            lines.append(f"TI  - {title}")
+
+        # Abstract (multi-line with 6-space continuation)
+        if article.get("abstract"):
+            abstract = article["abstract"]
+            # Split into lines of ~80 chars
+            words = abstract.split()
+            current_line = "AB  - "
+            for word in words:
+                if len(current_line) + len(word) + 1 > 80:
+                    lines.append(current_line.rstrip())
+                    current_line = "      " + word + " "  # 6-space continuation
+                else:
+                    current_line += word + " "
+            if current_line.strip():
+                lines.append(current_line.rstrip())
+
+        # Authors
+        if article.get("authors"):
+            authors = article["authors"]
+            if isinstance(authors, str):
+                # Split by comma or semicolon
+                author_list = [a.strip() for a in authors.replace(";", ",").split(",")]
+            else:
+                author_list = authors
+            for author in author_list[:10]:  # Limit to 10 authors
+                if author:
+                    lines.append(f"AU  - {author}")
+
+        # Journal
+        if article.get("journal"):
+            lines.append(f"JT  - {article['journal']}")
+
+        # Publication date
+        if article.get("pubdate"):
+            lines.append(f"DP  - {article['pubdate']}")
+
+        # Publication types
+        if article.get("pubtype"):
+            for pt in article["pubtype"]:
+                lines.append(f"PT  - {pt}")
+
+        # DOI
+        if article.get("doi"):
+            lines.append(f"LID - {article['doi']} [doi]")
+
+        # Language
+        lines.append("LA  - eng")
+
+        # Source (citation)
+        if article.get("journal") and article.get("pubdate"):
+            so = f"{article['journal']}. {article['pubdate']}"
+            if article.get("doi"):
+                so += f". doi: {article['doi']}"
+            lines.append(f"SO  - {so}")
+
+        output.append("\n".join(lines))
+
+    # Join articles with blank line separator
+    return "\n\n".join(output)
+
+
+def format_as_csv(articles: List[dict]) -> str:
+    """Format articles as CSV"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow(["PMID", "Title", "Authors", "Journal", "Year", "DOI", "Abstract"])
+
+    # Data
+    for article in articles:
+        writer.writerow([
+            article.get("pmid", ""),
+            article.get("title", ""),
+            article.get("authors", ""),
+            article.get("journal", ""),
+            article.get("pubdate", ""),
+            article.get("doi", ""),
+            article.get("abstract", "")[:500] if article.get("abstract") else ""  # Truncate abstract
+        ])
+
+    return output.getvalue()
+
+
+# ============================================================================
+# New Endpoint: MEDLINE Export
+# ============================================================================
+
+@router.post("/export")
+async def export_results(
+    request: MedlineExportRequest,
+    current_user: UserPayload = Depends(get_current_user)
+):
+    """
+    Export search results in MEDLINE or CSV format.
+    Returns a downloadable file.
+    """
+    try:
+        # Fetch articles
+        if request.pmids:
+            # Export specific articles by PMID
+            articles = await pubmed_service.fetch_by_pmids(request.pmids)
+        else:
+            # Export from query
+            result = await pubmed_service.search(
+                query=request.query,
+                max_results=request.max_results,
+                sort="relevance"
+            )
+            articles = result.get("articles", [])
+
+        if not articles:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No articles found to export"
+            )
+
+        # Generate file content based on format
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        if request.format == "medline":
+            content = format_as_medline(articles)
+            media_type = "text/plain"
+            filename = f"pubmed_export_{timestamp}.txt"
+        else:  # csv
+            content = format_as_csv(articles)
+            media_type = "text/csv"
+            filename = f"pubmed_export_{timestamp}.csv"
+
+        return StreamingResponse(
+            iter([content.encode('utf-8')]),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error exporting results: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
