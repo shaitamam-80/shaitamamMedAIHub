@@ -373,14 +373,14 @@ For each concept, provide:
     "NIDDM[tiab]"
   ],
   "mesh_terms": [
-    "\\"Aged\\"[Mesh]",
-    "\\"Aged, 80 and over\\"[Mesh]",
-    "\\"Diabetes Mellitus, Type 2\\"[Mesh]"
+    '"Aged"[Mesh]',
+    '"Aged, 80 and over"[Mesh]',
+    '"Diabetes Mellitus, Type 2"[Mesh]'
   ],
   "mesh_queries": {{
-    "broad": "(\\"Aged\\"[Mesh] AND \\"Diabetes Mellitus, Type 2\\"[Mesh])",
-    "focused": "(\\"Aged\\"[Mesh:majr] AND \\"Diabetes Mellitus, Type 2\\"[Mesh:majr])",
-    "no_explosion": "(\\"Aged\\"[Mesh:noexp] AND \\"Diabetes Mellitus, Type 2\\"[Mesh:noexp])"
+    "broad": '("Aged"[Mesh] AND "Diabetes Mellitus, Type 2"[Mesh])',
+    "focused": '("Aged"[Mesh:majr] AND "Diabetes Mellitus, Type 2"[Mesh:majr])',
+    "no_explosion": '("Aged"[Mesh:noexp] AND "Diabetes Mellitus, Type 2"[Mesh:noexp])'
   }}
 }}
 ```
@@ -505,7 +505,7 @@ Return a JSON object with this **EXACT** structure:
       "concept": "Human-readable concept description",
       "component_key": "P",
       "free_text_terms": ["term1[tiab]", "term2[tiab]", "..."],
-      "mesh_terms": ["\\"MeSH Term\\"[Mesh]", "..."],
+      "mesh_terms": ['"MeSH Term"[Mesh]', "..."],
       "mesh_queries": {{
         "broad": "MeSH query with explosion",
         "focused": "MeSH query with [majr]",
@@ -518,7 +518,7 @@ Return a JSON object with this **EXACT** structure:
     "comprehensive": {{
       "name": "Strategy A: Comprehensive Query (High Sensitivity)",
       "purpose": "Systematic reviews requiring maximum recall",
-      "formula": {"\"(P AND O AND I) OR (P AND O AND C)\"" if has_comparison else "\"(P AND I AND O)\""},
+      "formula": {'(P AND O AND I) OR (P AND O AND C)' if has_comparison else '(P AND I AND O)'},
       "query": "Complete PubMed query string",
       "expected_yield": "1000-5000+ results",
       "use_cases": ["Systematic reviews", "Scoping reviews", "Evidence mapping"]
@@ -526,10 +526,10 @@ Return a JSON object with this **EXACT** structure:
     "direct": {{
       "name": "Strategy B: Direct Comparison Query (High Specificity)",
       "purpose": "Head-to-head comparison studies",
-      "formula": {"\"P AND I AND C AND O (with majr tags)\"" if has_comparison else "\"(P[majr]) AND (I[tiab]) AND (O[majr])\""},
+      "formula": {'P AND I AND C AND O (with majr tags)' if has_comparison else '(P[majr]) AND (I[tiab]) AND (O[majr])'},
       "query": "Complete PubMed query string",
       "expected_yield": "100-500 results",
-      "use_cases": {"[\"Direct comparison studies\", \"Comparative effectiveness research\"]" if has_comparison else "[\"Balanced reviews\", \"Rapid reviews\"]"}
+      "use_cases": {['Direct comparison studies', 'Comparative effectiveness research'] if has_comparison else ['Balanced reviews', 'Rapid reviews']}
     }},
     "clinical": {{
       "name": "Strategy C: Clinically Filtered Query (RCT-Focused)",
@@ -548,7 +548,7 @@ Return a JSON object with this **EXACT** structure:
     {{
       "category": "Age Filters",
       "label": "Adults (19+ years)",
-      "query": "AND (adult[mh] OR \\"young adult\\"[mh] OR \\"middle aged\\"[mh] OR aged[mh])",
+      "query": 'AND (adult[mh] OR "young adult"[mh] OR "middle aged"[mh] OR aged[mh])',
       "description": "Limit results to adult populations only"
     }},
     {{
