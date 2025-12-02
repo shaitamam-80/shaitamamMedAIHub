@@ -1,5 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, chromium, type FullConfig } from '@playwright/test';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Define the path to the authentication file
 export const STORAGE_STATE = path.join(__dirname, 'playwright/auth-state.json');
