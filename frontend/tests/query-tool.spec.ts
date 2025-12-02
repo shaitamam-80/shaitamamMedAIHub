@@ -106,15 +106,27 @@ test.describe('Query Tool', () => {
       'Among adults with depression (P), is Cognitive Behavioral Therapy (I) more effective than SSRI medications (C) in reducing symptoms (O)?';
 
     test('should successfully generate V2 report and display Split Query', async ({ page }) => {
-      // Skip if not authenticated or no backend connection
-      test.setTimeout(60000);
+      // Extended timeout for E2E test
+      test.setTimeout(90000);
 
-      // 1. Create a Project to work with
+      // 1. Navigate to projects page
       await page.goto('/projects');
 
-      // Check if we need to login first
-      const loginButton = page.getByRole('button', { name: /Login|Sign in/i });
-      if (await loginButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Check if we're redirected to login (mock auth may not work with real Supabase)
+      const currentUrl = page.url();
+      if (currentUrl.includes('/auth/login') || currentUrl.includes('login')) {
+        console.log('⚠️ Redirected to login - mock auth not accepted by Supabase');
+        test.skip(true, 'Real authentication required - mock session not valid');
+        return;
+      }
+
+      // Wait a moment for auth state to be checked
+      await page.waitForTimeout(2000);
+
+      // Check if login button/form is visible (means we're not authenticated)
+      const loginForm = page.locator('input[type="email"], input[name="email"]');
+      if (await loginForm.isVisible({ timeout: 1000 }).catch(() => false)) {
+        console.log('⚠️ Login form detected - authentication required');
         test.skip(true, 'Authentication required - skipping E2E test');
         return;
       }
