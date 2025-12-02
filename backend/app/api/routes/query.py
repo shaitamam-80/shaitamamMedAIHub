@@ -452,8 +452,11 @@ async def generate_query_from_question(
     """
     Generate PubMed query from a specific research question.
 
-    This allows users to select which question they want to
-    generate a query for.
+    Uses programmatic Query Builder (with MeSH expansion) as PRIMARY method,
+    falls back to AI-based generation only if MeSH API fails.
+
+    This ensures Split Query Logic (P AND I AND O) OR (P AND C AND O) is used
+    for comparison questions.
     """
     try:
         # Verify project exists
@@ -475,39 +478,70 @@ async def generate_query_from_question(
         framework_data = project.get("framework_data", {})
         framework_type = request.framework_type or project.get("framework_type", "PICO")
 
-        # Add research question to framework data for AI context
-        enhanced_framework_data = {
-            **framework_data,
-            "research_question": request.research_question
-        }
+        # Step 1: Translate Hebrew to English if needed (PubMed requires English)
+        try:
+            english_framework_data = await ai_service.translate_framework_to_english(framework_data)
+            logger.info(f"Framework data translated for project {request.project_id}")
+        except Exception as translate_error:
+            logger.warning(f"Translation failed, using original data: {translate_error}")
+            english_framework_data = framework_data
 
-        # Generate query using AI
-        result = await ai_service.generate_pubmed_query(enhanced_framework_data, framework_type)
+        # Step 2: Use Query Builder (programmatic) as PRIMARY method
+        # This ensures Split Query Logic is applied for comparison questions
+        method_used = "query_builder"
+        try:
+            result = await query_builder.build_query_strategy(
+                english_framework_data, framework_type
+            )
+            logger.info(f"Query built successfully using Query Builder for project {request.project_id}")
 
-        # Save the query
-        focused_query = result.get("queries", {}).get("focused", "")
-        await db_service.save_query_string(
-            {
-                "project_id": str(request.project_id),
-                "query_text": focused_query,
-                "query_type": "boolean",
+            # Add research question to result metadata
+            result["research_question"] = request.research_question
+
+        except Exception as build_error:
+            # Step 3: Fallback to AI-based generation if MeSH API fails
+            logger.warning(f"Query Builder failed ({build_error}), falling back to AI")
+            method_used = "ai_fallback"
+
+            enhanced_framework_data = {
+                **english_framework_data,
+                "research_question": request.research_question
             }
-        )
+            result = await ai_service.generate_pubmed_query(enhanced_framework_data, framework_type)
+
+        # Save the focused query to database
+        focused_query = result.get("queries", {}).get("focused", "")
+        try:
+            await db_service.save_query_string(
+                {
+                    "project_id": str(request.project_id),
+                    "query_text": focused_query,
+                    "query_type": "boolean",
+                }
+            )
+        except Exception as db_error:
+            logger.error(f"Failed to save query string: {db_error}")
+            # Non-critical - continue anyway
 
         # Create analysis run record
-        await db_service.create_analysis_run(
-            {
-                "project_id": str(request.project_id),
-                "tool": "QUERY",
-                "status": "completed",
-                "results": result,
-                "config": {
-                    "framework_data": framework_data,
-                    "framework_type": framework_type,
-                    "research_question": request.research_question
-                },
-            }
-        )
+        try:
+            await db_service.create_analysis_run(
+                {
+                    "project_id": str(request.project_id),
+                    "tool": "QUERY",
+                    "status": "completed",
+                    "results": result,
+                    "config": {
+                        "framework_data": english_framework_data,
+                        "framework_type": framework_type,
+                        "research_question": request.research_question,
+                        "method": method_used
+                    },
+                }
+            )
+        except Exception as db_error:
+            logger.warning(f"Failed to create analysis run: {db_error}")
+            # Non-critical - continue anyway
 
         return QueryGenerateResponse(
             message=result.get("message", "Query generated successfully."),
@@ -515,11 +549,13 @@ async def generate_query_from_question(
             queries=result.get("queries", {"broad": "", "focused": "", "clinical_filtered": ""}),
             toolbox=result.get("toolbox", []),
             framework_type=framework_type,
-            framework_data=framework_data
+            framework_data=english_framework_data
         )
 
     except HTTPException:
         raise
+    except (TranslationError, ValidationError, DatabaseError) as e:
+        raise convert_to_http_exception(e)
     except Exception as e:
         logger.exception(f"Error generating query from question: {e}")
         raise HTTPException(

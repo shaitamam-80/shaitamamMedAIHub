@@ -167,8 +167,9 @@ class QueryBuilder:
         # Step 4: Build three strategies
         strategies = self._build_strategies(concepts, framework_type, recommended_hedge_key)
 
-        # Step 5: Build result
+        # Step 5: Build result (V2 format with legacy compatibility)
         return {
+            # V2 fields
             "report_intro": self._generate_report_intro(framework_type, concepts),
             "concepts": [c.to_dict() for c in concepts],
             "strategies": {
@@ -180,6 +181,7 @@ class QueryBuilder:
             "formatted_report": self._generate_formatted_report(
                 framework_type, concepts, strategies
             ),
+
             # Legacy compatibility
             "queries": {
                 "broad": strategies[0].query,
@@ -187,8 +189,19 @@ class QueryBuilder:
                 "clinical_filtered": strategies[2].query
             },
             "message": f"Query strategy generated for {framework_type} framework using MeSH expansion.",
+
+            # Metadata
             "framework_type": framework_type,
-            "framework_data": framework_data
+            "framework_data": framework_data,
+
+            # Transparency (V2)
+            "warnings": [],  # Empty - no warnings from programmatic builder
+            "translation_status": {
+                "success": True,
+                "fields_translated": [],
+                "fields_failed": [],
+                "method": "programmatic"
+            }
         }
 
     def _build_concepts(
