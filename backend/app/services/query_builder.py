@@ -39,24 +39,28 @@ class ConceptBlock:
         return f'"{self.original_value}"[ti]'
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+        """Convert to dictionary for JSON serialization - matches ConceptAnalysis schema"""
+        # Map key to concept number (P=1, I=2, C=3, O=4, etc.)
+        key_to_number = {"P": 1, "I": 2, "C": 3, "O": 4, "E": 5, "S": 6}
+        concept_number = key_to_number.get(self.key, ord(self.key) - ord('A') + 1)
+
         result = {
+            # Required fields for ConceptAnalysis schema
+            "concept_number": concept_number,
+            "component": self.label,
+            "mesh_terms": [],
+            "free_text_terms": [],
+            # Additional fields for V2/extended info
             "key": self.key,
             "label": self.label,
             "original_value": self.original_value,
-            "mesh_terms": [],
-            "free_text_terms": [],
             "entry_terms": []
         }
 
         if self.expanded:
+            # mesh_terms as strings (for ConceptAnalysis compatibility)
             result["mesh_terms"] = [
-                {
-                    "name": m.descriptor_name,
-                    "ui": m.descriptor_ui,
-                    "query": m.to_mesh_query()
-                }
-                for m in self.expanded.mesh_terms
+                m.descriptor_name for m in self.expanded.mesh_terms
             ]
             result["free_text_terms"] = self.expanded.free_text_terms
             result["entry_terms"] = self.expanded.entry_terms[:5]
