@@ -21,11 +21,21 @@ import {
 import { Copy, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Interface matching backend ConceptBlock.to_dict() output
 interface ConceptAnalysis {
-  concept: string;
-  component_key: string;
-  free_text_terms: string[];
+  // Backend field names
+  key: string;                    // "P", "I", "C", "O"
+  label: string;                  // "Population", "Intervention"
+  original_value: string;         // User's input value
+  concept_number: number;         // 1, 2, 3, 4
+  component: string;              // Same as label
   mesh_terms: string[];
+  free_text_terms: string[];
+  entry_terms?: string[];
+
+  // Legacy support for V2 frontend types
+  concept?: string;               // Alias for original_value
+  component_key?: string;         // Alias for key
   mesh_queries?: {
     broad?: string;
     focused?: string;
@@ -99,6 +109,16 @@ export function ConceptTable({
     return terms.join(" OR ");
   };
 
+  // Helper function to get the component key (supports both backend and legacy field names)
+  const getComponentKey = (c: ConceptAnalysis): string => {
+    return c.key || c.component_key || "?";
+  };
+
+  // Helper function to get the concept description
+  const getConceptDescription = (c: ConceptAnalysis): string => {
+    return c.original_value || c.concept || c.component || "";
+  };
+
   if (!concepts || concepts.length === 0) {
     return (
       <Card>
@@ -140,8 +160,10 @@ export function ConceptTable({
           </TableHeader>
           <TableBody>
             {concepts.map((concept, index) => {
-              const isExpanded = expandedRows.has(concept.component_key);
-              const rowKey = `${concept.component_key}-${index}`;
+              const componentKey = getComponentKey(concept);
+              const conceptDescription = getConceptDescription(concept);
+              const isExpanded = expandedRows.has(componentKey);
+              const rowKey = `${componentKey}-${index}`;
 
               return (
                 <React.Fragment key={rowKey}>
@@ -156,7 +178,7 @@ export function ConceptTable({
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => toggleRow(concept.component_key)}
+                        onClick={() => toggleRow(componentKey)}
                       >
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4" />
@@ -169,24 +191,24 @@ export function ConceptTable({
                       <Badge
                         className={cn(
                           "font-semibold",
-                          componentColors[concept.component_key] ||
+                          componentColors[componentKey] ||
                             "bg-gray-100 text-gray-800"
                         )}
                       >
-                        {concept.component_key}
+                        {componentKey}
                       </Badge>
                       <span className="ml-2 text-xs text-muted-foreground">
-                        {componentLabels[concept.component_key] || ""}
+                        {componentLabels[componentKey] || concept.label || ""}
                       </span>
                     </TableCell>
                     <TableCell className="max-w-[200px]">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="truncate block">{concept.concept}</span>
+                            <span className="truncate block">{conceptDescription}</span>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="max-w-[300px]">
-                            {concept.concept}
+                            {conceptDescription}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

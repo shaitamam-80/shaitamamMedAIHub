@@ -66,6 +66,9 @@ import { StrategyCard } from "@/components/query/StrategyCard";
 import { ConceptTable } from "@/components/query/ConceptTable";
 import { ToolboxAccordion } from "@/components/query/ToolboxAccordion";
 import { ResultsPagination } from "@/components/query/ResultsPagination";
+// New screen components (available for future refactoring)
+import { QueryBuilderScreen } from "@/components/query/QueryBuilderScreen";
+import { SearchResultsScreen } from "@/components/query/SearchResultsScreen";
 
 // Step type for wizard
 type Step = "select" | "generate" | "execute" | "results";

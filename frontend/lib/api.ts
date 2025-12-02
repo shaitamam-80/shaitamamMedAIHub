@@ -112,11 +112,21 @@ export interface QueryGenerateResponse {
 // V2 Query Types (Professional Report Format)
 // ============================================================================
 
+// Matches backend ConceptBlock.to_dict() output
 export interface ConceptAnalysisV2 {
-  concept: string;
-  component_key: string;
-  free_text_terms: string[];
+  // Primary backend fields
+  key: string;                    // "P", "I", "C", "O"
+  label: string;                  // "Population", "Intervention"
+  original_value: string;         // User's input
+  concept_number: number;         // 1, 2, 3, 4
+  component: string;              // Same as label
   mesh_terms: string[];
+  free_text_terms: string[];
+  entry_terms?: string[];
+
+  // Legacy field aliases for backward compatibility
+  concept?: string;               // Alias for original_value
+  component_key?: string;         // Alias for key
   mesh_queries?: {
     broad?: string;
     focused?: string;
