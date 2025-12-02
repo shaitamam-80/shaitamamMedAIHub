@@ -160,20 +160,270 @@ class MeSHService:
 
     async def fetch_mesh_details(self, mesh_uids: List[str]) -> List[MeSHTerm]:
         """
-        Fetch full MeSH record details including synonyms.
+        Fetch full MeSH record details including synonyms using efetch.
+
+        The efetch endpoint with rettype=full returns complete MeSH records
+        including Entry Terms (synonyms) which esummary does not provide.
+        Note: NCBI MeSH efetch returns plain text format, not XML.
 
         Args:
             mesh_uids: List of MeSH UIDs from search
 
         Returns:
-            List of MeSHTerm objects with full details
+            List of MeSHTerm objects with full details including entry terms
         """
         if not mesh_uids:
             return []
 
         try:
-            # Use esummary instead of efetch - it returns proper JSON format
-            # efetch for MeSH returns plain text which is hard to parse
+            # Use efetch to get full MeSH records (returns plain text, not XML)
+            efetch_url = f"{self.base_url}/efetch.fcgi"
+            params = self._add_auth_params({
+                "db": "mesh",
+                "id": ",".join(mesh_uids),
+                "rettype": "full"
+            })
+
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.get(efetch_url, params=params)
+                response.raise_for_status()
+
+            # Parse text response (NCBI MeSH returns plain text format)
+            results = self._parse_mesh_text(response.text)
+
+            if results:
+                logger.info(f"Found {len(results)} MeSH terms with {sum(len(r.entry_terms) for r in results)} entry terms total")
+
+            return results
+
+        except Exception as e:
+            logger.warning(f"MeSH efetch failed for UIDs {mesh_uids}: {e}")
+            # Fallback to esummary if efetch fails
+            return await self._fetch_mesh_summary(mesh_uids)
+
+    def _parse_mesh_text(self, text: str) -> List[MeSHTerm]:
+        """
+        Parse NCBI MeSH efetch plain text response.
+
+        The text format for MeSH records is structured as:
+        N: Descriptor Name
+        Description text...
+        Tree Number(s): ...
+        Entry Terms:
+            term1
+            term2
+            ...
+        """
+        results = []
+        import re
+
+        # Split by record number pattern (e.g., "1: ", "2: ", etc.)
+        records = re.split(r'\n(?=\d+:\s)', text)
+
+        for record in records:
+            record = record.strip()
+            if not record:
+                continue
+
+            try:
+                lines = record.split('\n')
+                if not lines:
+                    continue
+
+                # First line is "N: Descriptor Name"
+                first_line = lines[0]
+                match = re.match(r'^(\d+):\s*(.+)$', first_line)
+                if not match:
+                    continue
+
+                descriptor_name = match.group(2).strip()
+
+                # Extract tree numbers
+                tree_numbers = []
+                entry_terms = []
+                scope_note = ""
+                in_entry_terms = False
+                description_lines = []
+
+                for i, line in enumerate(lines[1:], 1):
+                    stripped = line.strip()
+
+                    if stripped.startswith('Tree Number(s):'):
+                        # Parse tree numbers
+                        tree_part = stripped.replace('Tree Number(s):', '').strip()
+                        tree_numbers = [t.strip() for t in tree_part.split(',') if t.strip()]
+                        in_entry_terms = False
+                    elif stripped == 'Entry Terms:':
+                        in_entry_terms = True
+                    elif stripped.startswith('Previous Indexing:') or stripped.startswith('See Also:'):
+                        in_entry_terms = False
+                    elif stripped.startswith('Subheadings:'):
+                        in_entry_terms = False
+                    elif stripped.startswith('All MeSH Categories'):
+                        in_entry_terms = False
+                        break
+                    elif in_entry_terms and stripped:
+                        # Entry terms are indented
+                        entry_terms.append(stripped)
+                    elif not in_entry_terms and stripped and not stripped.startswith('Year introduced:') and not stripped.startswith('Date introduced:'):
+                        # Description text (before Entry Terms section)
+                        if not tree_numbers and not entry_terms:
+                            description_lines.append(stripped)
+
+                # Build scope note from description lines (first few lines after name)
+                scope_note = ' '.join(description_lines[:3])[:500]
+
+                # Generate a UID from tree numbers or use a placeholder
+                descriptor_ui = ""
+                if tree_numbers:
+                    # Use first tree number as base for UI
+                    descriptor_ui = f"D{tree_numbers[0].replace('.', '')[:6]}"
+
+                results.append(MeSHTerm(
+                    descriptor_ui=descriptor_ui,
+                    descriptor_name=descriptor_name,
+                    entry_terms=entry_terms[:15],  # Limit to 15 synonyms
+                    tree_numbers=tree_numbers,
+                    scope_note=scope_note
+                ))
+
+                logger.debug(f"Parsed MeSH term: {descriptor_name} with {len(entry_terms)} entry terms")
+
+            except Exception as record_error:
+                logger.debug(f"Error parsing MeSH record: {record_error}")
+                continue
+
+        return results
+
+    def _parse_mesh_xml(self, xml_text: str) -> List[MeSHTerm]:
+        """
+        Parse MeSH XML response to extract descriptors and entry terms.
+        (Kept for backwards compatibility but not actively used since NCBI returns text)
+
+        The XML structure for MeSH records contains:
+        - DescriptorRecord > DescriptorUI (the UID)
+        - DescriptorRecord > DescriptorName > String (the main term)
+        - DescriptorRecord > ConceptList > Concept > TermList > Term > String (entry terms)
+        """
+        results = []
+
+        try:
+            # MeSH XML can have different root elements depending on response
+            # Wrap in a root element if needed
+            if not xml_text.strip().startswith('<?xml'):
+                xml_text = f'<?xml version="1.0"?><root>{xml_text}</root>'
+
+            root = ElementTree.fromstring(xml_text)
+
+            # Look for DescriptorRecord elements (may be nested differently)
+            descriptor_records = root.findall('.//DescriptorRecord')
+            if not descriptor_records:
+                # Try alternate path
+                descriptor_records = root.findall('.//DescriptorRecordSet/DescriptorRecord')
+
+            for record in descriptor_records:
+                try:
+                    # Get descriptor UI
+                    ui_elem = record.find('.//DescriptorUI')
+                    ui = ui_elem.text if ui_elem is not None else ""
+
+                    # Get descriptor name
+                    name_elem = record.find('.//DescriptorName/String')
+                    name = name_elem.text if name_elem is not None else ""
+
+                    if not name:
+                        continue
+
+                    # Get entry terms (synonyms) from all concepts
+                    entry_terms = []
+                    term_elements = record.findall('.//ConceptList/Concept/TermList/Term/String')
+                    for term_elem in term_elements:
+                        if term_elem.text and term_elem.text != name:
+                            entry_terms.append(term_elem.text)
+
+                    # Get tree numbers
+                    tree_numbers = []
+                    tree_elements = record.findall('.//TreeNumberList/TreeNumber')
+                    for tree_elem in tree_elements:
+                        if tree_elem.text:
+                            tree_numbers.append(tree_elem.text)
+
+                    # Get scope note
+                    scope_elem = record.find('.//ScopeNote')
+                    scope_note = scope_elem.text if scope_elem is not None else ""
+
+                    results.append(MeSHTerm(
+                        descriptor_ui=ui,
+                        descriptor_name=name,
+                        entry_terms=entry_terms[:15],  # Limit to 15 synonyms
+                        tree_numbers=tree_numbers,
+                        scope_note=scope_note[:500] if scope_note else ""  # Truncate long notes
+                    ))
+
+                except Exception as record_error:
+                    logger.debug(f"Error parsing MeSH record: {record_error}")
+                    continue
+
+        except ElementTree.ParseError as parse_error:
+            logger.warning(f"XML parse error: {parse_error}")
+            # Try to extract basic info from text
+            results = self._parse_mesh_text_fallback(xml_text)
+
+        return results
+
+    def _parse_mesh_text_fallback(self, text: str) -> List[MeSHTerm]:
+        """
+        Fallback parser for when XML parsing fails.
+        Extracts basic MeSH info from text output.
+        """
+        results = []
+        import re
+
+        # Try to find descriptor patterns in text
+        # Pattern: "Descriptor Name" followed by entry terms
+        lines = text.split('\n')
+
+        current_name = None
+        current_ui = None
+        current_entries = []
+
+        for line in lines:
+            line = line.strip()
+
+            # Look for main heading
+            if line.startswith('MH - ') or line.startswith('ENTRY - '):
+                if line.startswith('MH - '):
+                    if current_name:
+                        # Save previous
+                        results.append(MeSHTerm(
+                            descriptor_ui=current_ui or "",
+                            descriptor_name=current_name,
+                            entry_terms=current_entries[:15]
+                        ))
+                    current_name = line[5:].strip()
+                    current_entries = []
+                elif line.startswith('ENTRY - ') and current_name:
+                    current_entries.append(line[8:].strip())
+
+            elif line.startswith('UI - '):
+                current_ui = line[5:].strip()
+
+        # Don't forget last one
+        if current_name:
+            results.append(MeSHTerm(
+                descriptor_ui=current_ui or "",
+                descriptor_name=current_name,
+                entry_terms=current_entries[:15]
+            ))
+
+        return results
+
+    async def _fetch_mesh_summary(self, mesh_uids: List[str]) -> List[MeSHTerm]:
+        """
+        Fallback method using esummary when efetch fails.
+        Returns MeSH terms without entry terms.
+        """
+        try:
             esummary_url = f"{self.base_url}/esummary.fcgi"
             params = self._add_auth_params({
                 "db": "mesh",
@@ -196,24 +446,21 @@ class MeSHService:
                 if not record:
                     continue
 
-                # Extract descriptor name from summary
                 ds_mesh_term = record.get("ds_meshterms", [])
                 name = ds_mesh_term[0] if ds_mesh_term else record.get("title", "")
 
-                # esummary doesn't provide entry terms, but we can still use
-                # the descriptor name for query building
                 results.append(MeSHTerm(
                     descriptor_ui=f"D{uid}" if not str(uid).startswith("D") else str(uid),
                     descriptor_name=name,
-                    entry_terms=[],  # Not available in esummary
-                    tree_numbers=[],  # Not available in esummary
+                    entry_terms=[],
+                    tree_numbers=[],
                     scope_note=record.get("ds_scopenote", "")
                 ))
 
             return results
 
         except Exception as e:
-            logger.warning(f"MeSH fetch failed for UIDs {mesh_uids}: {e}")
+            logger.warning(f"MeSH summary fallback failed: {e}")
             return []
 
     async def expand_term(self, term: str) -> ExpandedTerms:
@@ -248,13 +495,21 @@ class MeSHService:
         mesh_uids = await self.search_mesh(clean_term)
 
         if mesh_uids:
-            # Fetch full MeSH details
+            # Fetch full MeSH details including entry terms
             mesh_terms = await self.fetch_mesh_details(mesh_uids[:3])  # Top 3 matches
             result.mesh_terms = mesh_terms
 
-            # Extract entry terms from best match
-            if mesh_terms:
-                result.entry_terms = mesh_terms[0].entry_terms[:10]  # Top 10 synonyms
+            # Extract entry terms from all matches
+            all_entry_terms = []
+            for mesh_term in mesh_terms:
+                all_entry_terms.extend(mesh_term.entry_terms)
+
+            # Deduplicate and limit
+            result.entry_terms = list(dict.fromkeys(all_entry_terms))[:10]
+
+            logger.info(f"Term '{clean_term}' -> {len(mesh_terms)} MeSH terms, {len(result.entry_terms)} synonyms")
+        else:
+            logger.info(f"No MeSH match for '{clean_term}'")
 
         # Generate free-text variations
         result.free_text_terms = self._generate_free_text(clean_term)
@@ -276,8 +531,8 @@ class MeSHService:
         """
         variations = []
 
-        # Original term
-        variations.append(term)
+        # Original term (quoted for phrase searching)
+        variations.append(f'"{term}"')
 
         # With truncation for word variants
         words = term.split()
@@ -285,8 +540,10 @@ class MeSHService:
             # Single word - add truncation
             variations.append(f"{term}*")
 
-        # Handle common abbreviations in medical terms
-        # (Could be expanded based on domain knowledge)
+        # Handle common abbreviations and variations
+        # Add the term without quotes for broader matching
+        if len(words) > 1:
+            variations.append(term)
 
         return variations
 
@@ -315,6 +572,8 @@ class MeSHService:
 
         if not items_to_expand:
             return results
+
+        logger.info(f"Expanding {len(items_to_expand)} framework components via MeSH API")
 
         # Expand all terms concurrently
         tasks = [

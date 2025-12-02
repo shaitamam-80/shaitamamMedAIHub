@@ -94,17 +94,20 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
-# Add security headers middleware
-app.add_middleware(SecurityHeadersMiddleware)
+# Add security headers middleware - DISABLED in DEBUG mode for CORS to work
+if not settings.DEBUG:
+    app.add_middleware(SecurityHeadersMiddleware)
 
-# Configure CORS with restricted methods and headers
+# Configure CORS
+# Note: allow_credentials=True cannot be used with allow_origins=["*"]
+# In DEBUG mode, we list explicit localhost origins instead
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include routers

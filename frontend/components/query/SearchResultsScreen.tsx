@@ -1,12 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,23 +11,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   ArrowRight,
-  Check,
-  Copy,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  ClipboardCopy,
   Download,
   ExternalLink,
   FileText,
   Filter,
   Loader2,
-  Play,
   Search,
-  ClipboardCopy,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Import pagination component
-import { ResultsPagination } from "./ResultsPagination";
 
 // Types
 import type {
@@ -54,6 +48,17 @@ interface SearchResultsScreenProps {
   perPage: number;
   setPerPage: (value: number) => void;
 }
+
+// Study type badge styling
+const getStudyTypeBadgeStyle = (type: string) => {
+  if (type.includes("Systematic") || type.includes("Meta"))
+    return "bg-indigo-100 text-indigo-700 border-indigo-200";
+  if (type.includes("Randomized"))
+    return "bg-blue-100 text-blue-700 border-blue-200";
+  if (type.includes("Cohort") || type.includes("Observational"))
+    return "bg-cyan-100 text-cyan-700 border-cyan-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+};
 
 export function SearchResultsScreen({
   searchResults,
@@ -104,45 +109,43 @@ export function SearchResultsScreen({
       )
     : searchResults.articles;
 
+  // Calculate pagination
+  const startResult = (searchResults.page - 1) * perPage + 1;
+  const endResult = Math.min(startResult + searchResults.returned - 1, searchResults.count);
+
   return (
-    <div className="space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBackToBuilder} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Query Builder
-        </Button>
-        <h1 className="text-xl font-semibold">Search Results</h1>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Advanced PubMed Search</h1>
+        <p className="text-gray-500 mt-1">Enter or edit PubMed query to search for relevant articles</p>
       </div>
 
-      {/* Query Editor Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Current Query
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
+      {/* Search Section */}
+      <Card className="shadow-sm border border-gray-200">
+        <CardContent className="p-6">
+          <textarea
             value={currentQuery}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="font-mono text-xs min-h-[100px] bg-slate-900 text-slate-100"
+            className="w-full h-28 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none"
+            placeholder="Enter your PubMed query..."
           />
-          <div className="flex gap-3">
+
+          <div className="flex gap-3 mt-4">
             <Button
               onClick={() => onSearch(1)}
-              disabled={isSearching || !currentQuery}
-              className="gap-2"
+              disabled={isSearching}
+              className="flex-1 py-3 gap-2"
+              size="lg"
             >
               {isSearching ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Play className="h-4 w-4" />
+                  <Search className="w-5 h-5" />
                   Search PubMed
                 </>
               )}
@@ -155,42 +158,48 @@ export function SearchResultsScreen({
                   "_blank"
                 )
               }
-              className="gap-2"
+              className="py-3 px-5 gap-2"
             >
-              <ExternalLink className="h-4 w-4" />
-              Open in PubMed
+              <ExternalLink className="w-5 h-5" />
+              Open PubMed
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onBackToBuilder}
+              className="py-3 px-5 gap-2"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Back
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                <Check className="h-6 w-6 text-green-500" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">
-                  {searchResults.count.toLocaleString()} Articles Found
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Showing page {searchResults.page} of {searchResults.total_pages} (
-                  {searchResults.returned} results)
-                </p>
+      {/* Results Section */}
+      <Card className="shadow-sm border border-gray-200 overflow-hidden">
+        {/* Results Header */}
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Search Results</h2>
+              <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                <span className="font-semibold text-blue-600">
+                  Found {searchResults.count.toLocaleString()} articles
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Page {searchResults.page} of {searchResults.total_pages}
+                </span>
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2">
               <Button
-                variant="outline"
-                onClick={() => onExport("medline")}
-                disabled={isExporting}
+                onClick={onContinueToReview}
                 className="gap-2"
               >
-                <Download className="h-4 w-4" />
-                Export MEDLINE
+                <Sparkles className="w-4 h-4" />
+                AI Analysis
               </Button>
               <Button
                 variant="outline"
@@ -198,124 +207,209 @@ export function SearchResultsScreen({
                 disabled={isExporting}
                 className="gap-2"
               >
-                <Download className="h-4 w-4" />
+                <Download className="w-4 h-4" />
                 Export CSV
-              </Button>
-              <Button onClick={onContinueToReview} className="gap-2">
-                <ArrowRight className="h-4 w-4" />
-                Continue to Review
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Filter Input */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Filter results by title, author, or journal..."
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          className="max-w-md"
-        />
-        {filterText && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setFilterText("")}
-            className="text-xs"
-          >
-            Clear
-          </Button>
-        )}
-      </div>
+          {/* Filter */}
+          <div className="relative mt-4">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Filter by title, journal, or author..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="w-full sm:w-80 pl-10 bg-gray-50"
+            />
+          </div>
+        </div>
 
-      {/* Articles List */}
-      <div className="grid gap-4">
-        {filteredArticles.map((article) => (
-          <Card
-            key={article.pmid}
-            className="hover:border-primary/50 transition-colors"
-          >
-            <CardContent className="py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm leading-tight mb-2">
-                    {article.title}
-                  </h4>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span>{article.authors}</span>
-                    <span className="text-muted-foreground/50">|</span>
-                    <span>{article.journal}</span>
-                    <span className="text-muted-foreground/50">|</span>
-                    <span>{article.pubdate}</span>
-                  </div>
-                  <div className="mt-2 flex gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-xs">
-                      PMID: {article.pmid}
-                    </Badge>
-                    {article.pubtype?.slice(0, 2).map((type, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {type}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewAbstract(article)}
-                    className="gap-1"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Abstract
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      window.open(
-                        `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
-                        "_blank"
-                      )
-                    }
-                    className="gap-1"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        {/* Results Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  PMID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Title
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Journal
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Year
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Authors
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Study Types
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredArticles.map((article) => (
+                <tr
+                  key={article.pmid}
+                  className="hover:bg-blue-50/30 transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <a
+                      href={`https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 font-mono text-sm font-medium hover:underline"
+                    >
+                      {article.pmid}
+                    </a>
+                  </td>
+                  <td className="px-6 py-4 max-w-md">
+                    <div>
+                      <button
+                        onClick={() => handleViewAbstract(article)}
+                        className="text-gray-900 font-semibold text-sm hover:text-blue-700 transition-colors line-clamp-2 text-left"
+                      >
+                        {article.title}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-gray-700 text-sm">{article.journal}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-gray-700 text-sm font-medium">
+                      {article.pubdate?.split(" ")[0] || article.pubdate}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-gray-700 text-sm max-w-[150px] truncate">
+                      {article.authors}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {article.pubtype?.slice(0, 2).map((type, i) => (
+                        <span
+                          key={i}
+                          className={cn(
+                            "text-xs font-medium px-2 py-0.5 rounded border",
+                            getStudyTypeBadgeStyle(type)
+                          )}
+                        >
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewAbstract(article)}
+                        className="h-8 w-8 p-0"
+                        title="View Abstract"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
+                            "_blank"
+                          )
+                        }
+                        className="h-8 w-8 p-0"
+                        title="View in PubMed"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* No Results Message */}
-      {filteredArticles.length === 0 && filterText && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">
+        {/* No Results Message */}
+        {filteredArticles.length === 0 && filterText && (
+          <div className="py-12 text-center">
+            <p className="text-gray-500">
               No articles match your filter. Try adjusting your search terms.
             </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Pagination */}
-      <ResultsPagination
-        currentPage={searchResults.page}
-        totalPages={searchResults.total_pages}
-        totalResults={searchResults.count}
-        resultsPerPage={perPage}
-        onPageChange={(page) => onSearch(page)}
-        onResultsPerPageChange={(newPerPage) => {
-          setPerPage(newPerPage);
-          onSearch(1);
-        }}
-        isLoading={isSearching}
-      />
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Showing{" "}
+            <span className="font-semibold text-gray-700">
+              {startResult}-{endResult}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-gray-700">
+              {searchResults.count.toLocaleString()}
+            </span>{" "}
+            results
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSearch(searchResults.page - 1)}
+              disabled={searchResults.page <= 1 || isSearching}
+              className="gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => onSearch(searchResults.page + 1)}
+              disabled={searchResults.page >= searchResults.total_pages || isSearching}
+              className="gap-1"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Continue to Review Card */}
+      <Card className="shadow-sm border border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Ready to screen these articles?
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Continue to the Review tool to screen articles with AI assistance
+              </p>
+            </div>
+            <Button
+              onClick={onContinueToReview}
+              size="lg"
+              className="gap-2"
+            >
+              <ArrowRight className="w-5 h-5" />
+              Continue to Review
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Abstract Preview Dialog */}
       <Dialog
@@ -324,31 +418,34 @@ export function SearchResultsScreen({
       >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-lg pr-8">
+            <DialogTitle className="text-lg pr-8 leading-tight">
               {selectedArticle?.title}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-4">
-            <div className="text-sm text-muted-foreground">
-              <p>{selectedArticle?.authors}</p>
+            <div className="text-sm text-gray-500">
+              <p className="font-medium text-gray-700">{selectedArticle?.authors}</p>
               <p>
-                {selectedArticle?.journal} | {selectedArticle?.pubdate}
+                {selectedArticle?.journal} • {selectedArticle?.pubdate}
+              </p>
+              <p className="text-blue-600 font-mono text-xs mt-1">
+                PMID: {selectedArticle?.pmid}
               </p>
             </div>
 
-            <div className="pt-2 border-t">
-              <h4 className="font-medium mb-2">Abstract</h4>
+            <div className="pt-4 border-t">
+              <h4 className="font-semibold text-gray-900 mb-2">Abstract</h4>
               {isLoadingAbstract ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-2 text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading abstract...
                 </div>
               ) : (
-                <p className="text-sm leading-relaxed">{abstractContent}</p>
+                <p className="text-sm leading-relaxed text-gray-700">{abstractContent}</p>
               )}
             </div>
 
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-4 border-t">
               <Button
                 variant="outline"
                 onClick={() =>

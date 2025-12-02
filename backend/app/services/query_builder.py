@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 from .mesh_service import mesh_service, ExpandedTerms
 from app.core.prompts.query import VALIDATED_HEDGES, FRAMEWORK_QUERY_LOGIC
+from app.core.search_config import TOOLBOX_FILTERS, PICO_PRIORITY
 
 logger = logging.getLogger(__name__)
 
@@ -101,36 +102,6 @@ class QueryStrategy:
             result["hedge_applied"] = self.hedge_applied
             result["hedge_citation"] = self.hedge_citation
         return result
-
-
-# Predefined toolbox filters
-TOOLBOX_FILTERS = [
-    # Age Filters
-    {"category": "Age", "label": "Adults (19+)", "query": 'AND ("adult"[Mesh] OR adult*[tiab])', "description": "Limit to adult population (19 years and older)"},
-    {"category": "Age", "label": "Children (0-18)", "query": 'AND ("child"[Mesh] OR "adolescent"[Mesh] OR child*[tiab] OR pediatric[tiab])', "description": "Limit to pediatric population"},
-    {"category": "Age", "label": "Elderly (65+)", "query": 'AND ("aged"[Mesh] OR elderly[tiab] OR "older adult*"[tiab])', "description": "Limit to elderly population (65 years and older)"},
-
-    # Article Type Filters
-    {"category": "Article Type", "label": "Systematic Reviews", "query": 'AND (systematic review[pt] OR meta-analysis[pt] OR "systematic review"[tiab])', "description": "Limit to systematic reviews and meta-analyses"},
-    {"category": "Article Type", "label": "RCTs Only", "query": 'AND (randomized controlled trial[pt] OR "randomized controlled trial"[tiab])', "description": "Limit to randomized controlled trials"},
-    {"category": "Article Type", "label": "Clinical Trials", "query": 'AND (clinical trial[pt] OR "clinical trial"[tiab])', "description": "Limit to clinical trials"},
-    {"category": "Article Type", "label": "Guidelines", "query": 'AND (practice guideline[pt] OR guideline[pt] OR "clinical guideline"[tiab])', "description": "Limit to clinical guidelines"},
-    {"category": "Article Type", "label": "Observational Studies", "query": 'AND (cohort studies[Mesh] OR case-control studies[Mesh] OR observational[tiab])', "description": "Limit to observational studies"},
-    {"category": "Article Type", "label": "Case Reports", "query": 'AND (case reports[pt])', "description": "Limit to case reports"},
-
-    # Date Filters
-    {"category": "Date", "label": "Last 5 Years", "query": 'AND ("last 5 years"[dp])', "description": "Published in the last 5 years"},
-    {"category": "Date", "label": "Last 10 Years", "query": 'AND ("last 10 years"[dp])', "description": "Published in the last 10 years"},
-    {"category": "Date", "label": "2020-Present", "query": 'AND ("2020"[dp] : "3000"[dp])', "description": "Published from 2020 onwards"},
-
-    # Language Filters
-    {"category": "Language", "label": "English Only", "query": "AND English[lang]", "description": "Limit to English language publications"},
-    {"category": "Language", "label": "Free Full Text", "query": "AND free full text[sb]", "description": "Only articles with free full text available"},
-
-    # Study Design Filters
-    {"category": "Study Design", "label": "Humans Only", "query": "AND humans[Mesh]", "description": "Exclude animal-only studies"},
-    {"category": "Study Design", "label": "Exclude Animals", "query": "NOT (animals[Mesh] NOT humans[Mesh])", "description": "Exclude studies on animals without human subjects"},
-]
 
 
 class QueryBuilder:
@@ -231,10 +202,13 @@ class QueryBuilder:
             "timeframe": "T", "study": "S", "factor": "F"
         }
 
-        # Prioritize single-letter keys (P, I, C, O) over full-word keys
+        # Prioritize single-letter keys (P, I, C, O) over full-word keys, then by PICO order
         sorted_keys = sorted(
             framework_data.keys(),
-            key=lambda k: (len(k) > 1, k)  # Single-letter keys first
+            key=lambda k: (
+                len(k) > 1,  # Single-letter keys first
+                PICO_PRIORITY.get(k.upper(), 99)  # Then by PICO priority (P=1, I=2, C=3, O=4...)
+            )
         )
 
         for key in sorted_keys:

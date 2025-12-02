@@ -90,7 +90,7 @@ class MedlineExportRequest(BaseModel):
 # Existing Endpoints (Updated)
 # ============================================================================
 
-@router.post("/generate", response_model=QueryGenerateResponse)
+@router.post("/generate")
 @limiter.limit("20/minute")
 async def generate_query(
     http_request: Request,
@@ -198,14 +198,10 @@ async def generate_query(
             logger.warning(f"Failed to create analysis run: {db_error}")
             # Non-critical - continue anyway
 
-        return QueryGenerateResponse(
-            message=result.get("message", "Query generated successfully."),
-            concepts=result.get("concepts", []),
-            queries=result.get("queries", {"broad": "", "focused": "", "clinical_filtered": ""}),
-            toolbox=result.get("toolbox", []),
-            framework_type=framework_type,
-            framework_data=english_framework_data
-        )
+        # Return full V2 response (not filtered by Pydantic model)
+        result["framework_type"] = framework_type
+        result["framework_data"] = english_framework_data
+        return result
 
     except HTTPException:
         raise
@@ -572,14 +568,10 @@ async def generate_query_from_question(
             logger.warning(f"Failed to create analysis run: {db_error}")
             # Non-critical - continue anyway
 
-        return QueryGenerateResponse(
-            message=result.get("message", "Query generated successfully."),
-            concepts=result.get("concepts", []),
-            queries=result.get("queries", {"broad": "", "focused": "", "clinical_filtered": ""}),
-            toolbox=result.get("toolbox", []),
-            framework_type=framework_type,
-            framework_data=english_framework_data
-        )
+        # Return full V2 response (not filtered by Pydantic model)
+        result["framework_type"] = framework_type
+        result["framework_data"] = english_framework_data
+        return result
 
     except HTTPException:
         raise

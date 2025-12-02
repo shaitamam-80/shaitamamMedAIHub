@@ -523,11 +523,42 @@ English translation:""")
             }
         ]
 
+        # Generate concepts from framework_data so UI isn't empty
+        key_to_label = {
+            'P': 'Population', 'I': 'Intervention', 'C': 'Comparison',
+            'O': 'Outcome', 'E': 'Exposure', 'S': 'Study Design', 'T': 'Timeframe',
+            'population': 'Population', 'intervention': 'Intervention',
+            'comparator': 'Comparison', 'comparison': 'Comparison',
+            'outcome': 'Outcome', 'exposure': 'Exposure'
+        }
+        key_to_number = {'P': 1, 'I': 2, 'C': 3, 'O': 4, 'E': 5, 'S': 6, 'T': 7}
+
+        concepts = []
+        for key, value in framework_data.items():
+            if not value or key.lower() in ['research_question', 'framework_type']:
+                continue
+            # Normalize key
+            normalized_key = key.upper() if len(key) == 1 else key[0].upper()
+            label = key_to_label.get(key, key_to_label.get(key.lower(), key.title()))
+            concepts.append({
+                "concept_number": key_to_number.get(normalized_key, len(concepts) + 1),
+                "component": label,
+                "key": normalized_key,
+                "label": label,
+                "original_value": value,
+                "mesh_terms": [],
+                "free_text_terms": [f'"{value}"[tiab]'],
+                "entry_terms": []
+            })
+
+        # Sort by concept_number (PICO order)
+        concepts.sort(key=lambda c: c["concept_number"])
+
         # Build V2 response structure
         return {
             # V2 fields
             "report_intro": f"This is a simplified search strategy for your {framework_type} framework. {message}",
-            "concepts": [],  # No detailed concepts in fallback
+            "concepts": concepts,  # NOW POPULATED from framework_data
             "strategies": {
                 "comprehensive": {
                     "name": "Fallback Query (Basic Boolean)",
