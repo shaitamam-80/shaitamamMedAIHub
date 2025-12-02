@@ -236,16 +236,56 @@ class QueryBuilder:
         framework_type: str,
         hedge_key: Optional[str]
     ) -> List[QueryStrategy]:
-        """Build three search strategies"""
+        """
+        Build three search strategies.
+
+        For comparison questions (with C component), uses SPLIT logic:
+        (P AND I AND O) OR (P AND C AND O)
+
+        This captures:
+        - Studies comparing I vs C directly
+        - Studies of intervention I alone
+        - Studies of comparator C alone
+        """
+
+        # Identify concept roles
+        concept_map = {c.key: c for c in concepts}
+        has_comparison = "C" in concept_map and concept_map["C"].original_value
+
+        # Core concepts for PICO-family frameworks
+        p_concept = concept_map.get("P")  # Population
+        i_concept = concept_map.get("I")  # Intervention
+        c_concept = concept_map.get("C")  # Comparison (optional)
+        o_concept = concept_map.get("O")  # Outcome
 
         # Strategy A: Comprehensive (High Sensitivity)
-        broad_parts = [c.to_broad_query() for c in concepts if c.to_broad_query()]
-        comprehensive_query = " AND ".join(broad_parts)
+        if has_comparison and p_concept and i_concept and o_concept:
+            # SPLIT QUERY LOGIC for comparison questions
+            # Formula: (P AND I AND O) OR (P AND C AND O)
+
+            p_broad = p_concept.to_broad_query() if p_concept else ""
+            i_broad = i_concept.to_broad_query() if i_concept else ""
+            c_broad = c_concept.to_broad_query() if c_concept else ""
+            o_broad = o_concept.to_broad_query() if o_concept else ""
+
+            # Build the split query
+            intervention_arm = f"({p_broad} AND {i_broad} AND {o_broad})"
+            comparator_arm = f"({p_broad} AND {c_broad} AND {o_broad})"
+            comprehensive_query = f"{intervention_arm} OR {comparator_arm}"
+
+            formula = "(P AND I AND O) OR (P AND C AND O) - Split structure for comparison questions"
+
+            logger.info(f"Built SPLIT query for comparison framework: {framework_type}")
+        else:
+            # Standard AND logic for non-comparison frameworks
+            broad_parts = [c.to_broad_query() for c in concepts if c.to_broad_query()]
+            comprehensive_query = " AND ".join(broad_parts)
+            formula = "(" + ") AND (".join([c.key for c in concepts]) + ") with OR-expanded terms"
 
         comprehensive = QueryStrategy(
             name="Comprehensive Search (High Sensitivity)",
             purpose="Maximum recall for systematic reviews - captures all potentially relevant studies",
-            formula="(" + ") AND (".join([c.key for c in concepts]) + ") with OR-expanded terms",
+            formula=formula,
             query=comprehensive_query,
             expected_yield="High (500-5000+ results)",
             use_cases=[
@@ -257,20 +297,39 @@ class QueryBuilder:
         )
 
         # Strategy B: Direct/Focused (High Precision)
-        focused_parts = [c.to_focused_query() for c in concepts if c.to_focused_query()]
-        focused_query = " AND ".join(focused_parts)
+        if has_comparison and p_concept and i_concept and c_concept and o_concept:
+            # For comparison questions: require BOTH I and C to be mentioned
+            # Formula: P AND I AND C AND O
+            p_focused = p_concept.to_focused_query() if p_concept else ""
+            i_focused = i_concept.to_focused_query() if i_concept else ""
+            c_focused = c_concept.to_focused_query() if c_concept else ""
+            o_focused = o_concept.to_focused_query() if o_concept else ""
+
+            focused_query = f"{p_focused} AND {i_focused} AND {c_focused} AND {o_focused}"
+            focused_formula = "P[majr] AND I[tiab] AND C[tiab] AND O[majr] - Direct comparison (requires both interventions)"
+            focused_purpose = "Head-to-head comparison studies - requires both interventions mentioned"
+        else:
+            focused_parts = [c.to_focused_query() for c in concepts if c.to_focused_query()]
+            focused_query = " AND ".join(focused_parts)
+            focused_formula = "MeSH[majr] + Title terms for each concept"
+            focused_purpose = "Balanced precision-recall for targeted searches"
 
         direct = QueryStrategy(
-            name="Focused Search (High Precision)",
-            purpose="Balanced precision-recall for targeted searches",
-            formula="MeSH[majr] + Title terms for each concept",
+            name="Focused Search (High Precision)" if not has_comparison else "Direct Comparison (Head-to-Head)",
+            purpose=focused_purpose,
+            formula=focused_formula,
             query=focused_query,
-            expected_yield="Medium (50-500 results)",
+            expected_yield="Medium (50-500 results)" if not has_comparison else "Medium-Low (20-300 results)",
             use_cases=[
                 "Rapid reviews",
                 "Clinical questions",
                 "Initial scoping",
                 "Time-limited searches"
+            ] if not has_comparison else [
+                "Clinical guidelines requiring direct comparison data",
+                "Meta-analyses of head-to-head RCTs",
+                "Comparative effectiveness research",
+                "Health technology assessment"
             ]
         )
 
@@ -317,15 +376,29 @@ class QueryBuilder:
         concept_count = len(concepts)
         mesh_count = sum(1 for c in concepts if c.expanded and c.expanded.mesh_terms)
 
+        # Check if this is a comparison question
+        concept_keys = [c.key for c in concepts]
+        has_comparison = "C" in concept_keys and any(
+            c.key == "C" and c.original_value for c in concepts
+        )
+
+        comparison_note = ""
+        if has_comparison:
+            comparison_note = """
+**Query Structure:** Split logic `(P AND I AND O) OR (P AND C AND O)` is used for the comprehensive strategy to capture:
+- Studies comparing Intervention vs Comparator directly
+- Studies of either intervention alone
+"""
+
         intro = f"""## Search Strategy Report
 
 This search strategy was generated for a **{framework_type}** research framework with {concept_count} concepts.
 
 **MeSH Coverage:** {mesh_count}/{concept_count} concepts mapped to MeSH terms via NCBI API.
-
+{comparison_note}
 Three search strategies are provided:
 1. **Comprehensive** - High sensitivity for systematic reviews
-2. **Focused** - Balanced precision-recall
+2. **{'Direct Comparison' if has_comparison else 'Focused'}** - {'Head-to-head studies' if has_comparison else 'Balanced precision-recall'}
 3. **Clinical Filtered** - With validated methodological hedge
 """
         return intro

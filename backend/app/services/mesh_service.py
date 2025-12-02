@@ -75,6 +75,10 @@ class ExpandedTerms:
         for term in self.entry_terms[:5]:  # Limit to top 5
             parts.append(f'{term}[tiab]')
 
+        # Fallback: if no MeSH/synonyms found, use original term
+        if not parts and self.original_term:
+            parts.append(f'"{self.original_term}"[tiab]')
+
         if not parts:
             return ""
 

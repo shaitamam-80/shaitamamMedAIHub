@@ -492,6 +492,139 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ## Recent Changes Log
 
+### 2025-12-02 - Query Tool V2: Advanced Query Engine
+
+#### Split Query Logic for Comparison Questions
+
+**Problem**: Standard AND logic `(P AND I AND C AND O)` misses studies that only mention one intervention.
+
+**Solution**: Implemented Split Query Logic for PICO comparison questions:
+
+```text
+(P AND I AND O) OR (P AND C AND O)
+```
+
+This captures:
+
+- Studies comparing Intervention vs Comparator directly
+- Studies of Intervention alone
+- Studies of Comparator alone
+
+**Implementation** (`backend/app/services/query_builder.py`):
+
+1. **Detection**: Checks if framework has populated C (Comparison) component
+2. **Strategy A (Comprehensive)**: Uses split structure `(P AND I AND O) OR (P AND C AND O)`
+3. **Strategy B (Direct Comparison)**: Uses full AND `P AND I AND C AND O` for head-to-head studies
+4. **Strategy C (Clinical Filtered)**: Focused + validated hedge + animal exclusion
+
+**Example Output** (for GAD/CBT vs SSRIs question):
+
+```text
+(
+  ("Anxiety Disorders"[Mesh] OR "generalized anxiety"[tiab] OR GAD[tiab])
+  AND
+  ("Cognitive Behavioral Therapy"[Mesh] OR CBT[tiab])
+  AND
+  ("Treatment Outcome"[Mesh] OR "anxiety symptoms"[tiab])
+)
+OR
+(
+  ("Anxiety Disorders"[Mesh] OR "generalized anxiety"[tiab] OR GAD[tiab])
+  AND
+  ("Serotonin Uptake Inhibitors"[Mesh] OR SSRI*[tiab] OR benzodiazepine*[tiab])
+  AND
+  ("Treatment Outcome"[Mesh] OR "anxiety symptoms"[tiab])
+)
+```
+
+#### MeSH Expansion Service
+
+New `backend/app/services/mesh_service.py`:
+
+- **MeSH Lookup**: NCBI E-utilities API for term validation
+- **Entry Terms**: Extracts synonyms from MeSH thesaurus
+- **Query Variants**:
+  - `[Mesh]` - With explosion (includes narrower terms)
+  - `[Majr]` - Major topic only
+  - `[tiab]` - Title/abstract free-text
+- **Fallback**: Uses original term in quotes if MeSH lookup fails
+
+#### Query Builder Service
+
+New `backend/app/services/query_builder.py`:
+
+- **Programmatic query building** (no AI needed for basic queries)
+- **Three strategies**: Comprehensive, Direct/Focused, Clinical Filtered
+- **15+ Toolbox Filters**: Age, Article Type, Date, Language, Study Design
+- **Framework-specific logic**: 20+ frameworks supported (PICO, PEO, SPIDER, etc.)
+
+#### Validated Methodological Hedges
+
+`backend/app/core/prompts/query.py` includes:
+
+| Hedge | Use Case | Source |
+|-------|----------|--------|
+| RCT_COCHRANE | Intervention questions | Cochrane HSSS |
+| OBSERVATIONAL_SIGN | Exposure/etiology | SIGN |
+| PROGNOSIS_HAYNES | Prognosis questions | McMaster |
+| DIAGNOSIS_HAYNES | Diagnostic accuracy | McMaster |
+| QUALITATIVE_WONG | Qualitative research | Wong Filter |
+| PREVALENCE_FILTER | Epidemiology | Cochrane |
+
+#### API Response V2
+
+`QueryGenerateResponseV2` structure:
+
+```typescript
+{
+  report_intro: string;           // Markdown intro with methodology
+  concepts: ConceptAnalysisV2[];  // MeSH + free-text for each component
+  strategies: {
+    comprehensive: QueryStrategy; // High sensitivity (split for comparison)
+    direct: QueryStrategy;        // High precision (head-to-head)
+    clinical: QueryStrategy;      // With hedge + animal exclusion
+  };
+  toolbox: ToolboxFilter[];       // 15+ pre-built filters
+  formatted_report: string;       // Complete markdown report
+
+  // Legacy compatibility
+  queries: { broad, focused, clinical_filtered };
+  message: string;
+
+  // Transparency
+  translation_status?: TranslationStatus;
+  warnings: QueryWarning[];
+}
+```
+
+#### Frontend Components
+
+New components in `frontend/components/query/`:
+
+- `StrategyCard.tsx` - Displays strategy with formula, query, expected yield
+- `ConceptTable.tsx` - MeSH terms and free-text analysis table
+- `ToolboxAccordion.tsx` - Expandable filter categories
+- `ResultsPagination.tsx` - Search result pagination
+
+#### Tests Added
+
+New `backend/tests/test_query_builder.py`:
+
+- Split Query Logic tests (14 tests total)
+- Direct Comparison strategy tests
+- Clinical Filtered strategy tests
+- Toolbox generation tests
+- Legacy compatibility tests
+- Edge case handling
+
+**Files Modified**:
+
+- `backend/app/services/query_builder.py` - Split Query implementation
+- `backend/app/services/mesh_service.py` - Fallback for empty MeSH
+- `backend/tests/test_query_builder.py` - New test file
+
+---
+
 ### 2025-11-30 (Session 2) - Query Tool Hebrew Translation Fix
 
 #### Branch Reorganization
@@ -577,12 +710,18 @@ Added `_generate_fallback_query()` method that creates proper PubMed queries whe
 | Auth | `backend/app/core/auth.py` |
 | AI Service | `backend/app/services/ai_service.py` |
 | DB Service | `backend/app/services/database.py` |
+| Query Builder | `backend/app/services/query_builder.py` |
+| MeSH Service | `backend/app/services/mesh_service.py` |
+| PubMed Service | `backend/app/services/pubmed_service.py` |
 | Schemas | `backend/app/api/models/schemas.py` |
 | Framework prompts | `backend/app/core/prompts/shared.py` |
+| Query prompts | `backend/app/core/prompts/query.py` |
 | Dockerfile | `backend/Dockerfile` |
 | API Client | `frontend/lib/api.ts` |
 | Supabase Client | `frontend/lib/supabase.ts` |
 | Auth Context | `frontend/contexts/auth-context.tsx` |
 | Define Page | `frontend/app/define/page.tsx` |
+| Query Page | `frontend/app/query/page.tsx` |
+| Query Components | `frontend/components/query/` |
 | DB Schema | `docs/schema.sql` |
 | RLS Policies | `docs/rls_policies.sql` |
