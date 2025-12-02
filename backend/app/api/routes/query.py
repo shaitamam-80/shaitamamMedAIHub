@@ -137,17 +137,32 @@ async def generate_query(
             english_framework_data = framework_data
 
         # Step 2: Build query using programmatic MeSH expansion (no AI, ~5 seconds)
+        method_used = "query_builder"
         try:
             result = await query_builder.build_query_strategy(
                 english_framework_data, framework_type
             )
+
+            # Validate result has strategies
+            if not result.get("strategies") or not result["strategies"].get("comprehensive"):
+                raise ValueError("Query Builder returned empty strategies")
+
             logger.info(f"Query built successfully for project {request.project_id}")
+
         except Exception as build_error:
-            logger.error(f"Query builder failed: {build_error}")
-            # Fallback to AI-based generation if MeSH API fails
-            logger.info("Falling back to AI-based query generation")
-            result = await ai_service.generate_pubmed_query(
+            # Use SIMPLE programmatic fallback (no external API calls)
+            logger.warning(f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback")
+            method_used = "simple_fallback"
+
+            # Generate simple Boolean query without external APIs
+            fallback_query = ai_service.generate_simple_fallback_query(
                 english_framework_data, framework_type
+            )
+
+            # Build complete response structure
+            result = ai_service.build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                reason=f"MeSH API/Builder failed: {type(build_error).__name__}"
             )
 
         # Save the focused query to database (primary query)

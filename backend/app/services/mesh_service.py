@@ -172,56 +172,42 @@ class MeSHService:
             return []
 
         try:
-            efetch_url = f"{self.base_url}/efetch.fcgi"
+            # Use esummary instead of efetch - it returns proper JSON format
+            # efetch for MeSH returns plain text which is hard to parse
+            esummary_url = f"{self.base_url}/esummary.fcgi"
             params = self._add_auth_params({
                 "db": "mesh",
                 "id": ",".join(mesh_uids),
-                "retmode": "xml"
+                "retmode": "json"
             })
 
             async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(efetch_url, params=params)
+                response = await client.get(esummary_url, params=params)
                 response.raise_for_status()
 
-            # Parse XML response
-            root = ElementTree.fromstring(response.content)
+            data = response.json()
             results = []
 
-            for descriptor in root.findall(".//DescriptorRecord"):
-                # Get descriptor UI
-                ui_elem = descriptor.find(".//DescriptorUI")
-                ui = ui_elem.text if ui_elem is not None else ""
+            result_data = data.get("result", {})
+            uid_list = result_data.get("uids", mesh_uids)
 
-                # Get descriptor name
-                name_elem = descriptor.find(".//DescriptorName/String")
-                name = name_elem.text if name_elem is not None else ""
+            for uid in uid_list:
+                record = result_data.get(str(uid), {})
+                if not record:
+                    continue
 
-                # Get Entry Terms (synonyms)
-                entry_terms = []
-                for concept in descriptor.findall(".//Concept"):
-                    for term in concept.findall(".//Term"):
-                        term_str = term.find("String")
-                        if term_str is not None and term_str.text:
-                            # Don't add the main name as entry term
-                            if term_str.text.lower() != name.lower():
-                                entry_terms.append(term_str.text)
+                # Extract descriptor name from summary
+                ds_mesh_term = record.get("ds_meshterms", [])
+                name = ds_mesh_term[0] if ds_mesh_term else record.get("title", "")
 
-                # Get Tree Numbers (hierarchy)
-                tree_numbers = [
-                    tn.text for tn in descriptor.findall(".//TreeNumber")
-                    if tn.text
-                ]
-
-                # Get Scope Note (definition)
-                scope_elem = descriptor.find(".//ScopeNote")
-                scope = scope_elem.text if scope_elem is not None else ""
-
+                # esummary doesn't provide entry terms, but we can still use
+                # the descriptor name for query building
                 results.append(MeSHTerm(
-                    descriptor_ui=ui,
+                    descriptor_ui=f"D{uid}" if not str(uid).startswith("D") else str(uid),
                     descriptor_name=name,
-                    entry_terms=entry_terms,
-                    tree_numbers=tree_numbers,
-                    scope_note=scope
+                    entry_terms=[],  # Not available in esummary
+                    tree_numbers=[],  # Not available in esummary
+                    scope_note=record.get("ds_scopenote", "")
                 ))
 
             return results
