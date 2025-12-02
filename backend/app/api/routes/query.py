@@ -493,21 +493,35 @@ async def generate_query_from_question(
             result = await query_builder.build_query_strategy(
                 english_framework_data, framework_type
             )
+
+            # Validate result has strategies
+            if not result.get("strategies") or not result["strategies"].get("comprehensive"):
+                raise ValueError("Query Builder returned empty strategies")
+
             logger.info(f"Query built successfully using Query Builder for project {request.project_id}")
 
             # Add research question to result metadata
             result["research_question"] = request.research_question
 
         except Exception as build_error:
-            # Step 3: Fallback to AI-based generation if MeSH API fails
-            logger.warning(f"Query Builder failed ({build_error}), falling back to AI")
-            method_used = "ai_fallback"
+            # Step 3: Use SIMPLE programmatic fallback (no external API calls)
+            # This avoids the AI fallback which can fail with JSON parsing errors
+            logger.warning(f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback")
+            method_used = "simple_fallback"
 
-            enhanced_framework_data = {
-                **english_framework_data,
-                "research_question": request.research_question
-            }
-            result = await ai_service.generate_pubmed_query(enhanced_framework_data, framework_type)
+            # Generate simple Boolean query without external APIs
+            fallback_query = ai_service.generate_simple_fallback_query(
+                english_framework_data, framework_type
+            )
+
+            # Build complete V2 response structure
+            result = ai_service.build_fallback_response(
+                fallback_query, framework_type, english_framework_data,
+                reason=f"MeSH API/Builder failed: {type(build_error).__name__}"
+            )
+
+            # Add research question to result
+            result["research_question"] = request.research_question
 
         # Save the focused query to database
         focused_query = result.get("queries", {}).get("focused", "")

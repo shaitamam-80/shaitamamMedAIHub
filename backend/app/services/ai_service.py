@@ -395,6 +395,67 @@ English translation:""")
         # Use batch translation for efficiency
         return await self._translate_framework_data(framework_data)
 
+    def generate_simple_fallback_query(
+        self,
+        framework_data: Dict[str, Any],
+        framework_type: str
+    ) -> str:
+        """
+        Public method to generate a simple fallback query.
+        Used when Query Builder/MeSH API fails.
+
+        This is a synchronous, no-external-API method that creates
+        a basic Boolean query from framework data.
+
+        Args:
+            framework_data: Framework data dict
+            framework_type: Framework name (PICO, PEO, etc.)
+
+        Returns:
+            Simple PubMed query string
+        """
+        return self._generate_fallback_query(framework_data, framework_type)
+
+    def build_fallback_response(
+        self,
+        fallback_query: str,
+        framework_type: str,
+        framework_data: Dict[str, Any],
+        reason: str = "api_failure"
+    ) -> Dict[str, Any]:
+        """
+        Public method to build a complete V2 response structure from a fallback query.
+        Used when Query Builder/MeSH API fails.
+
+        This ensures the frontend always receives a valid JSON response
+        even when external APIs fail.
+
+        Args:
+            fallback_query: The generated fallback query string
+            framework_type: Framework name
+            framework_data: Framework data
+            reason: Reason for fallback
+
+        Returns:
+            Complete V2 response dict with legacy compatibility
+        """
+        translation_status = {
+            "success": False,
+            "fields_translated": [],
+            "fields_failed": [],
+            "method": "simple_fallback"
+        }
+        warnings = [{
+            "code": "FALLBACK_USED",
+            "message": f"Using simplified fallback due to: {reason}",
+            "severity": "warning"
+        }]
+
+        return self._build_fallback_response(
+            fallback_query, framework_type, framework_data,
+            translation_status, warnings, reason
+        )
+
     def _build_fallback_response(
         self,
         fallback_query: str,
