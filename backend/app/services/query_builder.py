@@ -41,8 +41,15 @@ class ConceptBlock:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization - matches ConceptAnalysis schema"""
         # Map key to concept number (P=1, I=2, C=3, O=4, etc.)
-        key_to_number = {"P": 1, "I": 2, "C": 3, "O": 4, "E": 5, "S": 6}
-        concept_number = key_to_number.get(self.key, ord(self.key) - ord('A') + 1)
+        # Also handle full word keys like "population", "intervention", etc.
+        key_to_number = {
+            "P": 1, "I": 2, "C": 3, "O": 4, "E": 5, "S": 6, "T": 7, "F": 8,
+            "population": 1, "intervention": 2, "comparator": 3, "comparison": 3,
+            "outcome": 4, "exposure": 5, "study": 6, "timeframe": 7
+        }
+        # Get the key, normalize to lowercase for lookup if it's a word
+        lookup_key = self.key if len(self.key) == 1 else self.key.lower()
+        concept_number = key_to_number.get(lookup_key, 1)  # Default to 1 if unknown
 
         result = {
             # Required fields for ConceptAnalysis schema
@@ -215,14 +222,43 @@ class QueryBuilder:
     ) -> List[ConceptBlock]:
         """Build concept blocks from framework data and expansions"""
         concepts = []
+        seen_labels = set()  # Track which component types we've already added
 
-        for key, value in framework_data.items():
+        # Map full-word keys to single-letter keys for normalization
+        key_normalization = {
+            "population": "P", "intervention": "I", "comparator": "C",
+            "comparison": "C", "outcome": "O", "exposure": "E",
+            "timeframe": "T", "study": "S", "factor": "F"
+        }
+
+        # Prioritize single-letter keys (P, I, C, O) over full-word keys
+        sorted_keys = sorted(
+            framework_data.keys(),
+            key=lambda k: (len(k) > 1, k)  # Single-letter keys first
+        )
+
+        for key in sorted_keys:
+            value = framework_data[key]
             if not value or key.lower() in ['research_question', 'framework_type']:
                 continue
 
+            # Normalize key to get the component label
+            normalized_key = key_normalization.get(key.lower(), key)
+            label = self._get_component_label(key)
+
+            # Skip if we've already seen this component type
+            if label in seen_labels:
+                logger.debug(f"Skipping duplicate component: {key} -> {label}")
+                continue
+
+            seen_labels.add(label)
+
+            # Use single-letter key for display if possible
+            display_key = normalized_key if len(normalized_key) == 1 else key[0].upper()
+
             concept = ConceptBlock(
-                key=key,
-                label=self._get_component_label(key),
+                key=display_key,
+                label=label,
                 original_value=value,
                 expanded=expanded_terms.get(key)
             )
@@ -233,6 +269,7 @@ class QueryBuilder:
     def _get_component_label(self, key: str) -> str:
         """Get human-readable label for component key"""
         labels = {
+            # Single-letter keys
             "P": "Population",
             "I": "Intervention",
             "C": "Comparison",
@@ -241,11 +278,23 @@ class QueryBuilder:
             "T": "Timeframe",
             "S": "Study Design",
             "F": "Prognostic Factor",
+            # Full-word keys (lowercase)
+            "population": "Population",
+            "intervention": "Intervention",
+            "comparator": "Comparison",
+            "comparison": "Comparison",
+            "outcome": "Outcome",
+            "exposure": "Exposure",
+            "timeframe": "Timeframe",
+            "study": "Study Design",
+            "factor": "Prognostic Factor",
+            # Title case variants
             "Condition": "Condition",
             "Context": "Context",
             "Population": "Population"
         }
-        return labels.get(key, key)
+        # Try exact match first, then lowercase
+        return labels.get(key, labels.get(key.lower(), key.title()))
 
     def _build_strategies(
         self,
