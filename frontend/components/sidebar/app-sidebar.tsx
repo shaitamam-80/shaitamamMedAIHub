@@ -11,6 +11,7 @@ import {
   FileText,
   FolderOpen,
   Home,
+  Info,
   LogOut,
   MessageSquare,
   PlayCircle,
@@ -49,6 +50,12 @@ const navigation = [
     href: "/review",
     icon: FileText,
     description: "Literature Screening",
+  },
+  {
+    name: "About",
+    href: "/about",
+    icon: Info,
+    description: "About the Creator",
   },
 ];
 
