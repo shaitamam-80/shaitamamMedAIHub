@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS projects (
     framework_type VARCHAR(50), -- e.g., 'PICO', 'CoCoPop', 'PEO', 'SPIDER', etc.
     framework_data JSONB, -- Dynamic JSON data based on framework type
     user_id UUID, -- For multi-tenancy (add foreign key to auth.users if using Supabase Auth)
+    current_step VARCHAR(50) DEFAULT 'DEFINE', -- Workflow step: DEFINE, QUERY, REVIEW, COMPLETED
     CONSTRAINT valid_framework_type CHECK (framework_type IN (
         -- Core PICO family
         'PICO', 'PICOT', 'PICOS', 'PICOC', 'PICOTS', 'PICOT-D', 'PICOTS-ComTeC',
@@ -28,8 +29,14 @@ CREATE TABLE IF NOT EXISTS projects (
         'BeHEMoTh', 'PerSPEcTiF',
         -- Legacy
         'FINER'
-    ))
+    )),
+    CONSTRAINT valid_current_step CHECK (current_step IN ('DEFINE', 'QUERY', 'REVIEW', 'COMPLETED'))
 );
+
+-- Migration: Add current_step column to existing projects table
+-- Run this SQL in Supabase SQL Editor if upgrading existing database:
+-- ALTER TABLE projects ADD COLUMN IF NOT EXISTS current_step VARCHAR(50) DEFAULT 'DEFINE';
+-- ALTER TABLE projects ADD CONSTRAINT valid_current_step CHECK (current_step IN ('DEFINE', 'QUERY', 'REVIEW', 'COMPLETED'));
 
 -- Files Table
 -- Stores uploaded MEDLINE and other research files

@@ -592,7 +592,7 @@ export default function AboutPage() {
                 healthcare technology, and clinical research methodology.
               </p>
               <Link
-                href="https://pubmed.ncbi.nlm.nih.gov/?term=Tamam+S%5BAuthor%5D"
+                href="https://pubmed.ncbi.nlm.nih.gov/?term=Tamam+Shai%5BAuthor%5D"
                 target="_blank"
               >
                 <Button className="gap-2">

@@ -21,6 +21,7 @@ from app.services.database import db_service
 from app.services.ai_service import ai_service
 from app.services.pubmed_service import pubmed_service
 from app.services.query_builder import query_builder
+from app.services.mesh_service import mesh_service
 from app.core.auth import get_current_user, UserPayload
 from app.core.exceptions import TranslationError, ValidationError, DatabaseError, convert_to_http_exception
 
@@ -84,6 +85,29 @@ class MedlineExportRequest(BaseModel):
     pmids: Optional[List[str]] = Field(default=None, description="Specific PMIDs to export (if None, export from query)")
     max_results: int = Field(default=100, ge=1, le=500, description="Max articles to export")
     format: str = Field(default="medline", pattern="^(medline|csv)$", description="Export format")
+
+
+class ConceptTerm(BaseModel):
+    """A single term (MeSH or free-text) for a concept"""
+    term: str
+    source: str = Field(..., description="'mesh', 'entry_term', or 'ai_generated'")
+    selected: bool = True
+
+
+class ConceptAnalysisItem(BaseModel):
+    """Analysis of a single framework component"""
+    key: str = Field(..., description="Component key (P, I, C, O, etc.)")
+    label: str = Field(..., description="Full label (Population, Intervention, etc.)")
+    original_value: str = Field(..., description="User's original input")
+    mesh_terms: List[ConceptTerm] = Field(default_factory=list)
+    free_text_terms: List[ConceptTerm] = Field(default_factory=list)
+
+
+class ConceptAnalysisResponse(BaseModel):
+    """Response from concept analysis endpoint"""
+    project_id: str
+    framework_type: str
+    concepts: List[ConceptAnalysisItem]
 
 
 # ============================================================================
@@ -238,6 +262,179 @@ async def get_query_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while retrieving query history.",
+        )
+
+
+# ============================================================================
+# New Endpoint: Concept Analysis
+# ============================================================================
+
+@router.get("/analyze-concepts/{project_id}", response_model=ConceptAnalysisResponse)
+async def analyze_concepts(
+    project_id: UUID,
+    current_user: UserPayload = Depends(get_current_user)
+):
+    """
+    Analyze framework components and generate concept table for query building.
+
+    This endpoint:
+    1. Fetches project's framework data
+    2. Decomposes composite phrases into individual MeSH-searchable concepts (AI-powered)
+    3. Looks up MeSH terms from local database for each decomposed concept
+    4. Generates AI-powered free-text suggestions
+    5. Returns structured concept analysis for UI display
+
+    The response can be used to build the Concept Analysis table
+    where users can edit/select terms before generating queries.
+    """
+    try:
+        # Verify project exists and user has access
+        project = await db_service.get_project(project_id)
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found"
+            )
+
+        if project.get("user_id") and project["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+
+        framework_data = project.get("framework_data", {})
+        framework_type = project.get("framework_type", "PICO")
+
+        if not framework_data:
+            raise ValidationError("No framework data available. Please complete the Define tool first.")
+
+        # Step 1: Translate Hebrew to English if needed
+        try:
+            english_framework_data = await ai_service.translate_framework_to_english(framework_data)
+        except Exception as e:
+            logger.warning(f"Translation failed, using original: {e}")
+            english_framework_data = framework_data
+
+        # Step 2: Decompose composite phrases into individual MeSH-searchable concepts
+        # Example: "Adults with generalized anxiety disorder" -> ["Adults", "Generalized Anxiety Disorder"]
+        decomposed_concepts = await ai_service.decompose_to_mesh_concepts(
+            english_framework_data, framework_type
+        )
+        logger.info(f"Decomposed concepts: {decomposed_concepts}")
+
+        # Step 3: Get MeSH terms from local database for EACH decomposed concept
+        # This is the key change - instead of searching "Adults with GAD" as one phrase,
+        # we search "Adults" and "Generalized Anxiety Disorder" separately
+        all_mesh_results = {}
+        for key, decomposed_terms in decomposed_concepts.items():
+            key_mesh_terms = []
+            key_entry_terms = []
+
+            for term in decomposed_terms:
+                # Search MeSH for each individual term
+                mesh_data = await mesh_service.expand_term(term)
+                if mesh_data and mesh_data.mesh_terms:
+                    for mt in mesh_data.mesh_terms:
+                        if mt.descriptor_name not in [m.descriptor_name for m in key_mesh_terms]:
+                            key_mesh_terms.append(mt)
+                    # Collect entry terms (limit to avoid duplication)
+                    for entry in mesh_data.entry_terms[:3]:
+                        if entry not in key_entry_terms:
+                            key_entry_terms.append(entry)
+
+            all_mesh_results[key] = {
+                "mesh_terms": key_mesh_terms,
+                "entry_terms": key_entry_terms,
+                "decomposed_terms": decomposed_terms
+            }
+
+        # Step 4: Generate AI free-text terms (parallel call)
+        ai_terms = await ai_service.generate_free_text_terms(
+            english_framework_data, framework_type
+        )
+
+        # Step 5: Build response with labels
+        from app.core.prompts.shared import FRAMEWORK_SCHEMAS
+        schema = FRAMEWORK_SCHEMAS.get(framework_type, FRAMEWORK_SCHEMAS["PICO"])
+        component_labels = schema.get("labels", {})
+
+        concepts = []
+        for key, value in english_framework_data.items():
+            if not value or key.lower() in ['research_question', 'framework_type']:
+                continue
+
+            # Get MeSH data for this component (from decomposed search)
+            mesh_data = all_mesh_results.get(key, {})
+            mesh_terms_list = mesh_data.get("mesh_terms", [])
+            entry_terms_list = mesh_data.get("entry_terms", [])
+            decomposed_terms = mesh_data.get("decomposed_terms", [])
+
+            # Build mesh_terms list
+            mesh_terms = []
+            for mt in mesh_terms_list:
+                mesh_terms.append(ConceptTerm(
+                    term=mt.descriptor_name,
+                    source="mesh",
+                    selected=True
+                ))
+            # Add entry terms
+            for entry in entry_terms_list[:5]:
+                mesh_terms.append(ConceptTerm(
+                    term=entry,
+                    source="entry_term",
+                    selected=False
+                ))
+
+            # Build free_text_terms list
+            free_text_terms = []
+            # Add decomposed terms as free-text (these are the AI-parsed concepts)
+            for term in decomposed_terms:
+                # Don't add if it's already a MeSH term
+                if not any(mt.term.lower() == term.lower() for mt in mesh_terms):
+                    free_text_terms.append(ConceptTerm(
+                        term=term,
+                        source="mesh_derived",
+                        selected=True
+                    ))
+
+            # From AI-generated terms
+            ai_key_terms = ai_terms.get(key, [])
+            for term in ai_key_terms:
+                # Avoid duplicates
+                if not any(ft.term.lower() == term.lower() for ft in free_text_terms):
+                    free_text_terms.append(ConceptTerm(
+                        term=term,
+                        source="ai_generated",
+                        selected=True
+                    ))
+
+            concepts.append(ConceptAnalysisItem(
+                key=key,
+                label=component_labels.get(key, key),
+                original_value=value,
+                mesh_terms=mesh_terms,
+                free_text_terms=free_text_terms
+            ))
+
+        # Sort concepts by PICO order
+        from app.core.search_config import PICO_PRIORITY
+        concepts.sort(key=lambda c: PICO_PRIORITY.get(c.key.upper(), 99))
+
+        return ConceptAnalysisResponse(
+            project_id=str(project_id),
+            framework_type=framework_type,
+            concepts=concepts
+        )
+
+    except HTTPException:
+        raise
+    except (TranslationError, ValidationError, DatabaseError) as e:
+        raise convert_to_http_exception(e)
+    except Exception as e:
+        logger.exception(f"Error analyzing concepts for project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while analyzing concepts."
         )
 
 

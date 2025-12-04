@@ -12,45 +12,143 @@ import logging
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
 
-from .mesh_service import mesh_service, ExpandedTerms
+from .mesh_service import mesh_service, ExpandedTerms, MeSHTerm
 from app.core.prompts.query import VALIDATED_HEDGES, FRAMEWORK_QUERY_LOGIC
 from app.core.search_config import TOOLBOX_FILTERS, PICO_PRIORITY
 
 logger = logging.getLogger(__name__)
 
 
+async def decompose_value_to_concepts(value: str) -> List[str]:
+    """
+    Decompose a composite phrase into individual MeSH-searchable concepts using AI.
+
+    For example:
+    "Adults with generalized anxiety disorder" -> ["Adults", "Generalized Anxiety Disorder"]
+
+    Args:
+        value: The composite phrase to decompose
+
+    Returns:
+        List of individual concepts
+    """
+    # Lazy import to avoid circular dependency
+    from .ai_service import ai_service
+
+    try:
+        # Use AI to decompose the value
+        result = await ai_service.decompose_to_mesh_concepts(
+            {"concept": value}, "GENERIC"
+        )
+        if result and "concept" in result:
+            return result["concept"]
+    except Exception as e:
+        logger.warning(f"AI decomposition failed for '{value}': {e}")
+
+    # Fallback: return original value as single item
+    return [value]
+
+
 @dataclass
 class ConceptBlock:
-    """Represents a single concept in the query (e.g., Population, Intervention)"""
+    """
+    Represents a single concept in the query (e.g., Population, Intervention).
+
+    IMPORTANT: Different PICO components use different logic for decomposed terms:
+
+    - P (Population): "Adults with GAD" → AND (must be both adults AND have GAD)
+    - I, C (Intervention/Comparison): "CBT or SSRIs" → OR (either treatment works)
+    - O (Outcome): "ADL, Treatment Outcome, Time" → OR (any outcome measure)
+
+    Within each sub-concept, synonyms are ALWAYS connected with OR.
+    """
     key: str  # P, I, C, O, etc.
     label: str  # Full name from framework
     original_value: str  # User's input
-    expanded: Optional[ExpandedTerms] = None
+    expanded_list: List[ExpandedTerms] = field(default_factory=list)  # List of sub-concepts
+
+    def _get_join_operator(self) -> str:
+        """
+        Determine the operator to join decomposed sub-concepts.
+
+        - Population (P): AND - "Adults with GAD" means BOTH must be present
+        - Everything else (I, C, O, E, etc.): OR - any of the terms is sufficient
+        """
+        # Population requires intersection (AND)
+        if self.key.upper() == "P":
+            return " AND "
+        # All other components use union (OR) - more permissive
+        return " OR "
 
     def to_broad_query(self) -> str:
-        """Generate broad query (high sensitivity)"""
-        if self.expanded:
-            return self.expanded.to_broad_query()
-        return f'"{self.original_value}"[tiab]'
+        """
+        Generate broad query (high sensitivity).
+
+        Population uses AND between decomposed terms (must match all).
+        Other components (I, C, O) use OR (match any).
+
+        Examples:
+        - P: "Adults with GAD" → (Adults) AND (GAD)
+        - O: "ADL, Treatment Outcome" → (ADL) OR (Treatment Outcome)
+        """
+        if not self.expanded_list:
+            return f'"{self.original_value}"[tiab]'
+
+        if len(self.expanded_list) == 1:
+            # Single concept - just return its broad query
+            return self.expanded_list[0].to_broad_query()
+
+        # Multiple decomposed concepts - join with appropriate operator
+        sub_queries = []
+        for expanded in self.expanded_list:
+            sub_query = expanded.to_broad_query()
+            if sub_query:
+                sub_queries.append(f"({sub_query})")
+
+        if not sub_queries:
+            return f'"{self.original_value}"[tiab]'
+
+        # Join with AND for Population, OR for others
+        join_op = self._get_join_operator()
+        return join_op.join(sub_queries)
 
     def to_focused_query(self) -> str:
-        """Generate focused query (high precision)"""
-        if self.expanded:
-            return self.expanded.to_focused_query()
-        return f'"{self.original_value}"[ti]'
+        """
+        Generate focused query (high precision).
+
+        Same operator logic as broad query, but uses focused terms.
+        """
+        if not self.expanded_list:
+            return f'"{self.original_value}"[ti]'
+
+        if len(self.expanded_list) == 1:
+            return self.expanded_list[0].to_focused_query()
+
+        # Multiple decomposed concepts - join with appropriate operator
+        sub_queries = []
+        for expanded in self.expanded_list:
+            sub_query = expanded.to_focused_query()
+            if sub_query:
+                sub_queries.append(f"({sub_query})")
+
+        if not sub_queries:
+            return f'"{self.original_value}"[ti]'
+
+        join_op = self._get_join_operator()
+        return join_op.join(sub_queries)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization - matches ConceptAnalysis schema"""
-        # Map key to concept number (P=1, I=2, C=3, O=4, etc.)
-        # Also handle full word keys like "population", "intervention", etc.
-        key_to_number = {
-            "P": 1, "I": 2, "C": 3, "O": 4, "E": 5, "S": 6, "T": 7, "F": 8,
-            "population": 1, "intervention": 2, "comparator": 3, "comparison": 3,
-            "outcome": 4, "exposure": 5, "study": 6, "timeframe": 7
+        # Use PICO_PRIORITY from search_config for consistent numbering
+        # For full-word keys, normalize to single letter first
+        key_normalization = {
+            "population": "P", "intervention": "I", "comparator": "C",
+            "comparison": "C", "outcome": "O", "exposure": "E",
+            "timeframe": "T", "study": "S", "factor": "F"
         }
-        # Get the key, normalize to lowercase for lookup if it's a word
-        lookup_key = self.key if len(self.key) == 1 else self.key.lower()
-        concept_number = key_to_number.get(lookup_key, 1)  # Default to 1 if unknown
+        # Normalize key: single letter stays as-is, full word maps to letter
+        normalized_key = self.key.upper() if len(self.key) == 1 else key_normalization.get(self.key.lower(), self.key[0].upper())
+        concept_number = PICO_PRIORITY.get(normalized_key, 99)  # Use centralized priority
 
         result = {
             # Required fields for ConceptAnalysis schema
@@ -62,16 +160,31 @@ class ConceptBlock:
             "key": self.key,
             "label": self.label,
             "original_value": self.original_value,
-            "entry_terms": []
+            "entry_terms": [],
+            # Show decomposed sub-concepts
+            "sub_concepts": []
         }
 
-        if self.expanded:
-            # mesh_terms as strings (for ConceptAnalysis compatibility)
-            result["mesh_terms"] = [
-                m.descriptor_name for m in self.expanded.mesh_terms
-            ]
-            result["free_text_terms"] = self.expanded.free_text_terms
-            result["entry_terms"] = self.expanded.entry_terms[:5]
+        # Aggregate all MeSH terms and free-text from all sub-concepts
+        all_mesh = []
+        all_free_text = []
+        all_entry_terms = []
+        sub_concepts = []
+
+        for expanded in self.expanded_list:
+            all_mesh.extend([m.descriptor_name for m in expanded.mesh_terms])
+            all_free_text.extend(expanded.free_text_terms)
+            all_entry_terms.extend(expanded.entry_terms[:5])  # Limit per sub-concept
+            sub_concepts.append({
+                "term": expanded.original_term,
+                "mesh_terms": [m.descriptor_name for m in expanded.mesh_terms],
+                "free_text": expanded.free_text_terms
+            })
+
+        result["mesh_terms"] = all_mesh
+        result["free_text_terms"] = all_free_text
+        result["entry_terms"] = all_entry_terms[:10]  # Overall limit
+        result["sub_concepts"] = sub_concepts
 
         return result
 
@@ -134,22 +247,50 @@ class QueryBuilder:
         """
         logger.info(f"Building query for {framework_type} with {len(framework_data)} components")
 
-        # Step 1: Expand all terms via MeSH API
-        expanded_terms = await self.mesh_service.expand_framework_data(
-            framework_data, framework_type
-        )
+        # Step 1: Decompose composite phrases into individual MeSH-searchable concepts
+        # Example: "Adults with GAD" -> ["Adults", "Generalized Anxiety Disorder"]
+        from .ai_service import ai_service
+        try:
+            decomposed = await ai_service.decompose_to_mesh_concepts(
+                framework_data, framework_type
+            )
+            logger.info(f"Decomposed concepts: {decomposed}")
+        except Exception as e:
+            logger.warning(f"AI decomposition failed: {e}, using original values")
+            decomposed = {k: [v] for k, v in framework_data.items() if v}
 
-        # Step 2: Build concept blocks
+        # Step 2: Expand all decomposed terms via MeSH API
+        # IMPORTANT: Keep each decomposed term SEPARATE, don't merge!
+        # "Adults with GAD" decomposes to ["Adults", "GAD"]
+        # Each should be its own sub-query connected with AND, not merged with OR
+        expanded_terms: Dict[str, List[ExpandedTerms]] = {}  # List of ExpandedTerms per key
+        for key, terms in decomposed.items():
+            expanded_list = []
+            for term in terms:
+                term_expanded = await self.mesh_service.expand_term(term)
+                if term_expanded and (term_expanded.mesh_terms or term_expanded.entry_terms or term_expanded.free_text_terms):
+                    expanded_list.append(term_expanded)
+                else:
+                    # No MeSH found, create simple free-text ExpandedTerms
+                    expanded_list.append(ExpandedTerms(
+                        original_term=term,
+                        mesh_terms=[],
+                        entry_terms=[],
+                        free_text_terms=[f'"{term}"']
+                    ))
+            expanded_terms[key] = expanded_list
+
+        # Step 3: Build concept blocks
         concepts = self._build_concepts(framework_data, expanded_terms)
 
-        # Step 3: Get framework-specific logic
+        # Step 4: Get framework-specific logic
         query_logic = FRAMEWORK_QUERY_LOGIC.get(framework_type, FRAMEWORK_QUERY_LOGIC["PICO"])
         recommended_hedge_key = query_logic.get("hedge")
 
-        # Step 4: Build three strategies
+        # Step 5: Build three strategies
         strategies = self._build_strategies(concepts, framework_type, recommended_hedge_key)
 
-        # Step 5: Build result (V2 format with legacy compatibility)
+        # Step 6: Build result (V2 format with legacy compatibility)
         return {
             # V2 fields
             "report_intro": self._generate_report_intro(framework_type, concepts),
@@ -189,9 +330,15 @@ class QueryBuilder:
     def _build_concepts(
         self,
         framework_data: Dict[str, str],
-        expanded_terms: Dict[str, ExpandedTerms]
+        expanded_terms: Dict[str, List[ExpandedTerms]]
     ) -> List[ConceptBlock]:
-        """Build concept blocks from framework data and expansions"""
+        """
+        Build concept blocks from framework data and expansions.
+
+        Each concept may have multiple ExpandedTerms (from decomposition).
+        For example, "Adults with GAD" decomposes to ["Adults", "GAD"],
+        resulting in a List[ExpandedTerms] for that key.
+        """
         concepts = []
         seen_labels = set()  # Track which component types we've already added
 
@@ -230,11 +377,14 @@ class QueryBuilder:
             # Use single-letter key for display if possible
             display_key = normalized_key if len(normalized_key) == 1 else key[0].upper()
 
+            # Get the list of ExpandedTerms for this key (may have multiple from decomposition)
+            expanded_list = expanded_terms.get(key, [])
+
             concept = ConceptBlock(
                 key=display_key,
                 label=label,
                 original_value=value,
-                expanded=expanded_terms.get(key)
+                expanded_list=expanded_list  # Pass the list, not single item
             )
             concepts.append(concept)
 
@@ -270,6 +420,70 @@ class QueryBuilder:
         # Try exact match first, then lowercase
         return labels.get(key, labels.get(key.lower(), key.title()))
 
+    def _combine_concepts_broad(
+        self,
+        concepts: List[ConceptBlock],
+        operator: str = "OR"
+    ) -> str:
+        """
+        Combine multiple ConceptBlocks into a single query block.
+
+        Args:
+            concepts: List of ConceptBlocks to combine
+            operator: "AND" or "OR" to join them
+
+        Returns:
+            Combined query string
+        """
+        if not concepts:
+            return ""
+
+        parts = []
+        for concept in concepts:
+            query = concept.to_broad_query()
+            if query:
+                parts.append(f"({query})")
+
+        if not parts:
+            return ""
+
+        if len(parts) == 1:
+            return parts[0]
+
+        return f" {operator} ".join(parts)
+
+    def _combine_concepts_focused(
+        self,
+        concepts: List[ConceptBlock],
+        operator: str = "OR"
+    ) -> str:
+        """
+        Combine multiple ConceptBlocks into a single focused query block.
+
+        Args:
+            concepts: List of ConceptBlocks to combine
+            operator: "AND" or "OR" to join them
+
+        Returns:
+            Combined focused query string
+        """
+        if not concepts:
+            return ""
+
+        parts = []
+        for concept in concepts:
+            query = concept.to_focused_query()
+            if query:
+                parts.append(f"({query})")
+
+        if not parts:
+            return ""
+
+        if len(parts) == 1:
+            return parts[0]
+
+        return f" {operator} ".join(parts)
+
     def _build_strategies(
         self,
         concepts: List[ConceptBlock],
@@ -277,50 +491,78 @@ class QueryBuilder:
         hedge_key: Optional[str]
     ) -> List[QueryStrategy]:
         """
-        Build three search strategies.
+        Build three search strategies using Outcome-OR model.
 
-        For comparison questions (with C component), uses SPLIT logic:
-        (P AND I AND O) OR (P AND C AND O)
+        Query Structure (Optimal Model):
+        P AND (I OR C) AND O
 
-        This captures:
-        - Studies comparing I vs C directly
-        - Studies of intervention I alone
-        - Studies of comparator C alone
+        Where:
+        - P: Population terms joined with AND (must match all)
+        - I OR C: Interventions/Comparators joined with OR (match any)
+        - O: Outcomes joined with OR (match any)
+
+        Note: We use P AND (I OR C) AND O instead of split logic
+        (P AND I AND O) OR (P AND C AND O) because they are mathematically
+        equivalent but the former is shorter and cleaner.
         """
 
-        # Identify concept roles
-        concept_map = {c.key: c for c in concepts}
-        has_comparison = "C" in concept_map and concept_map["C"].original_value
+        # Group concepts by PICO role
+        p_concepts = [c for c in concepts if c.key == "P"]
+        i_concepts = [c for c in concepts if c.key == "I"]
+        c_concepts = [c for c in concepts if c.key == "C"]
+        o_concepts = [c for c in concepts if c.key == "O"]
+        other_concepts = [c for c in concepts if c.key not in ["P", "I", "C", "O"]]
 
-        # Core concepts for PICO-family frameworks
-        p_concept = concept_map.get("P")  # Population
-        i_concept = concept_map.get("I")  # Intervention
-        c_concept = concept_map.get("C")  # Comparison (optional)
-        o_concept = concept_map.get("O")  # Outcome
+        has_comparison = len(c_concepts) > 0 and any(c.original_value for c in c_concepts)
 
-        # Strategy A: Comprehensive (High Sensitivity)
-        if has_comparison and p_concept and i_concept and o_concept:
-            # SPLIT QUERY LOGIC for comparison questions
-            # Formula: (P AND I AND O) OR (P AND C AND O)
+        # Build combined blocks for each PICO component
+        # P: All population terms joined with AND
+        p_broad = self._combine_concepts_broad(p_concepts, "AND") if p_concepts else ""
+        p_focused = self._combine_concepts_focused(p_concepts, "AND") if p_concepts else ""
 
-            p_broad = p_concept.to_broad_query() if p_concept else ""
-            i_broad = i_concept.to_broad_query() if i_concept else ""
-            c_broad = c_concept.to_broad_query() if c_concept else ""
-            o_broad = o_concept.to_broad_query() if o_concept else ""
+        # I: All intervention terms joined with OR
+        i_broad = self._combine_concepts_broad(i_concepts, "OR") if i_concepts else ""
+        i_focused = self._combine_concepts_focused(i_concepts, "OR") if i_concepts else ""
 
-            # Build the split query
-            intervention_arm = f"({p_broad} AND {i_broad} AND {o_broad})"
-            comparator_arm = f"({p_broad} AND {c_broad} AND {o_broad})"
-            comprehensive_query = f"{intervention_arm} OR {comparator_arm}"
+        # C: All comparison terms joined with OR
+        c_broad = self._combine_concepts_broad(c_concepts, "OR") if c_concepts else ""
+        c_focused = self._combine_concepts_focused(c_concepts, "OR") if c_concepts else ""
 
-            formula = "(P AND I AND O) OR (P AND C AND O) - Split structure for comparison questions"
+        # O: All outcome terms joined with OR
+        o_broad = self._combine_concepts_broad(o_concepts, "OR") if o_concepts else ""
+        o_focused = self._combine_concepts_focused(o_concepts, "OR") if o_concepts else ""
 
-            logger.info(f"Built SPLIT query for comparison framework: {framework_type}")
+        # Combine I and C into single block with OR (Outcome-OR model)
+        intervention_combined = ""
+        if i_broad and c_broad:
+            intervention_combined = f"({i_broad} OR {c_broad})"
         else:
-            # Standard AND logic for non-comparison frameworks
-            broad_parts = [c.to_broad_query() for c in concepts if c.to_broad_query()]
-            comprehensive_query = " AND ".join(broad_parts)
-            formula = "(" + ") AND (".join([c.key for c in concepts]) + ") with OR-expanded terms"
+            intervention_combined = i_broad or c_broad
+
+        intervention_focused_combined = ""
+        if i_focused and c_focused:
+            intervention_focused_combined = f"({i_focused} OR {c_focused})"
+        else:
+            intervention_focused_combined = i_focused or c_focused
+
+        # Strategy A: Comprehensive (High Sensitivity) - Always use P AND (I OR C) AND O
+        parts = []
+        if p_broad:
+            parts.append(p_broad)
+        if intervention_combined:
+            parts.append(intervention_combined)
+        if o_broad:
+            parts.append(o_broad)
+        # Add other concepts if any (like Context, Time, etc.)
+        for c in other_concepts:
+            part = c.to_broad_query()
+            if part:
+                parts.append(part)
+
+        comprehensive_query = " AND ".join(parts) if parts else ""
+        formula = "P AND (I OR C) AND O" if has_comparison else "P AND I AND O"
+        if has_comparison:
+            logger.info(f"Built Outcome-OR query for comparison framework: {framework_type}")
 
         comprehensive = QueryStrategy(
             name="Comprehensive Search (High Sensitivity)",
@@ -337,21 +579,28 @@ class QueryBuilder:
         )
 
         # Strategy B: Direct/Focused (High Precision)
-        if has_comparison and p_concept and i_concept and c_concept and o_concept:
+        # NOTE: Use o_broad (not o_focused) to avoid [majr] restriction on Outcomes
+        # Indexers don't always mark outcomes as Major Topic, causing false negatives
+        if has_comparison and p_focused and i_focused and c_focused and o_broad:
             # For comparison questions: require BOTH I and C to be mentioned
-            # Formula: P AND I AND C AND O
-            p_focused = p_concept.to_focused_query() if p_concept else ""
-            i_focused = i_concept.to_focused_query() if i_concept else ""
-            c_focused = c_concept.to_focused_query() if c_concept else ""
-            o_focused = o_concept.to_focused_query() if o_concept else ""
-
-            focused_query = f"{p_focused} AND {i_focused} AND {c_focused} AND {o_focused}"
-            focused_formula = "P[majr] AND I[tiab] AND C[tiab] AND O[majr] - Direct comparison (requires both interventions)"
+            # Formula: P AND I AND C AND O (using broad O to capture more results)
+            focused_query = f"{p_focused} AND {i_focused} AND {c_focused} AND {o_broad}"
+            focused_formula = "P[majr] AND I[tiab] AND C[tiab] AND O[Mesh/tiab] - Direct comparison (requires both interventions)"
             focused_purpose = "Head-to-head comparison studies - requires both interventions mentioned"
+        elif p_focused and intervention_focused_combined and o_broad:
+            # Standard PICO structure for focused - use o_broad to avoid [Majr] restriction
+            focused_query = f"{p_focused} AND {intervention_focused_combined} AND {o_broad}"
+            focused_formula = "P[Majr] AND (I OR C)[Majr/Ti] AND O[Mesh/tiab]"
+            focused_purpose = "Balanced precision-recall for targeted searches"
         else:
-            focused_parts = [c.to_focused_query() for c in concepts if c.to_focused_query()]
-            focused_query = " AND ".join(focused_parts)
-            focused_formula = "MeSH[majr] + Title terms for each concept"
+            # Fallback - use o_broad to avoid [Majr] restriction on outcomes
+            parts = [p for p in [p_focused, intervention_focused_combined, o_broad] if p]
+            for c in other_concepts:
+                part = c.to_focused_query()
+                if part:
+                    parts.append(part)
+            focused_query = " AND ".join(parts) if parts else ""
+            focused_formula = "P[Majr] + I/C[Majr/Ti] + O[Mesh/tiab]"
             focused_purpose = "Balanced precision-recall for targeted searches"
 
         direct = QueryStrategy(
@@ -374,6 +623,8 @@ class QueryBuilder:
         )
 
         # Strategy C: Clinical Filtered
+        # NOTE: Use comprehensive_query as base (not focused_query) to avoid "double cutting"
+        # Hedge already filters aggressively, so we need the broader base for reasonable results
         hedge_query = ""
         hedge_citation = ""
         if hedge_key and hedge_key in VALIDATED_HEDGES:
@@ -381,13 +632,17 @@ class QueryBuilder:
             hedge_query = hedge["query"]
             hedge_citation = hedge.get("citation", "")
 
+        # Use comprehensive as base, fall back to focused if comprehensive is empty
+        base_query = comprehensive_query if comprehensive_query else focused_query
         if hedge_query:
-            clinical_query = f"({focused_query}) AND ({hedge_query})"
+            clinical_query = f"({base_query}) AND ({hedge_query})"
         else:
-            clinical_query = focused_query
+            clinical_query = base_query
 
-        # Add humans filter
-        clinical_query += " NOT (animals[Mesh] NOT humans[Mesh])"
+        # Add humans filter only if not already present in hedge/query
+        # (Cochrane hedge already contains "NOT (animals[mh] NOT humans[mh])")
+        if "animals[mh]" not in clinical_query.lower() and "animals[mesh]" not in clinical_query.lower():
+            clinical_query += " NOT (animals[Mesh] NOT humans[Mesh])"
 
         clinical = QueryStrategy(
             name="Clinical Filtered (Study Design Filter)",
@@ -414,7 +669,8 @@ class QueryBuilder:
     ) -> str:
         """Generate introduction text for the report"""
         concept_count = len(concepts)
-        mesh_count = sum(1 for c in concepts if c.expanded and c.expanded.mesh_terms)
+        # Count concepts that have at least one MeSH term in any sub-concept
+        mesh_count = sum(1 for c in concepts if any(exp.mesh_terms for exp in c.expanded_list))
 
         # Check if this is a comparison question
         concept_keys = [c.key for c in concepts]
@@ -460,13 +716,22 @@ Three search strategies are provided:
             report_parts.append(f"### {concept.key}: {concept.label}\n")
             report_parts.append(f"**Original Term:** {concept.original_value}\n")
 
-            if concept.expanded:
-                if concept.expanded.mesh_terms:
-                    mesh_names = [m.descriptor_name for m in concept.expanded.mesh_terms]
-                    report_parts.append(f"**MeSH Terms:** {', '.join(mesh_names)}\n")
+            # Show decomposed sub-concepts if multiple
+            if len(concept.expanded_list) > 1:
+                report_parts.append(f"**Decomposed into:** {len(concept.expanded_list)} sub-concepts (connected with AND)\n")
 
-                if concept.expanded.entry_terms:
-                    report_parts.append(f"**Synonyms:** {', '.join(concept.expanded.entry_terms[:5])}\n")
+            # Aggregate MeSH terms and synonyms from all sub-concepts
+            all_mesh_names = []
+            all_synonyms = []
+            for expanded in concept.expanded_list:
+                all_mesh_names.extend([m.descriptor_name for m in expanded.mesh_terms])
+                all_synonyms.extend(expanded.entry_terms[:3])  # Limit per sub-concept
+
+            if all_mesh_names:
+                report_parts.append(f"**MeSH Terms:** {', '.join(all_mesh_names)}\n")
+
+            if all_synonyms:
+                report_parts.append(f"**Synonyms:** {', '.join(all_synonyms[:5])}\n")
 
             report_parts.append("\n")
 

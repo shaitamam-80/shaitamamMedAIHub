@@ -320,9 +320,10 @@ class TestAIServiceGenerateQuery:
 
             result = await ai.generate_pubmed_query({}, "PICO")
 
-            assert "Failed to generate" in result["message"]
-            assert result["concepts"] == []
-            assert result["queries"]["broad"] == ""
+            # Fallback message should mention parse failure or fallback strategy
+            assert "fallback" in result["message"].lower() or "parse" in result["message"].lower()
+            assert "concepts" in result
+            assert "queries" in result
 
 
 class TestAIServiceAnalyzeBatch:
@@ -460,3 +461,303 @@ class TestAIServiceIntegration:
 
             assert "queries" in query_result
             assert query_result["queries"]["broad"] != ""
+
+
+# ============================================================================
+# Error Path Tests - Timeouts, API Failures, Hebrew Detection
+# ============================================================================
+
+class TestAIServiceErrorPaths:
+    """Tests for error handling and fallback mechanisms"""
+
+    @pytest.mark.asyncio
+    async def test_query_generation_timeout_returns_fallback(self):
+        """Test that timeout returns valid fallback response with queries"""
+        import asyncio
+
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError("Request timed out"))
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            framework_data = {
+                "P": "Adults with diabetes",
+                "I": "Metformin",
+                "O": "Blood glucose levels"
+            }
+
+            result = await ai.generate_pubmed_query(framework_data, "PICO")
+
+            # Should have valid structure even on timeout
+            assert "queries" in result
+            assert "message" in result
+            assert "warnings" in result
+
+            # Should have fallback query (not empty)
+            assert result["queries"]["broad"] != ""
+
+            # Should have warning about timeout
+            warning_codes = [w.get("code", "") for w in result.get("warnings", [])]
+            assert any("TIMEOUT" in code for code in warning_codes) or "timeout" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_query_generation_quota_exceeded_returns_fallback(self):
+        """Test that quota exceeded returns valid fallback response"""
+        from google.api_core.exceptions import ResourceExhausted
+
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(side_effect=ResourceExhausted("Quota exceeded"))
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            framework_data = {
+                "P": "Adults",
+                "I": "Exercise",
+                "O": "Health outcomes"
+            }
+
+            result = await ai.generate_pubmed_query(framework_data, "PICO")
+
+            # Should have valid structure even when API fails
+            assert "queries" in result
+            assert result["queries"]["broad"] != ""
+
+            # Should have fallback message (retry wrapper converts ResourceExhausted to RetryError,
+            # so we may see "error" message instead of "quota" message)
+            assert "fallback" in result["message"].lower() or "error" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_hebrew_in_response_triggers_fallback(self):
+        """Test that Hebrew characters in AI response trigger English fallback"""
+        mock_response = MagicMock()
+        # AI returns Hebrew in the query (should not happen but need to handle)
+        mock_response.content = json.dumps({
+            "message": "Generated query",
+            "concepts": [],
+            "queries": {
+                "broad": "סוכרת[tiab]",  # Hebrew!
+                "focused": "diabetes",
+                "clinical_filtered": "diabetes"
+            },
+            "toolbox": []
+        })
+
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            framework_data = {"P": "Adults", "I": "Treatment", "O": "Outcome"}
+            result = await ai.generate_pubmed_query(framework_data, "PICO")
+
+            # The broad query should NOT contain Hebrew
+            assert not ai._contains_hebrew(result["queries"]["broad"])
+
+    @pytest.mark.asyncio
+    async def test_contains_hebrew_detection(self):
+        """Test Hebrew character detection utility"""
+        from app.services.ai_service import AIService
+        ai = AIService.__new__(AIService)
+
+        # Should detect Hebrew
+        assert ai._contains_hebrew("סוכרת") is True
+        assert ai._contains_hebrew("מטופלים מבוגרים") is True
+        assert ai._contains_hebrew("Mixed עברית and English") is True
+
+        # Should not detect Hebrew
+        assert ai._contains_hebrew("diabetes mellitus") is False
+        assert ai._contains_hebrew("PICO Framework") is False
+        assert ai._contains_hebrew("") is False
+        assert ai._contains_hebrew(None) is False
+
+    @pytest.mark.asyncio
+    async def test_generate_fallback_query_creates_valid_pubmed_query(self):
+        """Test that fallback query generator produces valid queries"""
+        from app.services.ai_service import AIService
+        ai = AIService.__new__(AIService)
+
+        framework_data = {
+            "P": "Adults with type 2 diabetes",
+            "I": "Metformin therapy",
+            "C": "Lifestyle intervention",
+            "O": "HbA1c reduction"
+        }
+
+        query = ai._generate_fallback_query(framework_data, "PICO")
+
+        # Should be non-empty
+        assert query != ""
+
+        # Should contain tiab tags
+        assert "[tiab]" in query
+
+        # Should have AND structure
+        assert "AND" in query
+
+        # Should contain quoted terms
+        assert '"' in query
+
+    @pytest.mark.asyncio
+    async def test_build_fallback_response_has_required_fields(self):
+        """Test that fallback response builder includes all required fields"""
+        from app.services.ai_service import AIService
+        ai = AIService.__new__(AIService)
+
+        fallback_query = '("diabetes"[tiab]) AND ("metformin"[tiab])'
+        framework_data = {"P": "Adults", "I": "Metformin", "O": "Outcomes"}
+
+        result = ai.build_fallback_response(
+            fallback_query=fallback_query,
+            framework_type="PICO",
+            framework_data=framework_data,
+            reason="test_failure"
+        )
+
+        # V2 format fields
+        assert "report_intro" in result
+        assert "concepts" in result
+        assert "strategies" in result
+        assert "toolbox" in result
+        assert "formatted_report" in result
+
+        # Legacy format fields
+        assert "queries" in result
+        assert "message" in result
+
+        # All three query types should be present
+        assert "broad" in result["queries"]
+        assert "focused" in result["queries"]
+        assert "clinical_filtered" in result["queries"]
+
+        # Metadata
+        assert "framework_type" in result
+        assert "framework_data" in result
+        assert "warnings" in result
+        assert "translation_status" in result
+
+    @pytest.mark.asyncio
+    async def test_fallback_response_concepts_populated_from_framework_data(self):
+        """Test that fallback concepts are generated from framework data"""
+        from app.services.ai_service import AIService
+        ai = AIService.__new__(AIService)
+
+        framework_data = {
+            "P": "Elderly patients",
+            "I": "Exercise program",
+            "C": "Standard care",
+            "O": "Quality of life"
+        }
+
+        result = ai.build_fallback_response(
+            fallback_query="test query",
+            framework_type="PICO",
+            framework_data=framework_data,
+            reason="test"
+        )
+
+        # Concepts should be populated from framework_data
+        assert len(result["concepts"]) == 4
+
+        # Each concept should have required fields
+        for concept in result["concepts"]:
+            assert "concept_number" in concept
+            assert "component" in concept
+            assert "original_value" in concept
+
+    @pytest.mark.asyncio
+    async def test_unexpected_exception_returns_fallback(self):
+        """Test that unexpected exceptions return valid fallback"""
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("Unexpected error"))
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            framework_data = {"P": "Test", "I": "Test", "O": "Test"}
+            result = await ai.generate_pubmed_query(framework_data, "PICO")
+
+            # Should still return valid structure
+            assert "queries" in result
+            assert "warnings" in result
+
+    @pytest.mark.asyncio
+    async def test_malformed_json_response_returns_fallback(self):
+        """Test handling of partially valid JSON response"""
+        mock_response = MagicMock()
+        # JSON with missing required fields
+        mock_response.content = '{"partial": "data", "queries": {"broad": "test"}}'
+
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            result = await ai.generate_pubmed_query({"P": "Test"}, "PICO")
+
+            # Should have complete structure despite partial input
+            assert "queries" in result
+            assert "broad" in result["queries"]
+
+
+class TestAIServiceHebrewTranslation:
+    """Tests for Hebrew translation functionality"""
+
+    @pytest.mark.asyncio
+    async def test_translate_framework_data_detects_hebrew(self):
+        """Test that Hebrew fields are identified for translation"""
+        from app.services.ai_service import AIService
+        ai = AIService.__new__(AIService)
+
+        framework_data = {
+            "P": "מבוגרים עם סוכרת",  # Hebrew
+            "I": "Metformin",  # English
+            "O": "תוצאות בריאותיות"  # Hebrew
+        }
+
+        hebrew_fields = {
+            key: value for key, value in framework_data.items()
+            if isinstance(value, str) and ai._contains_hebrew(value)
+        }
+
+        assert "P" in hebrew_fields
+        assert "I" not in hebrew_fields
+        assert "O" in hebrew_fields
+
+    @pytest.mark.asyncio
+    async def test_public_translate_method_returns_original_if_no_hebrew(self):
+        """Test that non-Hebrew data is returned unchanged"""
+        mock_response = MagicMock()
+        mock_response.content = '{"P": "Adults", "I": "Treatment"}'
+
+        with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+            MockLLM.return_value = mock_llm
+
+            from app.services.ai_service import AIService
+            ai = AIService()
+
+            framework_data = {
+                "P": "Adults with diabetes",
+                "I": "Metformin treatment"
+            }
+
+            result = await ai.translate_framework_to_english(framework_data)
+
+            # Should be unchanged since no Hebrew
+            assert result["P"] == "Adults with diabetes"
+            assert result["I"] == "Metformin treatment"

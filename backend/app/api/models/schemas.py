@@ -11,6 +11,19 @@ from uuid import UUID
 # Import framework schemas from centralized prompts module
 from app.core.prompts.shared import FRAMEWORK_SCHEMAS as PROMPTS_FRAMEWORK_SCHEMAS
 
+# Import typed framework models
+from .frameworks import (
+    PICOData,
+    PICOTData,
+    PEOData,
+    SPIDERData,
+    CoCoPoPData,
+    GenericFrameworkData,
+    FrameworkDataUnion,
+    framework_to_dict,
+    detect_framework_type,
+)
+
 
 # ============================================================================
 # Research Framework Models (Dynamic)
@@ -91,6 +104,10 @@ class ProjectResponse(ProjectBase):
     user_id: Optional[str] = None  # String to handle Supabase UUID format
     created_at: datetime
     updated_at: datetime
+    current_step: str = Field(
+        default="DEFINE",
+        description="Current workflow step: DEFINE, QUERY, REVIEW, COMPLETED"
+    )
 
     class Config:
         from_attributes = True
@@ -202,6 +219,10 @@ class ConceptAnalysis(BaseModel):
     component: str
     free_text_terms: List[str]
     mesh_terms: List[str]
+    entry_terms: List[str] = []  # MeSH synonyms from NLM thesaurus
+    key: Optional[str] = None  # P, I, C, O
+    label: Optional[str] = None  # Population, Intervention, etc.
+    original_value: Optional[str] = None  # User's original input
 
 
 class QueryStrategies(BaseModel):
@@ -222,6 +243,8 @@ class QueryGenerateResponse(BaseModel):
     toolbox: Optional[List[ToolboxItem]] = None
     framework_type: str
     framework_data: Dict[str, Any]
+    research_question: Optional[str] = None  # Original research question
+    strategies: Optional[Dict[str, Any]] = None  # V2 strategies (comprehensive, direct, clinical)
 
 
 # ============================================================================
@@ -466,3 +489,62 @@ class FrameworkSchemaResponse(BaseModel):
     """Response containing framework schema definitions"""
 
     frameworks: Dict[str, Any] = Field(default_factory=_convert_prompts_to_api_format)
+
+
+# ============================================================================
+# Re-export typed framework models for convenience
+# Usage: from app.api.models.schemas import PICOData, framework_to_dict
+# ============================================================================
+__all__ = [
+    # Typed framework models
+    "PICOData",
+    "PICOTData",
+    "PEOData",
+    "SPIDERData",
+    "CoCoPoPData",
+    "GenericFrameworkData",
+    "FrameworkDataUnion",
+    "framework_to_dict",
+    "detect_framework_type",
+    # Project models
+    "ProjectBase",
+    "ProjectCreate",
+    "ProjectUpdate",
+    "ProjectResponse",
+    # Chat/Define models
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
+    "FinerScore",
+    "FinerAssessment",
+    "FinerAssessmentRequest",
+    "FinerAssessmentResponse",
+    # Query models
+    "QueryGenerateRequest",
+    "QueryGenerateResponse",
+    "QueryGenerateResponseV2",
+    "ConceptAnalysis",
+    "ConceptAnalysisV2",
+    "QueryStrategy",
+    "QueryStrategies",
+    "ToolboxFilter",
+    "ToolboxItem",
+    "TranslationStatus",
+    "QueryWarning",
+    # File/Abstract models
+    "FileUploadResponse",
+    "AbstractBase",
+    "AbstractResponse",
+    "AbstractUpdateDecision",
+    "PaginatedAbstractsResponse",
+    # Analysis models
+    "AnalysisRunBase",
+    "AnalysisRunCreate",
+    "AnalysisRunResponse",
+    "BatchAnalysisRequest",
+    "BatchAnalysisResponse",
+    # Schema definitions
+    "FrameworkData",
+    "FrameworkSchemaResponse",
+    "FRAMEWORK_SCHEMAS",
+]

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
         "http://localhost:3003",
         "http://localhost:3004",
         "http://localhost:3005",
+        "http://localhost:3006",
+        "http://localhost:3007",
+        "http://localhost:3008",
+        "http://localhost:3009",
         "https://shaitamam.com",
         "https://www.shaitamam.com",
     ]
@@ -58,6 +62,12 @@ class Settings(BaseSettings):
     # Get API key from: https://www.ncbi.nlm.nih.gov/account/settings/
     NCBI_API_KEY: Optional[str] = None
     NCBI_EMAIL: str = "shaitamam@gmail.com"  # Required by NCBI for identification
+
+    # Cache Settings
+    # If REDIS_URL is set, Redis cache is used; otherwise, in-memory cache
+    REDIS_URL: Optional[str] = None  # e.g., redis://localhost:6379 or Railway Redis URL
+    CACHE_TTL_DAYS: int = 30  # MeSH term cache TTL (MeSH updates annually)
+    CACHE_MAX_SIZE: int = 10000  # Max entries for in-memory cache
 
     class Config:
         env_file = ".env"

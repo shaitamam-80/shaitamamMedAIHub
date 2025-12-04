@@ -20,7 +20,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.create_project({"name": "Test Project", "framework_type": "PICO"})
 
@@ -35,7 +35,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_project(sample_project_id)
 
@@ -50,7 +50,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_project(sample_project_id)
 
@@ -65,7 +65,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.update_project(sample_project_id, {"name": "Updated Name"})
 
@@ -80,7 +80,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.list_projects()
 
@@ -94,7 +94,7 @@ class TestDatabaseServiceProjects:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.list_projects()
 
@@ -119,7 +119,7 @@ class TestDatabaseServiceFiles:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.create_file(file_data)
 
@@ -136,7 +136,7 @@ class TestDatabaseServiceFiles:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_file(file_id)
 
@@ -154,7 +154,7 @@ class TestDatabaseServiceFiles:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_files_by_project(sample_project_id)
 
@@ -178,7 +178,7 @@ class TestDatabaseServiceChatMessages:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.save_message(message_data)
 
@@ -197,7 +197,7 @@ class TestDatabaseServiceChatMessages:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_conversation(sample_project_id)
 
@@ -212,7 +212,7 @@ class TestDatabaseServiceChatMessages:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.clear_conversation(sample_project_id)
 
@@ -230,7 +230,7 @@ class TestDatabaseServiceAbstracts:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.create_abstract(sample_abstract_data)
 
@@ -246,7 +246,7 @@ class TestDatabaseServiceAbstracts:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.bulk_create_abstracts(abstracts)
 
@@ -260,7 +260,7 @@ class TestDatabaseServiceAbstracts:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_abstracts_by_project(sample_project_id)
 
@@ -276,7 +276,7 @@ class TestDatabaseServiceAbstracts:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.update_abstract_decision(
             abstract_id,
@@ -303,7 +303,7 @@ class TestDatabaseServiceAnalysisRuns:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.create_analysis_run(run_data)
 
@@ -320,7 +320,7 @@ class TestDatabaseServiceAnalysisRuns:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.update_analysis_run(run_id, updated_data)
 
@@ -344,7 +344,7 @@ class TestDatabaseServiceQueryStrings:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.save_query_string(query_data)
 
@@ -363,7 +363,7 @@ class TestDatabaseServiceQueryStrings:
         from app.services.database import DatabaseService
 
         db = DatabaseService.__new__(DatabaseService)
-        db.client = mock_supabase_client
+        db._client = mock_supabase_client
 
         result = await db.get_query_strings_by_project(sample_project_id)
 

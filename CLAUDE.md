@@ -70,20 +70,23 @@ backend/
 ├── app/
 │   ├── api/
 │   │   ├── models/
-│   │   │   └── schemas.py      # Pydantic models + FRAMEWORK_SCHEMAS
+│   │   │   ├── schemas.py      # Pydantic models + FRAMEWORK_SCHEMAS
+│   │   │   └── frameworks.py   # Typed framework models (PICO, PEO, SPIDER, etc.)
 │   │   └── routes/
 │   │       ├── projects.py     # CRUD for projects
 │   │       ├── define.py       # Chat + framework extraction
 │   │       ├── query.py        # Query generation
 │   │       └── review.py       # File upload + screening
 │   ├── core/
-│   │   ├── config.py           # Settings from .env
+│   │   ├── config.py           # Settings from .env + cache config
 │   │   ├── auth.py             # Supabase JWT validation
 │   │   └── prompts/
 │   │       └── shared.py       # AI prompts + framework schemas
 │   └── services/
 │       ├── ai_service.py       # Gemini AI (singleton)
 │       ├── database.py         # Supabase client (singleton)
+│       ├── cache_service.py    # Memory/Redis cache (singleton)
+│       ├── mesh_service.py     # MeSH term lookup + caching
 │       └── medline_parser.py   # MEDLINE file parser
 ```
 
@@ -128,6 +131,8 @@ frontend/
 
 - `ai_service` (singleton): All Gemini AI calls
 - `db_service` (singleton): All Supabase operations
+- `cache_service` (singleton): MeSH term caching (Memory/Redis)
+- `mesh_service` (singleton): NCBI MeSH API lookups
 - Routes never access DB/AI directly
 
 ### Dynamic Framework System
@@ -387,6 +392,15 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_KEY=eyJ...               # Anon key
 SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Service role (bypasses RLS)
 DEBUG=True                        # Enable /api/docs
+
+# Cache Settings (optional)
+REDIS_URL=                        # e.g., redis://localhost:6379 (uses memory cache if empty)
+CACHE_TTL_DAYS=30                 # MeSH term cache TTL
+CACHE_MAX_SIZE=10000              # Max in-memory cache entries
+
+# NCBI Settings (optional)
+NCBI_API_KEY=                     # From ncbi.nlm.nih.gov/account/settings
+NCBI_EMAIL=your@email.com         # Required by NCBI for identification
 ```
 
 ### Frontend `.env.local`
@@ -492,7 +506,92 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ## Recent Changes Log
 
-### 2025-12-02 - Query Tool V2: Advanced Query Engine
+### 2025-12-02 (Session 2) - Infrastructure: Caching, Type Safety, Testing
+
+#### Persistent Caching System
+
+New `backend/app/services/cache_service.py`:
+
+- **Cache Interface Pattern**: Abstract `CacheInterface` with pluggable implementations
+- **MemoryCache (default)**: LRU-like eviction, TTL support, no dependencies
+- **RedisCache**: Auto-enabled when `REDIS_URL` is set, scalable for production
+- **30-day TTL**: MeSH terms update annually, safe to cache for extended periods
+
+```python
+# Automatic selection based on environment
+from app.services.cache_service import get_cache, mesh_cache_key
+
+cache = get_cache()  # Returns MemoryCache or RedisCache
+key = mesh_cache_key("diabetes mellitus")
+await cache.set(key, data, ttl=timedelta(days=30))
+```
+
+#### Typed Framework Models
+
+New `backend/app/api/models/frameworks.py`:
+
+- **Pydantic models**: `PICOData`, `PEOData`, `SPIDERData`, `PICOTData`, `CoCoPoPData`, `GenericFrameworkData`
+- **Key normalization**: `@model_validator` converts full-word keys (e.g., "population" → "P")
+- **Type union**: `FrameworkDataUnion` for type-safe framework handling
+
+```python
+from app.api.models.schemas import PICOData, framework_to_dict
+
+# Accepts both formats
+pico = PICOData(population="Adults", intervention="Exercise", outcome="Health")
+pico = PICOData(P="Adults", I="Exercise", O="Health")
+
+# Always outputs single-letter keys
+dict_data = framework_to_dict(pico)  # {"P": "Adults", "I": "Exercise", "O": "Health"}
+```
+
+#### MeSH Service Caching Integration
+
+Updated `backend/app/services/mesh_service.py`:
+
+- **Serialization**: Added `to_dict()`/`from_dict()` to `ExpandedTerms` dataclass
+- **Cache integration**: Uses `cache_service` for persistent MeSH term storage
+- **Graceful degradation**: Cache errors are logged but don't break the service
+- **Statistics**: New `get_cache_stats()` method for monitoring
+
+#### Configuration Updates
+
+Updated `backend/app/core/config.py`:
+
+```python
+REDIS_URL: Optional[str] = None      # Auto-enables Redis cache
+CACHE_TTL_DAYS: int = 30             # MeSH term TTL
+CACHE_MAX_SIZE: int = 10000          # Memory cache max entries
+```
+
+#### Comprehensive Testing
+
+New test files:
+
+| File | Coverage |
+|------|----------|
+| `test_cache_service.py` | MemoryCache, key generation, factory, integration |
+| `test_mesh_service.py` | Error paths (timeout, network, HTTP), caching, expansion |
+| `test_ai_service.py` | Error paths (timeout, quota, Hebrew), fallback mechanisms |
+
+Test results: **172 passed, 1 skipped**
+
+**Files Created/Modified**:
+
+- `backend/app/api/models/frameworks.py` (NEW)
+- `backend/app/services/cache_service.py` (NEW)
+- `backend/app/services/mesh_service.py` (UPDATED - cache integration)
+- `backend/app/api/models/schemas.py` (UPDATED - imports)
+- `backend/app/core/config.py` (UPDATED - cache settings)
+- `backend/requirements.txt` (UPDATED - redis dependency)
+- `backend/tests/test_cache_service.py` (NEW)
+- `backend/tests/test_mesh_service.py` (NEW)
+- `backend/tests/test_ai_service.py` (UPDATED - error path tests)
+- `backend/tests/test_database_service.py` (FIXED - property access)
+
+---
+
+### 2025-12-02 (Session 1) - Query Tool V2: Advanced Query Engine
 
 #### Split Query Logic for Comparison Questions
 
@@ -710,10 +809,12 @@ Added `_generate_fallback_query()` method that creates proper PubMed queries whe
 | Auth | `backend/app/core/auth.py` |
 | AI Service | `backend/app/services/ai_service.py` |
 | DB Service | `backend/app/services/database.py` |
+| Cache Service | `backend/app/services/cache_service.py` |
 | Query Builder | `backend/app/services/query_builder.py` |
 | MeSH Service | `backend/app/services/mesh_service.py` |
 | PubMed Service | `backend/app/services/pubmed_service.py` |
 | Schemas | `backend/app/api/models/schemas.py` |
+| Framework Models | `backend/app/api/models/frameworks.py` |
 | Framework prompts | `backend/app/core/prompts/shared.py` |
 | Query prompts | `backend/app/core/prompts/query.py` |
 | Dockerfile | `backend/Dockerfile` |

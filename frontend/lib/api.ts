@@ -28,6 +28,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   user_id?: string;
+  current_step?: string;
 }
 
 export interface ChatMessage {
@@ -164,6 +165,30 @@ export interface QueryWarning {
   code: string;
   message: string;
   severity: "info" | "warning" | "error";
+}
+
+// ============================================================================
+// Concept Analysis Types (for editable concept table)
+// ============================================================================
+
+export interface ConceptTerm {
+  term: string;
+  source: "mesh" | "entry_term" | "ai_generated" | "mesh_derived" | "user_added";
+  selected: boolean;
+}
+
+export interface ConceptAnalysisItem {
+  key: string;
+  label: string;
+  original_value: string;
+  mesh_terms: ConceptTerm[];
+  free_text_terms: ConceptTerm[];
+}
+
+export interface ConceptAnalysisResponse {
+  project_id: string;
+  framework_type: string;
+  concepts: ConceptAnalysisItem[];
 }
 
 export interface QueryGenerateResponseV2 {
@@ -626,6 +651,23 @@ export const apiClient = {
 
   healthCheck: async (): Promise<{ status: string; service: string }> => {
     const response = await client.get("/health");
+    return response.data;
+  },
+
+  // ========================================================================
+  // Query - Concept Analysis
+  // ========================================================================
+
+  /**
+   * Analyze framework components and get MeSH + AI-generated terms
+   * Returns editable concept table data
+   */
+  analyzeConceptsForProject: async (
+    projectId: string
+  ): Promise<ConceptAnalysisResponse> => {
+    const response = await client.get(
+      `/api/v1/query/analyze-concepts/${projectId}`
+    );
     return response.data;
   },
 };

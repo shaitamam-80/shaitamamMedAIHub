@@ -21,6 +21,7 @@ from app.core.prompts import (
     FRAMEWORK_SCHEMAS,
     VALIDATED_HEDGES
 )
+from app.core.search_config import PICO_PRIORITY
 
 
 class AIService:
@@ -524,6 +525,7 @@ English translation:""")
         ]
 
         # Generate concepts from framework_data so UI isn't empty
+        # Use centralized mappings for consistency
         key_to_label = {
             'P': 'Population', 'I': 'Intervention', 'C': 'Comparison',
             'O': 'Outcome', 'E': 'Exposure', 'S': 'Study Design', 'T': 'Timeframe',
@@ -531,17 +533,25 @@ English translation:""")
             'comparator': 'Comparison', 'comparison': 'Comparison',
             'outcome': 'Outcome', 'exposure': 'Exposure'
         }
-        key_to_number = {'P': 1, 'I': 2, 'C': 3, 'O': 4, 'E': 5, 'S': 6, 'T': 7}
+        # Map full-word keys to single letters for PICO_PRIORITY lookup
+        key_normalization = {
+            "population": "P", "intervention": "I", "comparator": "C",
+            "comparison": "C", "outcome": "O", "exposure": "E",
+            "timeframe": "T", "study": "S", "factor": "F"
+        }
 
         concepts = []
         for key, value in framework_data.items():
             if not value or key.lower() in ['research_question', 'framework_type']:
                 continue
-            # Normalize key
-            normalized_key = key.upper() if len(key) == 1 else key[0].upper()
+            # Normalize key to single letter for consistent priority lookup
+            if len(key) == 1:
+                normalized_key = key.upper()
+            else:
+                normalized_key = key_normalization.get(key.lower(), key[0].upper())
             label = key_to_label.get(key, key_to_label.get(key.lower(), key.title()))
             concepts.append({
-                "concept_number": key_to_number.get(normalized_key, len(concepts) + 1),
+                "concept_number": PICO_PRIORITY.get(normalized_key, 99),  # Use centralized priority
                 "component": label,
                 "key": normalized_key,
                 "label": label,
@@ -551,7 +561,7 @@ English translation:""")
                 "entry_terms": []
             })
 
-        # Sort by concept_number (PICO order)
+        # Sort by concept_number (PICO order using centralized priority)
         concepts.sort(key=lambda c: c["concept_number"])
 
         # Build V2 response structure
@@ -1112,6 +1122,196 @@ Return ONLY valid JSON, no additional text."""
         # Parse JSON response
         results = self._extract_json(response.content, find_object=False)
         return results if results else []
+
+    async def decompose_to_mesh_concepts(
+        self,
+        framework_data: Dict[str, str],
+        framework_type: str
+    ) -> Dict[str, List[str]]:
+        """
+        Decompose framework components into individual MeSH-searchable concepts.
+
+        For example:
+        "Adults with generalized anxiety disorder" -> ["Adults", "Generalized Anxiety Disorder"]
+
+        This allows each concept to be searched separately in the MeSH database.
+
+        Args:
+            framework_data: Dict with framework components (P, I, C, O, etc.)
+            framework_type: Framework type (PICO, PEO, etc.)
+
+        Returns:
+            Dict mapping component keys to lists of decomposed MeSH concepts
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Filter out empty values and special keys
+        components = {
+            key: value for key, value in framework_data.items()
+            if value and key.lower() not in ['research_question', 'framework_type']
+        }
+
+        if not components:
+            return {}
+
+        # Build prompt
+        components_text = "\n".join([f"- {key}: {value}" for key, value in components.items()])
+
+        prompt = f"""You are a medical librarian expert in MeSH (Medical Subject Headings) terminology.
+
+TASK: Decompose each research component into individual concepts that can be searched in MeSH.
+
+IMPORTANT RULES:
+1. Break down composite phrases into separate searchable terms
+2. Each term should be a potential MeSH descriptor (official medical terminology)
+3. Do NOT keep phrases like "Adults with X" - split into "Adults" AND "X"
+4. Use FULL medical terminology, NOT abbreviations (e.g., "Cognitive Behavioral Therapy" not "CBT")
+5. Common abbreviations like SSRIs, GAD should be expanded to their full form
+6. If input contains both abbreviation and full term, use ONLY the full term
+7. AVOID REDUNDANCY: Do NOT output generic terms (like "Anxiety") that duplicate or overlap with the condition in P. For outcomes, focus on MEASURABLE outcomes (e.g., "Treatment Outcome", "Efficacy", "Remission") not symptoms that overlap with the condition.
+
+Framework type: {framework_type}
+
+Components to decompose:
+{components_text}
+
+Return ONLY a JSON object where each key maps to an array of individual MeSH-searchable concepts.
+
+Example:
+Input: "P": "Adults with generalized anxiety disorder"
+Output: "P": ["Adult", "Generalized Anxiety Disorder"]
+
+Input: "I": "Cognitive-Behavioral Therapy (CBT)"
+Output: "I": ["Cognitive Behavioral Therapy"]
+
+Input: "C": "SSRIs or benzodiazepines"
+Output: "C": ["Selective Serotonin Reuptake Inhibitors", "Benzodiazepines"]
+
+Input: "O": "Anxiety symptoms, daily functioning, long-term outcomes"
+Output: "O": ["Activities of Daily Living", "Treatment Outcome", "Efficacy"]
+(Note: "Anxiety" is redundant with condition in P, so we use measurable outcomes only)
+
+Return JSON:"""
+
+        try:
+            messages = [HumanMessage(content=prompt)]
+            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=20)
+
+            result = self._extract_json(response.content, find_object=True)
+
+            if result:
+                # Validate and clean the result
+                cleaned = {}
+                for key, terms in result.items():
+                    if isinstance(terms, list):
+                        # Filter out empty strings
+                        cleaned[key] = [t.strip() for t in terms if isinstance(t, str) and t.strip()]
+
+                logger.info(f"Decomposed {len(cleaned)} components into MeSH concepts")
+                return cleaned
+            else:
+                logger.warning("AI returned invalid JSON for MeSH decomposition")
+                return {}
+
+        except asyncio.TimeoutError:
+            logger.warning("Timeout decomposing to MeSH concepts")
+            return {}
+        except Exception as e:
+            logger.warning(f"Error decomposing to MeSH concepts: {e}")
+            return {}
+
+    async def generate_free_text_terms(
+        self,
+        framework_data: Dict[str, str],
+        framework_type: str
+    ) -> Dict[str, List[str]]:
+        """
+        Generate free-text search terms for each framework component using AI.
+
+        This complements MeSH terms by suggesting:
+        - Synonyms and variations
+        - Common abbreviations
+        - Related terminology
+        - Spelling variations (UK/US)
+
+        Args:
+            framework_data: Dict with framework components (P, I, C, O, etc.)
+            framework_type: Framework type (PICO, PEO, etc.)
+
+        Returns:
+            Dict mapping component keys to lists of free-text terms
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Filter out empty values and special keys
+        components = {
+            key: value for key, value in framework_data.items()
+            if value and key.lower() not in ['research_question', 'framework_type']
+        }
+
+        if not components:
+            return {}
+
+        # Build prompt
+        components_text = "\n".join([f"- {key}: {value}" for key, value in components.items()])
+
+        prompt = f"""You are a medical librarian expert in PubMed search strategies.
+
+For each research component below, generate 3-6 free-text search terms that would help find relevant articles in PubMed.
+
+Include:
+- Synonyms and alternative phrasings
+- Common abbreviations (e.g., CBT for Cognitive Behavioral Therapy, GAD for Generalized Anxiety Disorder)
+- Spelling variations (UK/US spelling)
+- Related but distinct terms
+
+Do NOT include:
+- Very broad or generic terms
+- Terms that would retrieve irrelevant results
+
+Framework type: {framework_type}
+
+Components:
+{components_text}
+
+Return ONLY a JSON object mapping each component key to an array of free-text terms.
+Format terms for PubMed [tiab] search (no quotes needed, I'll add them).
+
+Example response:
+{{
+  "P": ["elderly patients", "older adults", "geriatric population", "aged 65 and over"],
+  "I": ["CBT", "cognitive therapy", "behavioral therapy", "psychotherapy"],
+  "O": ["depression symptoms", "depressive disorder", "mood improvement"]
+}}"""
+
+        try:
+            messages = [HumanMessage(content=prompt)]
+            response = await self._invoke_with_retry(self.gemini_flash, messages, timeout_seconds=20)
+
+            result = self._extract_json(response.content, find_object=True)
+
+            if result:
+                # Validate and clean the result
+                cleaned = {}
+                for key, terms in result.items():
+                    if isinstance(terms, list):
+                        # Filter out empty strings and limit to 6 terms
+                        cleaned[key] = [t.strip() for t in terms if isinstance(t, str) and t.strip()][:6]
+
+                logger.info(f"Generated free-text terms for {len(cleaned)} components")
+                return cleaned
+            else:
+                logger.warning("AI returned invalid JSON for free-text terms")
+                return {}
+
+        except asyncio.TimeoutError:
+            logger.warning("Timeout generating free-text terms")
+            return {}
+        except Exception as e:
+            logger.warning(f"Error generating free-text terms: {e}")
+            return {}
 
 
 # Global instance
