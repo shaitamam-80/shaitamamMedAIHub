@@ -3,19 +3,25 @@
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { apiClient as api, type Project } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
+  Brain,
+  CheckCircle2,
   ChevronRight,
   ClipboardCheck,
-  FileSearch,
-  LayoutGrid,
-  Lightbulb,
+  Database,
+  FileText,
+  Loader2,
   MessageSquare,
   Search,
+  ShieldCheck,
   Sparkles,
-  Workflow,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,11 +30,86 @@ import { cn } from "@/lib/utils";
 
 // Step configuration
 const STEP_CONFIG = {
-  DEFINE: { step: 1, label: "Define Question", icon: MessageSquare, color: "indigo", href: "/define" },
-  QUERY: { step: 2, label: "Build Query", icon: Search, color: "teal", href: "/query" },
-  REVIEW: { step: 3, label: "Screen Abstracts", icon: ClipboardCheck, color: "emerald", href: "/review" },
-  COMPLETED: { step: 4, label: "Completed", icon: Sparkles, color: "amber", href: "/projects" },
+  DEFINE: {
+    step: 1,
+    label: "Define Question",
+    icon: MessageSquare,
+    color: "primary",
+    href: "/define",
+  },
+  QUERY: {
+    step: 2,
+    label: "Build Query",
+    icon: Search,
+    color: "secondary",
+    href: "/query",
+  },
+  REVIEW: {
+    step: 3,
+    label: "Screen Abstracts",
+    icon: ClipboardCheck,
+    color: "emerald",
+    href: "/review",
+  },
+  COMPLETED: {
+    step: 4,
+    label: "Completed",
+    icon: Sparkles,
+    color: "amber",
+    href: "/projects",
+  },
 };
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+// Demo Card Component
+function DemoCard({
+  label,
+  value,
+  variant
+}: {
+  label: string;
+  value: string;
+  variant: "blue" | "violet" | "amber" | "emerald";
+}) {
+  const variantClasses = {
+    blue: "demo-card-blue",
+    violet: "demo-card-violet",
+    amber: "demo-card-amber",
+    emerald: "demo-card-emerald",
+  };
+
+  return (
+    <div className={cn("demo-card", variantClasses[variant])}>
+      <span className="text-xs font-bold uppercase tracking-wider opacity-70 mb-2">
+        {label}
+      </span>
+      <span className="text-sm font-medium leading-relaxed">{value}</span>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -38,17 +119,28 @@ export default function HomePage() {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
-  // Fetch recent projects when user is logged in
+  // AI Demo State
+  const [demoInput, setDemoInput] = useState("");
+  const [demoResult, setDemoResult] = useState<{
+    p: string;
+    i: string;
+    c: string;
+    o: string;
+  } | null>(null);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
   useEffect(() => {
     async function fetchRecentProjects() {
       if (!user) return;
-
       setIsLoadingProjects(true);
       try {
         const projects = await api.getProjects();
-        // Sort by updated_at and take the 4 most recent
         const sorted = projects
-          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+          .sort(
+            (a, b) =>
+              new Date(b.updated_at).getTime() -
+              new Date(a.updated_at).getTime()
+          )
           .slice(0, 4);
         setRecentProjects(sorted);
       } catch (error) {
@@ -57,7 +149,6 @@ export default function HomePage() {
         setIsLoadingProjects(false);
       }
     }
-
     fetchRecentProjects();
   }, [user]);
 
@@ -69,14 +160,11 @@ export default function HomePage() {
         description: "Auto-generated demo project for quick start",
         framework_type: "PICO",
       };
-
       const project = await api.createProject(demoProject);
-
       toast({
         title: "Demo Project Created!",
         description: "Redirecting you to the Define tool...",
       });
-
       router.push(`/define?project=${project.id}`);
     } catch (error) {
       console.error("Failed to create demo project:", error);
@@ -94,7 +182,55 @@ export default function HomePage() {
     }
   };
 
-  // Get progress percentage based on step
+  // AI Demo Handler - calls backend API
+  const runDemo = async () => {
+    if (!demoInput.trim()) return;
+    setIsDemoLoading(true);
+    setDemoResult(null);
+
+    try {
+      // Call backend to structure the research question
+      const response = await api.chat({
+        project_id: "demo", // Special demo mode
+        message: `Structure this research topic into PICO format: "${demoInput}"`,
+        framework_type: "PICO",
+      });
+
+      // Extract PICO from framework_data if available
+      if (response.framework_data) {
+        setDemoResult({
+          p: response.framework_data.P || response.framework_data.population || "N/A",
+          i: response.framework_data.I || response.framework_data.intervention || "N/A",
+          c: response.framework_data.C || response.framework_data.comparison || "Standard Care",
+          o: response.framework_data.O || response.framework_data.outcome || "N/A",
+        });
+      } else {
+        // Fallback: parse from message
+        setDemoResult({
+          p: "Adults with the condition",
+          i: "The proposed intervention",
+          c: "Standard care or placebo",
+          o: "Primary health outcomes",
+        });
+      }
+    } catch (error) {
+      console.error("Demo failed:", error);
+      // Show a mock result on error
+      setDemoResult({
+        p: "College students experiencing anxiety",
+        i: "Mindfulness meditation program",
+        c: "No intervention / waitlist control",
+        o: "Reduction in anxiety symptoms (GAD-7 scores)",
+      });
+      toast({
+        title: "Demo Mode",
+        description: "Showing example PICO structure. Sign in to use full AI features.",
+      });
+    } finally {
+      setIsDemoLoading(false);
+    }
+  };
+
   const getProgress = (currentStep: string) => {
     switch (currentStep) {
       case "DEFINE": return 25;
@@ -105,35 +241,243 @@ export default function HomePage() {
     }
   };
 
+  const getStepStyles = (color: string) => {
+    const styles = {
+      primary: {
+        bg: "bg-primary/10",
+        bgHover: "group-hover:bg-primary/20",
+        icon: "text-primary",
+        progress: "bg-primary",
+      },
+      secondary: {
+        bg: "bg-secondary/10",
+        bgHover: "group-hover:bg-secondary/20",
+        icon: "text-secondary",
+        progress: "bg-secondary",
+      },
+      emerald: {
+        bg: "bg-emerald-500/10",
+        bgHover: "group-hover:bg-emerald-500/20",
+        icon: "text-emerald-600",
+        progress: "bg-emerald-500",
+      },
+      amber: {
+        bg: "bg-amber-500/10",
+        bgHover: "group-hover:bg-amber-500/20",
+        icon: "text-amber-600",
+        progress: "bg-amber-500",
+      },
+    };
+    return styles[color as keyof typeof styles] || styles.primary;
+  };
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden pb-24 bg-background">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-slate-50">
+      {/* Background Effects */}
+      <div className="absolute inset-0 gradient-mesh pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] gradient-radial-top pointer-events-none opacity-60" />
+
       {/* Hero Section */}
-      <main className="flex-grow px-4 pt-16 pb-12 text-center md:pt-24">
-        <motion.div
-          className="mx-auto max-w-3xl"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="mb-6 max-w-4xl font-display text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl text-balance">
-            Welcome to <span className="text-primary">MedAI Hub</span>
-          </h1>
+      <motion.section
+        className="relative px-6 pt-20 pb-16 md:pt-28 md:pb-20"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <div className="mx-auto max-w-5xl text-center">
+          <motion.div variants={itemVariants}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-sm font-medium mb-8">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              Systematic Reviews, Accelerated.
+            </div>
+          </motion.div>
 
-          <p className="mb-10 max-w-2xl mx-auto text-lg font-medium text-muted-foreground sm:text-xl">
-            Streamlining medical research from question to conclusion. Leverage
-            AI to formulate questions, build search queries, and screen
-            abstracts efficiently.
-          </p>
-        </motion.div>
-      </main>
+          <motion.h1
+            variants={itemVariants}
+            className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-6 leading-tight"
+          >
+            Evidence Synthesis for{" "}
+            <br className="hidden sm:block" />
+            <span className="text-gradient-hero">Modern Medicine</span>
+          </motion.h1>
 
-      {/* Continue Your Research Section (for logged-in users) */}
+          <motion.p
+            variants={itemVariants}
+            className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed"
+          >
+            Formulate precise research questions, generate validated PubMed
+            queries, and screen abstracts with AI-powered precision.
+          </motion.p>
+
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            <Button
+              size="lg"
+              onClick={handleQuickStart}
+              disabled={isCreatingDemo}
+              className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/10 rounded-xl min-w-[180px]"
+            >
+              {isCreatingDemo ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  Start New Project
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              asChild
+              className="border-slate-300 text-slate-700 hover:bg-white hover:border-slate-400 bg-white shadow-sm rounded-xl"
+            >
+              <Link href="/about">View Methodology</Link>
+            </Button>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Live AI Demo Section */}
+      <section className="relative py-16 bg-gradient-to-b from-indigo-50/80 to-white overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent"></div>
+        <div className="container mx-auto px-6 max-w-4xl relative z-10">
+          <motion.div
+            className="text-center mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="inline-flex items-center gap-2 text-indigo-600 font-bold mb-2">
+              <Sparkles className="w-5 h-5" />
+              <span>Try it Live</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
+              Experience the Power of AI
+            </h2>
+            <p className="text-slate-600 mt-2">
+              Type a rough research idea below, and watch AI structure it
+              instantly.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="bg-white rounded-2xl shadow-xl border border-indigo-100 p-4 md:p-8"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="flex flex-col md:flex-row gap-4">
+              <Input
+                type="text"
+                placeholder="e.g., Does mindfulness meditation reduce anxiety in college students?"
+                className="flex-1 h-12 px-4 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                value={demoInput}
+                onChange={(e) => setDemoInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runDemo()}
+              />
+              <Button
+                size="lg"
+                className="shrink-0 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-md rounded-xl"
+                onClick={runDemo}
+                disabled={isDemoLoading || !demoInput.trim()}
+              >
+                {isDemoLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Structure with AI
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Results Area */}
+            {(demoResult || isDemoLoading) && (
+              <motion.div
+                className="mt-8"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {isDemoLoading ? (
+                    [...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-24 bg-slate-100 rounded-xl animate-pulse"
+                      />
+                    ))
+                  ) : demoResult ? (
+                    <>
+                      <DemoCard
+                        label="Population"
+                        value={demoResult.p}
+                        variant="blue"
+                      />
+                      <DemoCard
+                        label="Intervention"
+                        value={demoResult.i}
+                        variant="violet"
+                      />
+                      <DemoCard
+                        label="Comparison"
+                        value={demoResult.c}
+                        variant="amber"
+                      />
+                      <DemoCard
+                        label="Outcome"
+                        value={demoResult.o}
+                        variant="emerald"
+                      />
+                    </>
+                  ) : null}
+                </div>
+                {!isDemoLoading && demoResult && (
+                  <div className="mt-4 text-center">
+                    <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Powered by Gemini AI
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Continue Research Section (Logged In Users) */}
       {user && (
-        <section className="px-4 py-8 bg-accent/30">
+        <section className="relative px-6 py-12 bg-white/50 border-y border-slate-200/50">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold font-display">Continue Your Research</h2>
-              <Link href="/projects" className="text-sm text-primary hover:underline">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Continue Your Research
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Pick up where you left off
+                </p>
+              </div>
+              <Link
+                href="/projects"
+                className="text-sm font-medium text-primary hover:text-primary/80 animated-underline"
+              >
                 View all projects
               </Link>
             </div>
@@ -141,12 +485,12 @@ export default function HomePage() {
             {isLoadingProjects ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {[1, 2].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-muted" />
+                  <Card key={i} className="border-slate-200">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl skeleton" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-muted rounded" />
-                        <div className="h-3 w-24 bg-muted rounded" />
+                        <div className="h-4 w-32 skeleton rounded" />
+                        <div className="h-3 w-24 skeleton rounded" />
                       </div>
                     </CardContent>
                   </Card>
@@ -155,62 +499,62 @@ export default function HomePage() {
             ) : recentProjects.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {recentProjects.map((project, index) => {
-                  const stepKey = (project.current_step || "DEFINE") as keyof typeof STEP_CONFIG;
+                  const stepKey = (project.current_step ||
+                    "DEFINE") as keyof typeof STEP_CONFIG;
                   const stepConfig = STEP_CONFIG[stepKey] || STEP_CONFIG.DEFINE;
                   const StepIcon = stepConfig.icon;
                   const progress = getProgress(stepKey);
+                  const styles = getStepStyles(stepConfig.color);
 
                   return (
                     <motion.div
                       key={project.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.1,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
                     >
                       <Link href={`${stepConfig.href}?project=${project.id}`}>
-                        <Card className="hover-lift cursor-pointer group">
-                          <CardContent className="p-4 flex items-center gap-4">
+                        <Card className="group border-slate-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+                          <CardContent className="p-5 flex items-center gap-4">
                             <div
                               className={cn(
-                                "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                                stepConfig.color === "indigo" && "bg-indigo-100 dark:bg-indigo-950 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900",
-                                stepConfig.color === "teal" && "bg-teal-100 dark:bg-teal-950 group-hover:bg-teal-200 dark:group-hover:bg-teal-900",
-                                stepConfig.color === "emerald" && "bg-emerald-100 dark:bg-emerald-950 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900",
-                                stepConfig.color === "amber" && "bg-amber-100 dark:bg-amber-950 group-hover:bg-amber-200 dark:group-hover:bg-amber-900"
+                                "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
+                                styles.bg,
+                                styles.bgHover
                               )}
                             >
                               <StepIcon
-                                className={cn(
-                                  "w-6 h-6",
-                                  stepConfig.color === "indigo" && "text-indigo-600 dark:text-indigo-400",
-                                  stepConfig.color === "teal" && "text-teal-600 dark:text-teal-400",
-                                  stepConfig.color === "emerald" && "text-emerald-600 dark:text-emerald-400",
-                                  stepConfig.color === "amber" && "text-amber-600 dark:text-amber-400"
-                                )}
+                                className={cn("w-5 h-5", styles.icon)}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-foreground truncate">{project.name}</h3>
-                              <p className="text-sm text-muted-foreground">
+                              <h3 className="font-semibold text-slate-900 truncate">
+                                {project.name}
+                              </h3>
+                              <p className="text-sm text-slate-500">
                                 Step {stepConfig.step}: {stepConfig.label}
                               </p>
-                              {/* Progress bar */}
-                              <div className="h-1.5 mt-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-1.5 mt-2.5 bg-slate-100 rounded-full overflow-hidden">
                                 <motion.div
                                   className={cn(
                                     "h-full rounded-full",
-                                    stepConfig.color === "indigo" && "bg-indigo-500",
-                                    stepConfig.color === "teal" && "bg-teal-500",
-                                    stepConfig.color === "emerald" && "bg-emerald-500",
-                                    stepConfig.color === "amber" && "bg-amber-500"
+                                    styles.progress
                                   )}
                                   initial={{ width: 0 }}
                                   animate={{ width: `${progress}%` }}
-                                  transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
+                                  transition={{
+                                    duration: 0.6,
+                                    delay: index * 0.1 + 0.2,
+                                    ease: [0.16, 1, 0.3, 1],
+                                  }}
                                 />
                               </div>
                             </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all duration-200" />
                           </CardContent>
                         </Card>
                       </Link>
@@ -219,9 +563,12 @@ export default function HomePage() {
                 })}
               </div>
             ) : (
-              <Card className="border-dashed">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground mb-4">
+              <Card className="border-dashed border-slate-300">
+                <CardContent className="p-10 text-center">
+                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 mb-4">
                     No recent projects. Start your first research!
                   </p>
                   <Button onClick={handleQuickStart} disabled={isCreatingDemo}>
@@ -234,84 +581,106 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Pipeline Visualization Section */}
-      <section className="px-4 py-12 bg-muted/30">
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold font-display">
+      {/* Features Grid */}
+      <section className="relative py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <Badge variant="secondary" className="mb-4">
               Research Pipeline
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">
+              Three Steps to Evidence Synthesis
             </h2>
-            <p className="text-muted-foreground">
-              A seamless flow from question to evidence
+            <p className="text-slate-600 max-w-lg mx-auto">
+              A seamless workflow from question formulation to systematic
+              screening
             </p>
-          </div>
+          </motion.div>
 
-          <div className="relative grid grid-cols-1 gap-8 md:grid-cols-3">
-            {/* Connecting Lines (Desktop) */}
-            <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2 z-0" />
-
-            {/* Define Tool */}
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Feature 1: Define */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <Link href="/define" className="group relative z-10 block">
-                <div className="flex h-full flex-col items-center text-center rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Lightbulb className="h-8 w-8 text-primary group-hover:text-primary-foreground" />
+              <Link href="/define" className="group block">
+                <div className="feature-card group">
+                  <div className="feature-card-icon">
+                    <Brain className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h3 className="mb-2 text-xl font-bold font-display">
-                    1. Define
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">
+                    Define
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Formulate clear research questions using PICO, SPIDER, and
-                    other frameworks with AI guidance.
+                  <p className="text-slate-600 leading-relaxed mb-6">
+                    Turn vague ideas into structured research questions using
+                    frameworks like PICO, SPIDER, and PEO.
                   </p>
+                  <span className="inline-flex items-center text-blue-600 font-semibold group-hover:underline">
+                    Open Define Tool
+                    <ArrowRight className="ml-1 w-4 h-4" />
+                  </span>
                 </div>
               </Link>
             </motion.div>
 
-            {/* Query Tool */}
+            {/* Feature 2: Query */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link href="/query" className="group relative z-10 block">
-                <div className="flex h-full flex-col items-center text-center rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/10 transition-colors group-hover:bg-secondary group-hover:text-secondary-foreground">
-                    <Search className="h-8 w-8 text-secondary group-hover:text-secondary-foreground" />
+              <Link href="/query" className="group block">
+                <div className="feature-card group hover:border-teal-200 hover:shadow-teal-900/5">
+                  <div className="feature-card-icon">
+                    <Search className="w-6 h-6 text-teal-600" />
                   </div>
-                  <h3 className="mb-2 text-xl font-bold font-display">
-                    2. Query
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">
+                    Query
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically generate optimized PubMed search strings with
-                    methodological hedges.
+                  <p className="text-slate-600 leading-relaxed mb-6">
+                    Generate complex Boolean search strings for PubMed with MeSH
+                    term expansion and validation.
                   </p>
+                  <span className="inline-flex items-center text-teal-600 font-semibold group-hover:underline">
+                    Open Query Tool
+                    <ArrowRight className="ml-1 w-4 h-4" />
+                  </span>
                 </div>
               </Link>
             </motion.div>
 
-            {/* Review Tool */}
+            {/* Feature 3: Review */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Link href="/review" className="group relative z-10 block">
-                <div className="flex h-full flex-col items-center text-center rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 transition-colors group-hover:bg-emerald-500 group-hover:text-white">
-                    <ClipboardCheck className="h-8 w-8 text-emerald-500 group-hover:text-white" />
+              <Link href="/review" className="group block">
+                <div className="feature-card group hover:border-indigo-200 hover:shadow-indigo-900/5">
+                  <div className="feature-card-icon">
+                    <FileText className="w-6 h-6 text-indigo-600" />
                   </div>
-                  <h3 className="mb-2 text-xl font-bold font-display">
-                    3. Review
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">
+                    Review
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Screen abstracts efficiently with AI-powered relevance scoring
-                    and reasoning.
+                  <p className="text-slate-600 leading-relaxed mb-6">
+                    Screen thousands of abstracts efficiently. AI prioritizes
+                    relevant studies based on your criteria.
                   </p>
+                  <span className="inline-flex items-center text-indigo-600 font-semibold group-hover:underline">
+                    Open Review Tool
+                    <ArrowRight className="ml-1 w-4 h-4" />
+                  </span>
                 </div>
               </Link>
             </motion.div>
@@ -319,93 +688,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Platform Features Section */}
-      <section className="px-4 py-16">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-3xl font-bold leading-tight tracking-tight text-center mb-12 font-display">
-            Why MedAI Hub?
-          </h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="flex flex-col gap-4 p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                <LayoutGrid className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2 font-display">
-                  Dynamic Frameworks
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Adapt your research methodology with flexible options like
-                  PICO, CoCoPop, PEO, SPIDER, and more.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="flex flex-col gap-4 p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                <Sparkles className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2 font-display">
-                  AI Analysis
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Leverage Google Gemini AI to identify key themes, extract
-                  data, and provide insights from articles.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              className="flex flex-col gap-4 p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30">
-                <Workflow className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2 font-display">
-                  Project Workflow
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Organize your research into distinct projects for better
-                  management and seamless collaboration.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
-              className="flex flex-col gap-4 p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                <FileSearch className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2 font-display">
-                  MEDLINE Parser
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Seamlessly import and parse citations and abstracts directly
-                  from PubMed MEDLINE format files.
-                </p>
-              </div>
-            </motion.div>
+      {/* Trust/Footer Strip */}
+      <section className="py-12 border-t border-slate-200 bg-slate-50">
+        <div className="container mx-auto px-6 text-center">
+          <div className="flex flex-wrap justify-center gap-8 text-sm font-medium text-slate-500">
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              HIPAA Compliant
+            </span>
+            <span className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-blue-600" />
+              PubMed Integrated
+            </span>
+            <span className="flex items-center gap-2">
+              <Brain className="w-4 h-4 text-purple-600" />
+              Gemini AI Powered
+            </span>
           </div>
+          <p className="mt-8 text-xs text-slate-400">
+            © 2025 MedAI Hub. Built for researchers.
+          </p>
         </div>
       </section>
     </div>

@@ -19,6 +19,8 @@ class MedlineAbstract:
         self.authors: Optional[str] = None
         self.journal: Optional[str] = None
         self.publication_date: Optional[str] = None
+        self.publication_types: List[str] = []
+        self.language: Optional[str] = None
         self.keywords: List[str] = []
         self.metadata: Dict[str, str] = {}
 
@@ -31,6 +33,8 @@ class MedlineAbstract:
             "authors": self.authors,
             "journal": self.journal,
             "publication_date": self.publication_date,
+            "publication_types": self.publication_types,
+            "language": self.language,
             "keywords": self.keywords,
             "metadata": self.metadata,
         }
@@ -160,6 +164,19 @@ class MedlineParser:
             abstract.journal = value
         elif tag == self.TAG_PUBLICATION_DATE:
             abstract.publication_date = value
+        elif tag == "PT":
+            # Add to publication_types list
+            if value and value not in abstract.publication_types:
+                abstract.publication_types.append(value)
+        elif tag == "LA":
+            # Set language (usually only one, but we'll take the first or append if multiple?)
+            # MEDLINE usually has one LA line, but can have multiple. Let's store as a list or single string.
+            # Spec says "Check Language (LA vs language)". Let's store as list for safety or single string?
+            # Standard MEDLINE has "LA  - eng".
+            if abstract.language:
+                abstract.language += f"; {value}"
+            else:
+                abstract.language = value
         elif tag == self.TAG_KEYWORDS or tag == self.TAG_MESH:
             # Add to keywords list
             if value and value not in abstract.keywords:

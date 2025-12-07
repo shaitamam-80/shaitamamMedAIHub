@@ -1313,6 +1313,142 @@ Example response:
             logger.warning(f"Error generating free-text terms: {e}")
             return {}
 
+    async def analyze_abstract_gems(
+        self,
+        abstract_text: str,
+        title: str,
+        framework_data: Dict[str, str],
+        criteria_codes: List[str],
+        review_type: str = "systematic"
+    ) -> Dict[str, Any]:
+        """
+        Analyze an abstract using GEMS methodology (Layer B - AI Analysis).
+
+        Args:
+            abstract_text: The abstract to analyze
+            title: Article title
+            framework_data: PICO/PEO/SPIDER data (e.g., {"P": "Adults", "I": "Exercise"})
+            criteria_codes: Selected criteria codes (e.g., ["P1", "I1", "S2"])
+            review_type: "systematic", "scoping", or "quick"
+
+        Returns:
+            {
+                "status": "included" | "excluded" | "unclear",
+                "reason": "Explanation of decision",
+                "evidence_quote": "Verbatim quote from abstract supporting decision",
+                "study_type": "RCT" | "Cohort" | "Case-Control" | "Review" | etc.,
+                "confidence": 0.0-1.0
+            }
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Import screening prompts
+        from app.core.prompts.screening import get_screening_prompt, get_criteria_text_for_prompt
+
+        # Validate inputs
+        if not abstract_text or not title:
+            logger.warning("Missing abstract or title for AI analysis")
+            return {
+                "status": "unclear",
+                "reason": "Missing abstract or title for analysis",
+                "evidence_quote": "",
+                "study_type": "Other",
+                "confidence": 0.0
+            }
+
+        # Get framework type from framework_data or default
+        framework_type = framework_data.get("framework_type", "PICO")
+
+        try:
+            # Build criteria text from codes
+            criteria_text = get_criteria_text_for_prompt(criteria_codes)
+
+            # Build complete screening prompt
+            prompt = get_screening_prompt(
+                abstract_text=abstract_text,
+                title=title,
+                framework_data=framework_data,
+                framework_type=framework_type,
+                criteria_text=criteria_text,
+                review_type=review_type
+            )
+
+            # Send to AI with timeout (30s for screening)
+            messages = [HumanMessage(content=prompt)]
+            response = await self._invoke_with_retry(
+                self.gemini_flash,
+                messages,
+                timeout_seconds=30
+            )
+
+            # Parse JSON response
+            result = self._extract_json(response.content, find_object=True)
+
+            if result and "status" in result:
+                # Validate and normalize response
+                status = result.get("status", "unclear").lower()
+                if status not in ["included", "excluded", "unclear"]:
+                    status = "unclear"
+
+                # Ensure confidence is a float between 0 and 1
+                confidence = result.get("confidence", 0.5)
+                if isinstance(confidence, (int, float)):
+                    confidence = max(0.0, min(1.0, float(confidence)))
+                else:
+                    confidence = 0.5
+
+                # Truncate evidence quote if too long
+                evidence_quote = result.get("evidence_quote", "")
+                if len(evidence_quote) > 200:
+                    evidence_quote = evidence_quote[:197] + "..."
+
+                return {
+                    "status": status,
+                    "reason": result.get("reason", "AI analysis completed"),
+                    "evidence_quote": evidence_quote,
+                    "study_type": result.get("study_type", "Other"),
+                    "confidence": confidence
+                }
+            else:
+                # Failed to parse - return unclear
+                logger.warning(f"Failed to parse AI screening response: {response.content[:200]}")
+                return {
+                    "status": "unclear",
+                    "reason": "AI returned invalid response format",
+                    "evidence_quote": "",
+                    "study_type": "Other",
+                    "confidence": 0.0
+                }
+
+        except asyncio.TimeoutError:
+            logger.error(f"AI screening timed out for PMID title: {title[:50]}")
+            return {
+                "status": "unclear",
+                "reason": "AI analysis timed out - needs manual review",
+                "evidence_quote": "",
+                "study_type": "Other",
+                "confidence": 0.0
+            }
+        except ResourceExhausted as e:
+            logger.error(f"API quota exhausted during screening: {e}")
+            return {
+                "status": "unclear",
+                "reason": "API quota exceeded - needs manual review",
+                "evidence_quote": "",
+                "study_type": "Other",
+                "confidence": 0.0
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error during AI screening: {type(e).__name__}: {e}")
+            return {
+                "status": "unclear",
+                "reason": f"AI analysis error: {type(e).__name__}",
+                "evidence_quote": "",
+                "study_type": "Other",
+                "confidence": 0.0
+            }
+
 
 # Global instance
 ai_service = AIService()

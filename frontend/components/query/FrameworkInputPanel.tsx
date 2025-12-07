@@ -61,16 +61,15 @@ export function FrameworkInputPanel({
                     variant="ghost"
                     size="sm"
                     onClick={onCancelEdit}
-                    className="h-8"
+                    className="h-8 border border-gray-200 hover:bg-gray-100 transition-all duration-200 dark:border-gray-700 dark:hover:bg-gray-800"
                   >
                     <X className="mr-1 h-4 w-4" />
                     Cancel
                   </Button>
                   <Button
-                    variant="default"
                     size="sm"
                     onClick={onSaveEdit}
-                    className="h-8"
+                    className="h-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 dark:shadow-blue-900/30"
                   >
                     <Save className="mr-1 h-4 w-4" />
                     Save
@@ -81,7 +80,7 @@ export function FrameworkInputPanel({
                   variant="outline"
                   size="sm"
                   onClick={onStartEdit}
-                  className="h-8"
+                  className="h-8 border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-all duration-200 dark:border-gray-700 dark:hover:border-blue-500"
                 >
                   <Pencil className="mr-1 h-4 w-4" />
                   Edit Terms

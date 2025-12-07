@@ -23,6 +23,44 @@ logger = logging.getLogger(__name__)
 EUTILS_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
+def normalize_term_for_dedup(term: str) -> str:
+    """
+    Normalize a term for duplicate detection by sorting words alphabetically.
+
+    This detects word-order permutations like:
+    - "Anxiety Disorder, Generalized" vs "Generalized Anxiety Disorder"
+    - "Daily Living Activities" vs "Activities of Daily Living"
+
+    Returns:
+        Normalized string with words sorted alphabetically (lowercase)
+    """
+    # Remove punctuation and split into words
+    clean = term.lower().replace(",", " ").replace("-", " ").replace("'", "")
+    words = [w.strip() for w in clean.split() if w.strip()]
+    return " ".join(sorted(words))
+
+
+def filter_permutation_duplicates(terms: List[str], existing_normalized: set = None) -> List[str]:
+    """
+    Filter out terms that are word-order permutations of each other.
+
+    Keeps only the first occurrence of each unique word combination.
+    """
+    if existing_normalized is None:
+        existing_normalized = set()
+
+    filtered = []
+    seen = set(existing_normalized)
+
+    for term in terms:
+        normalized = normalize_term_for_dedup(term)
+        if normalized not in seen:
+            filtered.append(term)
+            seen.add(normalized)
+
+    return filtered
+
+
 @dataclass
 class MeSHTerm:
     """Represents a MeSH descriptor with its metadata"""
@@ -97,10 +135,22 @@ class ExpandedTerms:
 
             seen_terms.add(term_lower)
 
-        # 3. Entry Terms (Synonyms) - limit to 8 to prevent URI too long
+        # 3. Entry Terms (Synonyms) - filter permutations and limit to 4
+        # Build normalized set of existing terms to filter against
+        existing_normalized = set()
+        for mesh in self.mesh_terms:
+            existing_normalized.add(normalize_term_for_dedup(mesh.descriptor_name))
+        for term in self.free_text_terms:
+            clean = term.strip().replace('"', '')
+            if '[' not in clean:
+                existing_normalized.add(normalize_term_for_dedup(clean))
+
+        # Filter out word-order permutations
+        filtered_entries = filter_permutation_duplicates(self.entry_terms, existing_normalized)
+
         count = 0
-        for term in self.entry_terms:
-            if count >= 8:
+        for term in filtered_entries:
+            if count >= 4:  # Reduced from 8 to 4
                 break
 
             clean_term = term.strip()
@@ -135,15 +185,23 @@ class ExpandedTerms:
         return "(" + " OR ".join(parts) + ")"
 
     def to_focused_query(self) -> str:
-        """Generate focused query for high precision"""
+        """
+        Generate focused query for higher precision (but still usable).
+
+        Uses [Mesh] instead of [Majr] and [tiab] instead of [ti] to avoid
+        returning 0 results. [Majr] and [ti] are too restrictive.
+        """
         parts = []
 
-        # Add MeSH terms with [majr] for major topic
+        # Add MeSH terms with [Mesh] (not [Majr] - too restrictive)
         for mesh in self.mesh_terms[:1]:  # Only best match
-            parts.append(mesh.to_mesh_query("majr"))
+            parts.append(mesh.to_mesh_query("default"))
 
-        # Add original term in title
-        parts.append(f'{self.original_term}[ti]')
+        # Add original term in title/abstract (not just title - too restrictive)
+        if " " in self.original_term:
+            parts.append(f'"{self.original_term}"[tiab]')
+        else:
+            parts.append(f'{self.original_term}[tiab]')
 
         if not parts:
             return ""
@@ -443,12 +501,19 @@ class MeSHService:
             for mesh_term in mesh_terms:
                 all_entry_terms.extend(mesh_term.entry_terms)
 
-            # Deduplicate and limit
-            result.entry_terms = list(dict.fromkeys(all_entry_terms))[:10]
+            # Step 1: Simple deduplication
+            unique_entries = list(dict.fromkeys(all_entry_terms))
+
+            # Step 2: Filter out word-order permutations of MeSH descriptor names
+            mesh_normalized = {normalize_term_for_dedup(m.descriptor_name) for m in mesh_terms}
+            filtered_entries = filter_permutation_duplicates(unique_entries, mesh_normalized)
+
+            # Step 3: Limit to 6 (final limit of 4 happens in to_broad_query)
+            result.entry_terms = filtered_entries[:6]
 
             logger.info(
-                f"Term '{clean_term}' -> {len(mesh_terms)} MeSH terms, "
-                f"{len(result.entry_terms)} synonyms"
+                f"Term '{clean_term}' -> {len(mesh_terms)} MeSH, "
+                f"{len(result.entry_terms)} synonyms (from {len(all_entry_terms)})"
             )
         else:
             logger.info(f"No MeSH match for '{clean_term}'")

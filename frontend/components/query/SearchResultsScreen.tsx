@@ -1,28 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowRight,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   ClipboardCopy,
   Download,
   ExternalLink,
-  FileText,
   Filter,
   Loader2,
   Search,
   Sparkles,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,16 +46,43 @@ interface SearchResultsScreenProps {
   setPerPage: (value: number) => void;
 }
 
-// Study type badge styling
+// Study type badge styling - more distinct colors
+const STUDY_TYPE_COLORS: Record<string, string> = {
+  "Systematic Review": "bg-purple-100 text-purple-800 border-purple-300",
+  "Meta-Analysis": "bg-violet-100 text-violet-800 border-violet-300",
+  "Randomized Controlled Trial": "bg-emerald-100 text-emerald-800 border-emerald-300",
+  "Clinical Trial": "bg-green-100 text-green-800 border-green-300",
+  "Review": "bg-blue-100 text-blue-800 border-blue-300",
+  "Case Reports": "bg-amber-100 text-amber-800 border-amber-300",
+  "Cohort Study": "bg-cyan-100 text-cyan-800 border-cyan-300",
+  "Observational Study": "bg-teal-100 text-teal-800 border-teal-300",
+  "Guideline": "bg-rose-100 text-rose-800 border-rose-300",
+  "Editorial": "bg-slate-100 text-slate-700 border-slate-300",
+  "Letter": "bg-gray-100 text-gray-700 border-gray-300",
+  "Comment": "bg-gray-100 text-gray-600 border-gray-200",
+};
+
 const getStudyTypeBadgeStyle = (type: string) => {
-  if (type.includes("Systematic") || type.includes("Meta"))
-    return "bg-indigo-100 text-indigo-700 border-indigo-200";
-  if (type.includes("Randomized"))
-    return "bg-blue-100 text-blue-700 border-blue-200";
-  if (type.includes("Cohort") || type.includes("Observational"))
-    return "bg-cyan-100 text-cyan-700 border-cyan-200";
+  // Check for exact match first
+  if (STUDY_TYPE_COLORS[type]) return STUDY_TYPE_COLORS[type];
+
+  // Check for partial matches
+  if (type.includes("Systematic")) return STUDY_TYPE_COLORS["Systematic Review"];
+  if (type.includes("Meta")) return STUDY_TYPE_COLORS["Meta-Analysis"];
+  if (type.includes("Randomized")) return STUDY_TYPE_COLORS["Randomized Controlled Trial"];
+  if (type.includes("Clinical Trial")) return STUDY_TYPE_COLORS["Clinical Trial"];
+  if (type.includes("Cohort")) return STUDY_TYPE_COLORS["Cohort Study"];
+  if (type.includes("Observational")) return STUDY_TYPE_COLORS["Observational Study"];
+  if (type.includes("Review")) return STUDY_TYPE_COLORS["Review"];
+  if (type.includes("Guideline")) return STUDY_TYPE_COLORS["Guideline"];
+  if (type.includes("Case")) return STUDY_TYPE_COLORS["Case Reports"];
+
   return "bg-gray-100 text-gray-700 border-gray-200";
 };
+
+// Sort configuration type
+type SortField = "pmid" | "title" | "journal" | "year" | "authors";
+type SortDirection = "asc" | "desc";
 
 export function SearchResultsScreen({
   searchResults,
@@ -78,40 +102,158 @@ export function SearchResultsScreen({
   // Local filter state
   const [filterText, setFilterText] = useState("");
 
-  // Abstract preview state
-  const [selectedArticle, setSelectedArticle] = useState<PubMedArticle | null>(null);
-  const [abstractContent, setAbstractContent] = useState<string>("");
-  const [isLoadingAbstract, setIsLoadingAbstract] = useState(false);
+  // Selection state
+  const [selectedPmids, setSelectedPmids] = useState<Set<string>>(new Set());
 
-  // Handle abstract view
-  const handleViewAbstract = async (article: PubMedArticle) => {
-    setSelectedArticle(article);
-    setIsLoadingAbstract(true);
-    setAbstractContent("");
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-    try {
-      const abstractData = await onViewAbstract(article);
-      setAbstractContent(abstractData.abstract || "No abstract available");
-    } catch {
-      setAbstractContent("Failed to load abstract");
-    } finally {
-      setIsLoadingAbstract(false);
+  // Expanded abstract state (accordion)
+  const [expandedPmid, setExpandedPmid] = useState<string | null>(null);
+  const [abstractCache, setAbstractCache] = useState<Record<string, string>>({});
+  const [loadingAbstract, setLoadingAbstract] = useState<string | null>(null);
+
+  // Handle abstract accordion toggle
+  const handleToggleAbstract = async (article: PubMedArticle) => {
+    const pmid = article.pmid;
+
+    if (expandedPmid === pmid) {
+      // Close accordion
+      setExpandedPmid(null);
+      return;
+    }
+
+    // Open accordion
+    setExpandedPmid(pmid);
+
+    // Load abstract if not cached
+    if (!abstractCache[pmid]) {
+      setLoadingAbstract(pmid);
+      try {
+        const abstractData = await onViewAbstract(article);
+        setAbstractCache((prev) => ({
+          ...prev,
+          [pmid]: abstractData.abstract || "No abstract available",
+        }));
+      } catch {
+        setAbstractCache((prev) => ({
+          ...prev,
+          [pmid]: "Failed to load abstract",
+        }));
+      } finally {
+        setLoadingAbstract(null);
+      }
     }
   };
 
-  // Filter articles locally
-  const filteredArticles = filterText
-    ? searchResults.articles.filter(
+  // Handle selection
+  const handleSelectAll = () => {
+    if (selectedPmids.size === filteredArticles.length) {
+      setSelectedPmids(new Set());
+    } else {
+      setSelectedPmids(new Set(filteredArticles.map((a) => a.pmid)));
+    }
+  };
+
+  const handleSelectOne = (pmid: string) => {
+    const newSelection = new Set(selectedPmids);
+    if (newSelection.has(pmid)) {
+      newSelection.delete(pmid);
+    } else {
+      newSelection.add(pmid);
+    }
+    setSelectedPmids(newSelection);
+  };
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Filter and sort articles
+  const processedArticles = useMemo(() => {
+    let articles = searchResults.articles;
+
+    // Filter
+    if (filterText) {
+      articles = articles.filter(
         (a) =>
           a.title.toLowerCase().includes(filterText.toLowerCase()) ||
           a.authors.toLowerCase().includes(filterText.toLowerCase()) ||
           a.journal.toLowerCase().includes(filterText.toLowerCase())
-      )
-    : searchResults.articles;
+      );
+    }
+
+    // Sort
+    if (sortField) {
+      articles = [...articles].sort((a, b) => {
+        let aVal: string | number = "";
+        let bVal: string | number = "";
+
+        switch (sortField) {
+          case "pmid":
+            aVal = parseInt(a.pmid);
+            bVal = parseInt(b.pmid);
+            break;
+          case "title":
+            aVal = a.title.toLowerCase();
+            bVal = b.title.toLowerCase();
+            break;
+          case "journal":
+            aVal = a.journal.toLowerCase();
+            bVal = b.journal.toLowerCase();
+            break;
+          case "year":
+            aVal = a.pubdate?.split(" ")[0] || "";
+            bVal = b.pubdate?.split(" ")[0] || "";
+            break;
+          case "authors":
+            aVal = a.authors.toLowerCase();
+            bVal = b.authors.toLowerCase();
+            break;
+        }
+
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return articles;
+  }, [searchResults.articles, filterText, sortField, sortDirection]);
+
+  const filteredArticles = processedArticles;
 
   // Calculate pagination
   const startResult = (searchResults.page - 1) * perPage + 1;
   const endResult = Math.min(startResult + searchResults.returned - 1, searchResults.count);
+
+  // Sortable header component
+  const SortableHeader = ({ field, label }: { field: SortField; label: string }) => (
+    <button
+      onClick={() => handleSort(field)}
+      className="flex items-center gap-1 hover:text-blue-600 transition-colors group"
+    >
+      {label}
+      <span className="opacity-50 group-hover:opacity-100">
+        {sortField === field ? (
+          sortDirection === "asc" ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )
+        ) : (
+          <ArrowUpDown className="w-3 h-3" />
+        )}
+      </span>
+    </button>
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -226,116 +368,253 @@ export function SearchResultsScreen({
           </div>
         </div>
 
+        {/* Selection Info Bar */}
+        {selectedPmids.size > 0 && (
+          <div className="px-6 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+            <span className="text-sm text-blue-700 font-medium">
+              {selectedPmids.size} article(s) selected
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const selected = filteredArticles.filter((a) =>
+                    selectedPmids.has(a.pmid)
+                  );
+                  const citations = selected
+                    .map(
+                      (a) =>
+                        `${a.title}\n${a.authors}\n${a.journal}, ${a.pubdate}\nPMID: ${a.pmid}`
+                    )
+                    .join("\n\n");
+                  onCopy(citations, `${selected.length} citations`);
+                }}
+                className="h-7 text-xs gap-1"
+              >
+                <ClipboardCopy className="w-3 h-3" />
+                Copy Selected
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedPmids(new Set())}
+                className="h-7 text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Results Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  PMID
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
+                  <Checkbox
+                    checked={
+                      filteredArticles.length > 0 &&
+                      selectedPmids.size === filteredArticles.length
+                    }
+                    onCheckedChange={handleSelectAll}
+                    className="mx-auto"
+                  />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Title
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
+                  #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Journal
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <SortableHeader field="pmid" label="PMID" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Year
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <SortableHeader field="title" label="Title" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Authors
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <SortableHeader field="journal" label="Journal" />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <SortableHeader field="year" label="Year" />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <SortableHeader field="authors" label="Authors" />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Study Types
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredArticles.map((article) => (
-                <tr
-                  key={article.pmid}
-                  className="hover:bg-blue-50/30 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <a
-                      href={`https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 font-mono text-sm font-medium hover:underline"
+              {filteredArticles.map((article, index) => (
+                <React.Fragment key={article.pmid}>
+                  {/* Main Row */}
+                  <tr
+                    className={cn(
+                      "transition-colors cursor-pointer",
+                      selectedPmids.has(article.pmid)
+                        ? "bg-blue-50/50"
+                        : "hover:bg-gray-50",
+                      expandedPmid === article.pmid && "bg-blue-50/30"
+                    )}
+                    onClick={() => handleToggleAbstract(article)}
+                  >
+                    <td
+                      className="px-3 py-3 text-center"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      {article.pmid}
-                    </a>
-                  </td>
-                  <td className="px-6 py-4 max-w-md">
-                    <div>
-                      <button
-                        onClick={() => handleViewAbstract(article)}
-                        className="text-gray-900 font-semibold text-sm hover:text-blue-700 transition-colors line-clamp-2 text-left"
+                      <Checkbox
+                        checked={selectedPmids.has(article.pmid)}
+                        onCheckedChange={() => handleSelectOne(article.pmid)}
+                      />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="text-xs text-gray-400 font-mono">
+                        {startResult + index}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={`https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-600 hover:text-blue-800 font-mono text-sm font-medium hover:underline"
                       >
-                        {article.title}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-gray-700 text-sm">{article.journal}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-gray-700 text-sm font-medium">
-                      {article.pubdate?.split(" ")[0] || article.pubdate}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-gray-700 text-sm max-w-[150px] truncate">
-                      {article.authors}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {article.pubtype?.slice(0, 2).map((type, i) => (
+                        {article.pmid}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3 max-w-md">
+                      <div className="flex items-start gap-2">
                         <span
-                          key={i}
                           className={cn(
-                            "text-xs font-medium px-2 py-0.5 rounded border",
-                            getStudyTypeBadgeStyle(type)
+                            "transition-transform flex-shrink-0 mt-1",
+                            expandedPmid === article.pmid && "rotate-90"
                           )}
                         >
-                          {type}
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
                         </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewAbstract(article)}
-                        className="h-8 w-8 p-0"
-                        title="View Abstract"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          window.open(
-                            `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
-                            "_blank"
-                          )
-                        }
-                        className="h-8 w-8 p-0"
-                        title="View in PubMed"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                        <span className="text-gray-900 font-medium text-sm line-clamp-2">
+                          {article.title}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm">{article.journal}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm font-medium">
+                        {article.pubdate?.split(" ")[0] || article.pubdate}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-gray-700 text-sm max-w-[120px] truncate">
+                        {article.authors}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {article.pubtype?.slice(0, 2).map((type, i) => (
+                          <span
+                            key={i}
+                            className={cn(
+                              "text-xs font-medium px-2 py-0.5 rounded-full border",
+                              getStudyTypeBadgeStyle(type)
+                            )}
+                          >
+                            {type.length > 20 ? type.substring(0, 18) + "..." : type}
+                          </span>
+                        ))}
+                        {article.pubtype && article.pubtype.length > 2 && (
+                          <span className="text-xs text-gray-400">
+                            +{article.pubtype.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td
+                      className="px-4 py-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            window.open(
+                              `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
+                              "_blank"
+                            )
+                          }
+                          className="h-7 w-7 p-0"
+                          title="View in PubMed"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Expanded Abstract Row (Accordion) */}
+                  {expandedPmid === article.pmid && (
+                    <tr className="bg-blue-50/20">
+                      <td colSpan={9} className="px-6 py-4">
+                        <div className="pl-8 pr-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-2 text-sm">
+                                Abstract
+                              </h4>
+                              {loadingAbstract === article.pmid ? (
+                                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Loading abstract...
+                                </div>
+                              ) : (
+                                <p className="text-sm leading-relaxed text-gray-700">
+                                  {abstractCache[article.pmid] || "No abstract available"}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-2 flex-shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(
+                                    `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
+                                    "_blank"
+                                  )
+                                }
+                                className="h-8 text-xs gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                PubMed
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  onCopy(
+                                    `${article.title}\n${article.authors}\n${article.journal}, ${article.pubdate}\nPMID: ${article.pmid}`,
+                                    "Citation"
+                                  )
+                                }
+                                className="h-8 text-xs gap-1"
+                              >
+                                <ClipboardCopy className="h-3 w-3" />
+                                Copy
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -387,8 +666,8 @@ export function SearchResultsScreen({
         </div>
       </Card>
 
-      {/* Continue to Review Card */}
-      <Card className="shadow-sm border border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      {/* Continue to Screening Card */}
+      <Card className="shadow-sm border border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -396,88 +675,21 @@ export function SearchResultsScreen({
                 Ready to screen these articles?
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                Continue to the Review tool to screen articles with AI assistance
+                Continue to the Smart Screener for AI-powered abstract screening
               </p>
             </div>
             <Button
               onClick={onContinueToReview}
               size="lg"
-              className="gap-2"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
             >
-              <ArrowRight className="w-5 h-5" />
-              Continue to Review
+              <Sparkles className="w-5 h-5" />
+              Start Smart Screening
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Abstract Preview Dialog */}
-      <Dialog
-        open={!!selectedArticle}
-        onOpenChange={() => setSelectedArticle(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-lg pr-8 leading-tight">
-              {selectedArticle?.title}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4">
-            <div className="text-sm text-gray-500">
-              <p className="font-medium text-gray-700">{selectedArticle?.authors}</p>
-              <p>
-                {selectedArticle?.journal} • {selectedArticle?.pubdate}
-              </p>
-              <p className="text-blue-600 font-mono text-xs mt-1">
-                PMID: {selectedArticle?.pmid}
-              </p>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h4 className="font-semibold text-gray-900 mb-2">Abstract</h4>
-              {isLoadingAbstract ? (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading abstract...
-                </div>
-              ) : (
-                <p className="text-sm leading-relaxed text-gray-700">{abstractContent}</p>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  selectedArticle &&
-                  window.open(
-                    `https://pubmed.ncbi.nlm.nih.gov/${selectedArticle.pmid}/`,
-                    "_blank"
-                  )
-                }
-                className="gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View in PubMed
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  selectedArticle &&
-                  onCopy(
-                    `${selectedArticle.title}\n${selectedArticle.authors}\n${selectedArticle.journal}, ${selectedArticle.pubdate}\nPMID: ${selectedArticle.pmid}`,
-                    "Citation"
-                  )
-                }
-                className="gap-2"
-              >
-                <ClipboardCopy className="h-4 w-4" />
-                Copy Citation
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

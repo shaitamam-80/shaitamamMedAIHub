@@ -670,6 +670,42 @@ export const apiClient = {
     );
     return response.data;
   },
+
+  // ========================================================================
+  // Screening
+  // ========================================================================
+
+  getCriteriaLibrary: async () => {
+    const response = await client.get("/api/v1/screening/criteria-library");
+    return response.data;
+  },
+
+  initCriteria: async (data: {
+    project_id: string;
+    review_type: string;
+    filters: Record<string, unknown>;
+  }) => {
+    const response = await client.post("/api/v1/screening/init-criteria", data);
+    return response.data;
+  },
+
+  processPmids: async (data: {
+    project_id: string;
+    pmids: string[];
+    criteria_config: {
+      review_type: string;
+      languages: string[];
+      population: { codes: string[]; custom_text?: string };
+      study_design: { inclusion_codes: string[]; exclusion_codes: string[] };
+      date_range_start?: number;
+      date_range_end?: number;
+      custom_inclusion?: string;
+      custom_exclusion?: string;
+    };
+  }) => {
+    const response = await client.post("/api/v1/screening/process-pmids", data);
+    return response.data;
+  },
 };
 
 export default apiClient;

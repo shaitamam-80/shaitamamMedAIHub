@@ -114,12 +114,12 @@ class ConceptBlock:
 
     def to_focused_query(self) -> str:
         """
-        Generate focused query (high precision).
+        Generate focused query (higher precision but still usable).
 
-        Same operator logic as broad query, but uses focused terms.
+        Uses [tiab] instead of [ti] to avoid 0 results.
         """
         if not self.expanded_list:
-            return f'"{self.original_value}"[ti]'
+            return f'"{self.original_value}"[tiab]'
 
         if len(self.expanded_list) == 1:
             return self.expanded_list[0].to_focused_query()
@@ -132,7 +132,7 @@ class ConceptBlock:
                 sub_queries.append(f"({sub_query})")
 
         if not sub_queries:
-            return f'"{self.original_value}"[ti]'
+            return f'"{self.original_value}"[tiab]'
 
         join_op = self._get_join_operator()
         return join_op.join(sub_queries)
@@ -578,29 +578,27 @@ class QueryBuilder:
             ]
         )
 
-        # Strategy B: Direct/Focused (High Precision)
-        # NOTE: Use o_broad (not o_focused) to avoid [majr] restriction on Outcomes
-        # Indexers don't always mark outcomes as Major Topic, causing false negatives
+        # Strategy B: Direct/Focused (Higher Precision)
+        # NOTE: Now uses [Mesh] and [tiab] instead of [Majr] and [ti] to avoid 0 results
         if has_comparison and p_focused and i_focused and c_focused and o_broad:
             # For comparison questions: require BOTH I and C to be mentioned
-            # Formula: P AND I AND C AND O (using broad O to capture more results)
             focused_query = f"{p_focused} AND {i_focused} AND {c_focused} AND {o_broad}"
-            focused_formula = "P[majr] AND I[tiab] AND C[tiab] AND O[Mesh/tiab] - Direct comparison (requires both interventions)"
+            focused_formula = "P[Mesh/tiab] AND I[Mesh/tiab] AND C[Mesh/tiab] AND O[Mesh/tiab]"
             focused_purpose = "Head-to-head comparison studies - requires both interventions mentioned"
         elif p_focused and intervention_focused_combined and o_broad:
-            # Standard PICO structure for focused - use o_broad to avoid [Majr] restriction
+            # Standard PICO structure for focused
             focused_query = f"{p_focused} AND {intervention_focused_combined} AND {o_broad}"
-            focused_formula = "P[Majr] AND (I OR C)[Majr/Ti] AND O[Mesh/tiab]"
+            focused_formula = "P[Mesh/tiab] AND (I OR C)[Mesh/tiab] AND O[Mesh/tiab]"
             focused_purpose = "Balanced precision-recall for targeted searches"
         else:
-            # Fallback - use o_broad to avoid [Majr] restriction on outcomes
+            # Fallback
             parts = [p for p in [p_focused, intervention_focused_combined, o_broad] if p]
             for c in other_concepts:
                 part = c.to_focused_query()
                 if part:
                     parts.append(part)
             focused_query = " AND ".join(parts) if parts else ""
-            focused_formula = "P[Majr] + I/C[Majr/Ti] + O[Mesh/tiab]"
+            focused_formula = "P[Mesh/tiab] + I/C[Mesh/tiab] + O[Mesh/tiab]"
             focused_purpose = "Balanced precision-recall for targeted searches"
 
         direct = QueryStrategy(

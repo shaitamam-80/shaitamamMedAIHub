@@ -40,6 +40,21 @@ function getConceptKey(concept: ConceptAnalysisV2): string {
   return concept.key || concept.component_key || "unknown";
 }
 
+/**
+ * Get PICO-based color classes for concept headers
+ * P = Blue, I = Emerald, C = Purple, O = Rose
+ */
+function getPICOColorClass(key: string): string {
+  const colorMap: Record<string, string> = {
+    P: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-700",
+    I: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700",
+    C: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-700",
+    O: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/40 dark:text-rose-200 dark:border-rose-700",
+  };
+  const normalizedKey = key.toUpperCase().charAt(0);
+  return colorMap[normalizedKey] || "bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600";
+}
+
 function getChipVariant(type: "mesh" | "freetext" | "entry"): "default" | "secondary" | "outline" {
   switch (type) {
     case "mesh":
@@ -81,10 +96,11 @@ function TermChip({ term, type, isEditMode, onRemove }: TermChipProps) {
     <Badge
       variant={getChipVariant(type)}
       className={cn(
-        "flex items-center gap-1 px-2 py-1 text-xs font-normal transition-all",
-        type === "mesh" && "bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300",
-        type === "freetext" && "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300",
-        type === "entry" && "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300",
+        "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border-2 shadow-sm",
+        "hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-default",
+        type === "mesh" && "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/50",
+        type === "freetext" && "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700 dark:hover:bg-emerald-900/50",
+        type === "entry" && "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700 dark:hover:bg-orange-900/50",
         isEditMode && "pr-1"
       )}
     >
@@ -96,7 +112,7 @@ function TermChip({ term, type, isEditMode, onRemove }: TermChipProps) {
             e.stopPropagation();
             onRemove();
           }}
-          className="ml-1 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10"
+          className="ml-1 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
           aria-label={`Remove ${term}`}
         >
           <X className="h-3 w-3" />
@@ -180,27 +196,26 @@ export function InteractiveConceptChips({
         return (
           <div
             key={conceptKey}
-            className="rounded-lg border bg-card p-3 shadow-sm"
+            className="rounded-2xl border-2 border-gray-100 bg-white p-4 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 dark:bg-gray-900 dark:border-gray-800"
           >
             {/* Concept Header */}
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-primary/10 px-2 py-0.5 text-sm font-semibold text-primary">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className={cn(
+                  "rounded-lg border-2 px-3 py-1 text-sm font-bold shadow-sm",
+                  getPICOColorClass(conceptKey)
+                )}>
                   {conceptKey}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {concept.label || concept.original_value || ""}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{meshTerms.length} MeSH</span>
-                <span>|</span>
-                <span>{freeTextTerms.length} Free-text</span>
+              <div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">{meshTerms.length} MeSH</span>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">{freeTextTerms.length} Free-text</span>
                 {entryTerms.length > 0 && (
-                  <>
-                    <span>|</span>
-                    <span>{entryTerms.length} Entry</span>
-                  </>
+                  <span className="rounded-full bg-orange-50 px-2 py-0.5 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300">{entryTerms.length} Entry</span>
                 )}
               </div>
             </div>
@@ -309,23 +324,24 @@ export function InteractiveConceptChips({
       })}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 dark:text-gray-400 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 border border-gray-100 dark:border-gray-700">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">Term Types:</span>
         <div className="flex items-center gap-1.5">
-          <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+          <Badge className="bg-blue-50 text-blue-700 border-2 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
             <Tag className="mr-1 h-3 w-3" />
             MeSH
           </Badge>
           <span>Controlled vocabulary</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+          <Badge className="bg-emerald-50 text-emerald-700 border-2 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700">
             <FileText className="mr-1 h-3 w-3" />
             Free-text
           </Badge>
           <span>Title/Abstract search</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <Badge className="bg-orange-50 text-orange-700 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700">
             <FileText className="mr-1 h-3 w-3" />
             Entry
           </Badge>

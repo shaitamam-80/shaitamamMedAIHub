@@ -97,16 +97,16 @@ function StrategyTabs({ currentStrategy, onStrategyChange }: StrategyTabsProps) 
   ];
 
   return (
-    <div className="flex gap-1 rounded-lg bg-muted p-1">
+    <div className="flex gap-1 rounded-xl bg-gray-100 p-1.5 dark:bg-gray-800">
       {strategies.map((s) => (
         <button
           key={s.key}
           onClick={() => onStrategyChange(s.key)}
           className={cn(
-            "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all",
+            "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
             currentStrategy === s.key
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-gray-900 shadow-md dark:bg-gray-700 dark:text-white"
+              : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           )}
           title={s.description}
         >
@@ -143,10 +143,11 @@ function QuickFilters({
             key={filter.label}
             variant={isAdded ? "default" : "outline"}
             className={cn(
-              "cursor-pointer transition-all",
+              "cursor-pointer transition-all duration-200 border-2",
+              "hover:-translate-y-0.5 hover:shadow-md",
               isAdded
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-primary/10"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-md"
+                : "border-gray-200 text-gray-600 hover:border-blue-500 hover:text-blue-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
             )}
             onClick={() =>
               isAdded ? onRemoveFilter(filter.label) : onAddFilter(filter)
@@ -205,10 +206,10 @@ function ToolboxFilters({
       </button>
 
       {showMoreFilters && (
-        <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+        <div className="space-y-3 rounded-xl border-2 border-gray-100 bg-gray-50/50 p-4 shadow-sm dark:bg-gray-800/30 dark:border-gray-800">
           {categories.map((category) => (
             <div key={category}>
-              <div className="mb-1.5 text-xs font-semibold text-muted-foreground">
+              <div className="mb-2 text-xs font-bold text-gray-700 uppercase tracking-wide dark:text-gray-300">
                 {category}
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -219,8 +220,11 @@ function ToolboxFilters({
                       key={filter.label}
                       variant={isAdded ? "secondary" : "outline"}
                       className={cn(
-                        "cursor-pointer text-xs transition-all",
-                        isAdded && "bg-secondary"
+                        "cursor-pointer text-xs transition-all duration-200 border",
+                        "hover:-translate-y-0.5 hover:shadow-sm",
+                        isAdded
+                          ? "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+                          : "border-gray-200 text-gray-600 hover:border-blue-400 dark:border-gray-700 dark:text-gray-400"
                       )}
                       onClick={() =>
                         isAdded
@@ -275,8 +279,9 @@ export function QueryOutputPanel({
   className,
 }: QueryOutputPanelProps) {
   return (
-    <div className={cn("flex h-full flex-col", className)}>
-      <Card className="flex h-full flex-col border-0 shadow-none">
+    <div className={cn("flex flex-col", className)}>
+      <Card className="flex flex-col border-0 shadow-none">
+        {/* Header - Fixed */}
         <CardHeader className="flex-shrink-0 border-b pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -312,63 +317,63 @@ export function QueryOutputPanel({
           )}
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col overflow-hidden p-4">
-          {/* Query Editor */}
-          <div className="flex-1 space-y-3">
-            {/* Visual Query Block Editor */}
-            <QueryBlockEditor
-              query={currentQuery}
-              onChange={onQueryChange}
-              onCopy={onCopy}
-              onReset={onResetQuery}
-              minHeight="150px"
-              placeholder="Type to add terms..."
-            />
+        {/* Content - Scrollable */}
+        <CardContent className="flex-1 p-4 space-y-4">
+          {/* Visual Query Block Editor */}
+          <QueryBlockEditor
+            query={currentQuery}
+            onChange={onQueryChange}
+            onCopy={onCopy}
+            onReset={onResetQuery}
+            minHeight="180px"
+            placeholder="Type to add terms..."
+          />
 
-            {/* Quick Filters */}
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground">
-                Quick Filters
-              </div>
-              <QuickFilters
-                quickFilters={quickFilters}
-                addedFilters={addedFilters}
-                onAddFilter={onAddFilter}
-                onRemoveFilter={onRemoveFilter}
-              />
+          {/* Quick Filters */}
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">
+              Quick Filters
             </div>
-
-            {/* Toolbox Filters */}
-            <ToolboxFilters
-              groupedToolbox={groupedToolbox}
+            <QuickFilters
+              quickFilters={quickFilters}
               addedFilters={addedFilters}
-              showMoreFilters={showMoreFilters}
               onAddFilter={onAddFilter}
               onRemoveFilter={onRemoveFilter}
-              onToggleMore={onToggleMoreFilters}
             />
-
-            {/* Added Filters Summary */}
-            {addedFilters.length > 0 && (
-              <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                <span className="text-xs text-muted-foreground">
-                  {addedFilters.length} filter(s) applied
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClearAllFilters}
-                  className="h-6 px-2 text-xs"
-                >
-                  Clear All
-                </Button>
-              </div>
-            )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-4 space-y-3 border-t pt-4">
-            {/* Search Options */}
+          {/* Toolbox Filters */}
+          <ToolboxFilters
+            groupedToolbox={groupedToolbox}
+            addedFilters={addedFilters}
+            showMoreFilters={showMoreFilters}
+            onAddFilter={onAddFilter}
+            onRemoveFilter={onRemoveFilter}
+            onToggleMore={onToggleMoreFilters}
+          />
+
+          {/* Added Filters Summary */}
+          {addedFilters.length > 0 && (
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+              <span className="text-xs text-muted-foreground">
+                {addedFilters.length} filter(s) applied
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearAllFilters}
+                className="h-6 px-2 text-xs"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
+        </CardContent>
+
+        {/* Sticky Action Bar - Always visible at bottom */}
+        <div className="sticky bottom-0 border-t bg-white/95 backdrop-blur-sm p-4 dark:bg-gray-900/95">
+          {/* Search Options Row */}
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-muted-foreground">Results:</label>
@@ -400,37 +405,46 @@ export function QueryOutputPanel({
                 </Select>
               </div>
             </div>
-
-            {/* Main Actions */}
-            <div className="flex gap-2">
-              <Button
-                onClick={onExecute}
-                disabled={isQueryEmpty || isSearching}
-                className="flex-1"
-              >
-                {isSearching ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Search PubMed
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={onOpenPubMed}
-                disabled={isQueryEmpty}
-                title="Open in PubMed"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+            <div className="text-xs text-muted-foreground">
+              {queryLength.toLocaleString()} chars
             </div>
           </div>
-        </CardContent>
+
+          {/* Main Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={onExecute}
+              disabled={isQueryEmpty || isSearching}
+              size="lg"
+              className={cn(
+                "flex-1 h-11 text-base font-semibold transition-all duration-300",
+                !isQueryEmpty && !isSearching && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200 hover:shadow-xl hover:-translate-y-0.5 dark:shadow-blue-900/30"
+              )}
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-5 w-5" />
+                  Search PubMed
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onOpenPubMed}
+              disabled={isQueryEmpty}
+              title="Open in PubMed"
+              className="h-11 px-4 border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-all duration-200 dark:border-gray-700 dark:hover:border-blue-500"
+            >
+              <ExternalLink className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );

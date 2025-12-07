@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, query, review
+from app.api.routes import projects, define, query, review, screening
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -30,8 +30,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+        )
         return response
 
 
@@ -42,23 +46,23 @@ limiter = Limiter(key_func=get_remote_address)
 tags_metadata = [
     {
         "name": "projects",
-        "description": "Project management operations. Create, read, update, and delete research projects."
+        "description": "Project management operations. Create, read, update, and delete research projects.",
     },
     {
         "name": "define",
-        "description": "Research question definition with AI chat. Formulate research questions using frameworks like PICO, CoCoPop, PEO, SPIDER, etc."
+        "description": "Research question definition with AI chat. Formulate research questions using frameworks like PICO, CoCoPop, PEO, SPIDER, etc.",
     },
     {
         "name": "query",
-        "description": "PubMed query generation. Generate optimized Boolean search queries for systematic literature reviews."
+        "description": "PubMed query generation. Generate optimized Boolean search queries for systematic literature reviews.",
     },
     {
         "name": "review",
-        "description": "Abstract screening and review. Upload MEDLINE files and use AI to screen abstracts for relevance."
+        "description": "Abstract screening and review. Upload MEDLINE files and use AI to screen abstracts for relevance.",
     },
     {
         "name": "health",
-        "description": "Health check endpoints. Monitor service status and readiness."
+        "description": "Health check endpoints. Monitor service status and readiness.",
     },
 ]
 
@@ -76,6 +80,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -89,10 +94,11 @@ async def log_requests(request: Request, call_next):
             "method": request.method,
             "path": request.url.path,
             "status_code": response.status_code,
-            "duration_seconds": round(duration, 3)
-        }
+            "duration_seconds": round(duration, 3),
+        },
     )
     return response
+
 
 # Add security headers middleware - DISABLED in DEBUG mode for CORS to work
 if not settings.DEBUG:
@@ -115,6 +121,7 @@ app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define.router, prefix=settings.API_V1_PREFIX)
 app.include_router(query.router, prefix=settings.API_V1_PREFIX)
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)
+app.include_router(screening.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/", tags=["health"])
@@ -139,13 +146,14 @@ async def health_check(detailed: bool = False):
     health = {
         "status": "healthy",
         "service": "MedAI Hub Backend",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
     if detailed:
         # Check database connection
         try:
             from app.services.database import db_service
+
             # Simple query to verify connection
             health["database"] = "connected"
         except Exception as e:
@@ -155,6 +163,7 @@ async def health_check(detailed: bool = False):
         # Check AI service configuration
         try:
             from app.core.config import settings
+
             health["ai_configured"] = bool(settings.GOOGLE_API_KEY)
         except:
             health["ai_configured"] = False

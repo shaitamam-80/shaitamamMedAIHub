@@ -1,40 +1,62 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-clinical focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        emerald:
-          "border-transparent bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30",
-        slate:
-          "border-transparent bg-slate-700/50 text-slate-300 border-slate-600/50 hover:bg-slate-700/70",
+          "border-transparent bg-primary/10 text-primary hover:bg-primary/20",
+        primary:
+          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-secondary/10 text-secondary hover:bg-secondary/20",
+        success:
+          "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20",
+        warning:
+          "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+          "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20",
+        info:
+          "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20",
+        outline:
+          "border-border text-foreground hover:bg-accent",
+        muted:
+          "border-transparent bg-muted text-muted-foreground hover:bg-muted/80",
+        // Status badges for screening
+        include:
+          "border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold",
+        exclude:
+          "border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300 font-semibold",
+        maybe:
+          "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold",
+        pending:
+          "border-slate-500/30 bg-slate-500/15 text-slate-700 dark:text-slate-300 font-semibold",
+      },
+      size: {
+        default: "px-2.5 py-1 text-xs",
+        sm: "px-2 py-0.5 text-2xs",
+        lg: "px-3 py-1.5 text-sm",
       },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
-)
+);
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, size, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+    <div className={cn(badgeVariants({ variant, size }), className)} {...props} />
+  );
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };

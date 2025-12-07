@@ -506,6 +506,164 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ## Recent Changes Log
 
+### 2025-12-07 - Smart Screener Module & UI Refresh
+
+#### Smart Screener Module (NEW)
+
+Implemented the **GEMS-based Smart Screener** - an automated literature screening tool that bridges Query Tool and Review Tool.
+
+**Architecture: Hybrid Filtering Engine**
+
+| Layer | Engine | Purpose | Speed |
+|-------|--------|---------|-------|
+| A | Python Rule Engine | Deterministic filtering (date, language, pub type) | ~1000 articles/sec |
+| B | Gemini AI | Semantic analysis, relevance scoring | ~5 concurrent |
+
+**New Backend Files:**
+
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── models/screening.py      # Pydantic models (CriteriaConfig, ArticleDecision)
+│   │   └── routes/screening.py      # API endpoints
+│   ├── core/
+│   │   ├── gems/criteria_library.py # GEMS screening codes (P1, S2, S-Ex1, etc.)
+│   │   └── prompts/screening.py     # AI prompts for abstract analysis
+│   └── services/
+│       ├── rule_engine.py           # Layer A: Rule-based filtering
+│       └── screening_service.py     # Orchestrator: Pipeline management
+```
+
+**New Frontend Files:**
+
+```
+frontend/
+├── app/screening/page.tsx           # Screening page
+├── components/screening/
+│   ├── ScreeningWizard.tsx          # 4-step wizard container
+│   ├── Step1Framework.tsx           # Framework validation
+│   ├── Step2ReviewType.tsx          # Review type selection
+│   ├── Step3Criteria.tsx            # Criteria builder
+│   └── Step4Execution.tsx           # Execution console
+└── types/screening.ts               # TypeScript interfaces
+```
+
+**Key Features:**
+
+- **4-Step Wizard**: Framework → Review Type → Criteria → Execute
+- **Review Types**: Systematic (strict), Scoping (broad), Quick Answer
+- **Criteria Library**: Population codes (P1-P5), Study Design (S1-S5), Exclusions (S-Ex1-Ex5)
+- **AI Integration**: Gemini analyzes abstracts with PICO context
+- **Evidence Quotes**: AI extracts supporting text from abstracts
+
+**API Endpoints:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/screening/init-criteria` | Save screening configuration |
+| POST | `/api/v1/screening/process-pmids` | Run full screening pipeline |
+| GET | `/api/v1/screening/criteria-library` | Get available criteria codes |
+
+---
+
+#### Frontend UI Refresh
+
+**Design System Updates:**
+
+- Tailwind config extended with custom colors and animations
+- Updated button, card, badge components with new variants
+- Added glass morphism effects and gradient backgrounds
+- New progress.tsx and radio-group.tsx components
+
+**Homepage Redesign:**
+
+- Modern hero section with animated gradient
+- Feature cards with hover effects
+- Improved navigation and layout
+
+**Query Tool Enhancements:**
+
+- Interactive concept chips with edit/remove capability
+- Improved QueryBlockEditor with drag-and-drop
+- Enhanced SearchResultsScreen with better pagination
+- Real-time query validation feedback
+
+**Sidebar Improvements:**
+
+- Collapsible navigation groups
+- Active state indicators
+- Mobile-responsive drawer
+
+---
+
+#### Backend Improvements
+
+**AI Service (`ai_service.py`):**
+
+- Added `analyze_abstract_gems()` method for GEMS screening
+- Batch translation support for Hebrew → English
+- Improved error handling and timeouts
+
+**MeSH Service (`mesh_service.py`):**
+
+- Enhanced term expansion with entry terms
+- Better fallback for failed lookups
+- Cache statistics method
+
+**PubMed Service (`pubmed_service.py`):**
+
+- Improved search result pagination
+- Better MEDLINE format handling
+- Error recovery mechanisms
+
+**MEDLINE Parser (`medline_parser.py`):**
+
+- Added study type extraction from PT field
+- Improved multi-line field parsing
+
+---
+
+**Files Modified (26 total):**
+
+Backend:
+- `backend/main.py` - Added screening routes
+- `backend/app/core/gems/criteria_library.py` - GEMS criteria codes
+- `backend/app/services/ai_service.py` - GEMS AI methods
+- `backend/app/services/mesh_service.py` - Improved caching
+- `backend/app/services/pubmed_service.py` - Search improvements
+- `backend/app/services/medline_parser.py` - PT field parsing
+- `backend/app/services/query_builder.py` - Minor fixes
+
+Frontend:
+- `frontend/app/page.tsx` - Homepage redesign
+- `frontend/app/layout.tsx` - Layout improvements
+- `frontend/app/query/page.tsx` - Query tool updates
+- `frontend/app/globals.css` - Design system updates
+- `frontend/tailwind.config.ts` - Extended theme
+- `frontend/lib/api.ts` - Screening API methods
+- `frontend/lib/query-parser.ts` - Parser fixes
+- `frontend/components/query/*` - 6 component updates
+- `frontend/components/sidebar/app-sidebar.tsx` - Navigation update
+- `frontend/components/ui/*` - 5 component updates
+
+**New Files (15 total):**
+
+- `backend/app/api/models/screening.py`
+- `backend/app/api/routes/screening.py`
+- `backend/app/core/prompts/screening.py`
+- `backend/app/services/rule_engine.py`
+- `backend/app/services/screening_service.py`
+- `backend/tests/test_screening_integration.py`
+- `frontend/app/screening/page.tsx`
+- `frontend/components/screening/*.tsx` (5 files)
+- `frontend/components/ui/progress.tsx`
+- `frontend/components/ui/radio-group.tsx`
+- `frontend/types/screening.ts`
+- `docs/Smart Screener *.md` (3 spec files)
+
+---
+
 ### 2025-12-02 (Session 2) - Infrastructure: Caching, Type Safety, Testing
 
 #### Persistent Caching System

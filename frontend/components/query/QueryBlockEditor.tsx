@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   GripVertical,
   Undo2,
+  AlignLeft,
 } from "lucide-react";
 import {
   DndContext,
@@ -41,6 +42,174 @@ import {
   type QueryTerm,
 } from "@/lib/query-parser";
 
+// ============================================================================
+// Formatted Query Display Component
+// ============================================================================
+
+interface FormattedQueryDisplayProps {
+  query: string;
+  className?: string;
+}
+
+function FormattedQueryDisplay({ query, className }: FormattedQueryDisplayProps) {
+  // Format the query with indentation and syntax highlighting
+  const formattedParts = useMemo(() => {
+    if (!query.trim()) return [];
+
+    const parts: { text: string; type: "operator" | "mesh" | "text" | "field" | "paren" | "normal" }[] = [];
+
+    // Split by AND/OR operators while preserving them
+    const tokens = query.split(/(\bAND\b|\bOR\b|\bNOT\b|\[Mesh\]|\[Majr\]|\[tiab\]|\[Title\/Abstract\]|\[Title\]|\[tw\]|\[pt\]|\[mh\]|\(|\))/gi);
+
+    let indentLevel = 0;
+    let currentLine: typeof parts = [];
+    const lines: (typeof parts)[] = [];
+
+    tokens.forEach((token) => {
+      if (!token) return;
+
+      const trimmed = token.trim();
+      if (!trimmed) return;
+
+      const upperToken = trimmed.toUpperCase();
+
+      if (trimmed === "(") {
+        if (currentLine.length > 0) {
+          lines.push([...currentLine]);
+          currentLine = [];
+        }
+        currentLine.push({ text: "(", type: "paren" });
+        lines.push([...currentLine]);
+        currentLine = [];
+        indentLevel++;
+      } else if (trimmed === ")") {
+        if (currentLine.length > 0) {
+          lines.push([...currentLine]);
+          currentLine = [];
+        }
+        indentLevel = Math.max(0, indentLevel - 1);
+        currentLine.push({ text: ")", type: "paren" });
+        lines.push([...currentLine]);
+        currentLine = [];
+      } else if (upperToken === "AND" || upperToken === "OR" || upperToken === "NOT") {
+        if (currentLine.length > 0) {
+          lines.push([...currentLine]);
+          currentLine = [];
+        }
+        currentLine.push({ text: upperToken, type: "operator" });
+      } else if (trimmed.match(/^\[.+\]$/)) {
+        currentLine.push({ text: trimmed, type: "field" });
+      } else {
+        // Check if it's a MeSH term (in quotes or with [Mesh] nearby)
+        const isMesh = query.toLowerCase().includes(`${trimmed.toLowerCase()}[mesh]`) ||
+                       query.toLowerCase().includes(`${trimmed.toLowerCase()}[majr]`) ||
+                       query.toLowerCase().includes(`${trimmed.toLowerCase()}[mh]`);
+        currentLine.push({ text: trimmed, type: isMesh ? "mesh" : "normal" });
+      }
+    });
+
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  }, [query]);
+
+  // Simple tokenization for display
+  const highlightedQuery = useMemo(() => {
+    if (!query.trim()) return null;
+
+    // Regex patterns for different token types
+    const patterns = [
+      { regex: /\b(AND|OR|NOT)\b/gi, type: "operator" },
+      { regex: /\[Mesh\]|\[Majr\]|\[mh\]/gi, type: "mesh-tag" },
+      { regex: /\[tiab\]|\[Title\/Abstract\]|\[Title\]|\[tw\]/gi, type: "text-tag" },
+      { regex: /\[pt\]|\[la\]|\[dp\]|\[sb\]/gi, type: "filter-tag" },
+    ];
+
+    // Split by parentheses and operators for line breaks
+    const formatted = query
+      .replace(/\(\s*/g, "(\n  ")
+      .replace(/\s*\)/g, "\n)")
+      .replace(/\s+(AND|OR)\s+/gi, "\n$1 ")
+      .split("\n");
+
+    return formatted.map((line, lineIdx) => {
+      let result = line;
+      const elements: React.ReactNode[] = [];
+      let lastIndex = 0;
+
+      // Find all matches
+      const matches: { start: number; end: number; text: string; type: string }[] = [];
+
+      patterns.forEach(({ regex, type }) => {
+        let match;
+        const re = new RegExp(regex.source, regex.flags);
+        while ((match = re.exec(line)) !== null) {
+          matches.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            text: match[0],
+            type,
+          });
+        }
+      });
+
+      // Sort by position
+      matches.sort((a, b) => a.start - b.start);
+
+      // Build elements
+      matches.forEach((match, i) => {
+        // Add text before match
+        if (match.start > lastIndex) {
+          elements.push(
+            <span key={`${lineIdx}-text-${i}`} className="text-gray-800 dark:text-gray-200">
+              {line.slice(lastIndex, match.start)}
+            </span>
+          );
+        }
+
+        // Add matched element with styling
+        const colorClass = {
+          "operator": "font-bold text-purple-600 dark:text-purple-400",
+          "mesh-tag": "text-blue-600 dark:text-blue-400 font-medium",
+          "text-tag": "text-emerald-600 dark:text-emerald-400 font-medium",
+          "filter-tag": "text-amber-600 dark:text-amber-400 font-medium",
+        }[match.type] || "";
+
+        elements.push(
+          <span key={`${lineIdx}-match-${i}`} className={colorClass}>
+            {match.text}
+          </span>
+        );
+
+        lastIndex = match.end;
+      });
+
+      // Add remaining text
+      if (lastIndex < line.length) {
+        elements.push(
+          <span key={`${lineIdx}-end`} className="text-gray-800 dark:text-gray-200">
+            {line.slice(lastIndex)}
+          </span>
+        );
+      }
+
+      return (
+        <div key={lineIdx} className="whitespace-pre">
+          {elements.length > 0 ? elements : line}
+        </div>
+      );
+    });
+  }, [query]);
+
+  return (
+    <div className={cn("font-mono text-sm leading-relaxed", className)}>
+      {highlightedQuery}
+    </div>
+  );
+}
+
 interface QueryBlockEditorProps {
   query: string;
   onChange: (query: string) => void;
@@ -51,6 +220,8 @@ interface QueryBlockEditorProps {
   minHeight?: string;
 }
 
+type ViewMode = "formatted" | "raw" | "visual";
+
 export function QueryBlockEditor({
   query,
   onChange,
@@ -60,7 +231,7 @@ export function QueryBlockEditor({
   placeholder = "Type to add terms...",
   minHeight = "200px",
 }: QueryBlockEditorProps) {
-  const [isRawMode, setIsRawMode] = useState(false); // Default to visual mode
+  const [viewMode, setViewMode] = useState<ViewMode>("formatted"); // Default to formatted mode
   const [inputValue, setInputValue] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -143,12 +314,12 @@ export function QueryBlockEditor({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card overflow-hidden shadow-sm",
+        "rounded-2xl border-2 border-gray-100 bg-white overflow-hidden shadow-md dark:bg-gray-900 dark:border-gray-800",
         className
       )}
     >
       {/* Header with mode toggle */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-900 dark:border-gray-800">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Query Editor</span>
           {!validation.isValid && (
@@ -183,24 +354,67 @@ export function QueryBlockEditor({
             )}
             <span className="ml-1.5 hidden sm:inline">{copied ? "Copied!" : "Copy"}</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsRawMode(!isRawMode)}
-            className="h-8 px-2"
-          >
-            {isRawMode ? (
-              <Blocks className="w-4 h-4 mr-1.5" />
-            ) : (
-              <Code className="w-4 h-4 mr-1.5" />
-            )}
-            <span className="hidden sm:inline">{isRawMode ? "Visual" : "Raw"}</span>
-          </Button>
+
+          {/* View Mode Segmented Control */}
+          <div className="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+            <button
+              onClick={() => setViewMode("formatted")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-all",
+                viewMode === "formatted"
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              )}
+              title="Formatted view with syntax highlighting"
+            >
+              <AlignLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Formatted</span>
+            </button>
+            <button
+              onClick={() => setViewMode("raw")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-all",
+                viewMode === "raw"
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              )}
+              title="Raw text editor"
+            >
+              <Code className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Raw</span>
+            </button>
+            <button
+              onClick={() => setViewMode("visual")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-all",
+                viewMode === "visual"
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              )}
+              title="Visual block editor"
+            >
+              <Blocks className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Visual</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      {isRawMode ? (
+      {viewMode === "formatted" ? (
+        <div
+          className="p-4 overflow-y-auto bg-gray-50/50 dark:bg-gray-800/30"
+          style={{ minHeight }}
+        >
+          {query.trim() ? (
+            <FormattedQueryDisplay query={query} />
+          ) : (
+            <div className="text-muted-foreground text-sm italic">
+              No query to display. Switch to Raw mode to start editing.
+            </div>
+          )}
+        </div>
+      ) : viewMode === "raw" ? (
         <Textarea
           value={query}
           onChange={(e) => onChange(e.target.value)}
@@ -252,18 +466,21 @@ export function QueryBlockEditor({
       )}
 
       {/* Footer with char count and warnings */}
-      <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 text-xs font-medium text-gray-500 dark:bg-gray-800/50 dark:border-gray-800 dark:text-gray-400">
         <span>{query.length} characters</span>
-        {!isRawMode && parsedTerms.length > 0 && (
-          <span>{parsedTerms.filter((t) => t.type !== "operator" && t.type !== "group").length} terms</span>
+        {viewMode === "visual" && parsedTerms.length > 0 && (
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">{parsedTerms.filter((t) => t.type !== "operator" && t.type !== "group").length} terms</span>
+        )}
+        {viewMode === "formatted" && (
+          <span className="text-gray-400 dark:text-gray-500">Read-only • Switch to Raw to edit</span>
         )}
       </div>
 
       {/* Warnings */}
       {!validation.isValid && (
-        <div className="px-4 py-2 border-t bg-amber-50/50 dark:bg-amber-950/20">
+        <div className="px-4 py-2.5 border-t border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900">
           {validation.warnings.map((warning, i) => (
-            <p key={i} className="text-xs text-amber-700 dark:text-amber-400">
+            <p key={i} className="text-xs font-medium text-amber-700 dark:text-amber-400">
               {warning}
             </p>
           ))}
@@ -323,9 +540,10 @@ function SortableTermBlock({ term, index, onRemove }: SortableTermBlockProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-medium border shadow-sm cursor-grab active:cursor-grabbing",
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium border-2 shadow-sm cursor-grab active:cursor-grabbing",
+        "hover:shadow-md hover:-translate-y-0.5 transition-all duration-200",
         getTermColorClass(term.type),
-        isDragging && "ring-2 ring-primary ring-offset-2"
+        isDragging && "ring-2 ring-primary ring-offset-2 shadow-lg"
       )}
     >
       {/* Drag handle */}

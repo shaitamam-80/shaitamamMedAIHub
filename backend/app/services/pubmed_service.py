@@ -37,7 +37,7 @@ class PubMedService:
         query: str,
         max_results: int = 20,
         sort: str = "relevance",
-        retstart: int = 0
+        retstart: int = 0,
     ) -> Dict[str, Any]:
         """
         Execute a PubMed search query and return results.
@@ -54,15 +54,17 @@ class PubMedService:
         try:
             # Step 1: ESearch - Get PMIDs matching the query
             esearch_url = f"{self.base_url}/esearch.fcgi"
-            esearch_params = self._add_auth_params({
-                "db": "pubmed",
-                "term": query,
-                "retmax": max_results,
-                "retstart": retstart,
-                "retmode": "json",
-                "sort": "pub+date" if sort == "date" else "relevance",
-                "usehistory": "y"
-            })
+            esearch_params = self._add_auth_params(
+                {
+                    "db": "pubmed",
+                    "term": query,
+                    "retmax": max_results,
+                    "retstart": retstart,
+                    "retmode": "json",
+                    "sort": "pub+date" if sort == "date" else "relevance",
+                    "usehistory": "y",
+                }
+            )
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 esearch_response = await client.get(esearch_url, params=esearch_params)
@@ -78,19 +80,19 @@ class PubMedService:
                     "count": total_count,
                     "returned": 0,
                     "articles": [],
-                    "query": query
+                    "query": query,
                 }
 
             # Step 2: ESummary - Get article details
             esummary_url = f"{self.base_url}/esummary.fcgi"
-            esummary_params = self._add_auth_params({
-                "db": "pubmed",
-                "id": ",".join(pmids),
-                "retmode": "json"
-            })
+            esummary_params = self._add_auth_params(
+                {"db": "pubmed", "id": ",".join(pmids), "retmode": "json"}
+            )
 
             async with httpx.AsyncClient(timeout=30.0) as client:
-                esummary_response = await client.get(esummary_url, params=esummary_params)
+                esummary_response = await client.get(
+                    esummary_url, params=esummary_params
+                )
                 esummary_response.raise_for_status()
                 esummary_data = esummary_response.json()
 
@@ -110,21 +112,27 @@ class PubMedService:
                         if len(authors) > 3:
                             author_names.append("et al.")
 
-                    articles.append({
-                        "pmid": pmid,
-                        "title": article_data.get("title", "No title"),
-                        "authors": ", ".join(author_names) if author_names else "Unknown",
-                        "journal": article_data.get("fulljournalname", article_data.get("source", "Unknown")),
-                        "pubdate": article_data.get("pubdate", "Unknown"),
-                        "doi": article_data.get("elocationid", ""),
-                        "pubtype": article_data.get("pubtype", []),
-                    })
+                    articles.append(
+                        {
+                            "pmid": pmid,
+                            "title": article_data.get("title", "No title"),
+                            "authors": (
+                                ", ".join(author_names) if author_names else "Unknown"
+                            ),
+                            "journal": article_data.get(
+                                "fulljournalname", article_data.get("source", "Unknown")
+                            ),
+                            "pubdate": article_data.get("pubdate", "Unknown"),
+                            "doi": article_data.get("elocationid", ""),
+                            "pubtype": article_data.get("pubtype", []),
+                        }
+                    )
 
             return {
                 "count": total_count,
                 "returned": len(articles),
                 "articles": articles,
-                "query": query
+                "query": query,
             }
 
         except httpx.TimeoutException:
@@ -149,11 +157,9 @@ class PubMedService:
         """
         try:
             efetch_url = f"{self.base_url}/efetch.fcgi"
-            efetch_params = self._add_auth_params({
-                "db": "pubmed",
-                "id": pmid,
-                "retmode": "xml"
-            })
+            efetch_params = self._add_auth_params(
+                {"db": "pubmed", "id": pmid, "retmode": "xml"}
+            )
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(efetch_url, params=efetch_params)
@@ -207,7 +213,11 @@ class PubMedService:
 
             # Extract publication date
             pub_date = article.find(".//PubDate")
-            year = pub_date.find("Year").text if pub_date is not None and pub_date.find("Year") is not None else ""
+            year = (
+                pub_date.find("Year").text
+                if pub_date is not None and pub_date.find("Year") is not None
+                else ""
+            )
 
             # Extract keywords
             keywords = []
@@ -223,7 +233,7 @@ class PubMedService:
                 "authors": ", ".join(authors),
                 "journal": journal,
                 "year": year,
-                "keywords": keywords
+                "keywords": keywords,
             }
 
         except Exception as e:
@@ -242,12 +252,14 @@ class PubMedService:
         """
         try:
             esearch_url = f"{self.base_url}/esearch.fcgi"
-            esearch_params = self._add_auth_params({
-                "db": "pubmed",
-                "term": query,
-                "retmax": 0,  # Don't return any results
-                "retmode": "json"
-            })
+            esearch_params = self._add_auth_params(
+                {
+                    "db": "pubmed",
+                    "term": query,
+                    "retmax": 0,  # Don't return any results
+                    "retmode": "json",
+                }
+            )
 
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(esearch_url, params=esearch_params)
@@ -264,7 +276,7 @@ class PubMedService:
                 "valid": not bool(error_list),
                 "count": int(result.get("count", 0)),
                 "query_translation": query_translation,
-                "errors": error_list.get("phrasesnotfound", []) if error_list else []
+                "errors": error_list.get("phrasesnotfound", []) if error_list else [],
             }
 
         except Exception as e:
@@ -273,7 +285,7 @@ class PubMedService:
                 "valid": False,
                 "count": 0,
                 "query_translation": "",
-                "errors": [str(e)]
+                "errors": [str(e)],
             }
 
     async def fetch_by_pmids(self, pmids: List[str]) -> List[Dict[str, Any]]:
@@ -292,11 +304,9 @@ class PubMedService:
         try:
             # Use EFetch to get detailed XML for all PMIDs
             efetch_url = f"{self.base_url}/efetch.fcgi"
-            efetch_params = self._add_auth_params({
-                "db": "pubmed",
-                "id": ",".join(pmids),
-                "retmode": "xml"
-            })
+            efetch_params = self._add_auth_params(
+                {"db": "pubmed", "id": ",".join(pmids), "retmode": "xml"}
+            )
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.get(efetch_url, params=efetch_params)
@@ -377,16 +387,18 @@ class PubMedService:
                         if pt.text:
                             pubtype.append(pt.text)
 
-                    articles.append({
-                        "pmid": pmid,
-                        "title": title,
-                        "abstract": abstract_text,
-                        "authors": ", ".join(authors) if authors else "",
-                        "journal": journal,
-                        "pubdate": pubdate,
-                        "doi": doi,
-                        "pubtype": pubtype
-                    })
+                    articles.append(
+                        {
+                            "pmid": pmid,
+                            "title": title,
+                            "abstract": abstract_text,
+                            "authors": ", ".join(authors) if authors else "",
+                            "journal": journal,
+                            "pubdate": pubdate,
+                            "doi": doi,
+                            "pubtype": pubtype,
+                        }
+                    )
 
                 except Exception as e:
                     logger.warning(f"Error parsing article: {e}")
@@ -397,6 +409,41 @@ class PubMedService:
         except Exception as e:
             logger.exception(f"Error fetching PMIDs: {e}")
             raise Exception(f"Failed to fetch articles: {str(e)}")
+
+    async def fetch_details_as_medline(self, pmids: List[str]) -> str:
+        """
+        Fetch article details in MEDLINE text format.
+
+        Args:
+            pmids: List of PubMed IDs
+
+        Returns:
+            Raw MEDLINE text content
+        """
+        if not pmids:
+            return ""
+
+        try:
+            # Use EFetch with rettype=medline&retmode=text
+            efetch_url = f"{self.base_url}/efetch.fcgi"
+            efetch_params = self._add_auth_params(
+                {
+                    "db": "pubmed",
+                    "id": ",".join(pmids),
+                    "rettype": "medline",
+                    "retmode": "text",
+                }
+            )
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(efetch_url, params=efetch_params)
+                response.raise_for_status()
+
+            return response.text
+
+        except Exception as e:
+            logger.exception(f"Error fetching MEDLINE format: {e}")
+            raise Exception(f"Failed to fetch MEDLINE data: {str(e)}")
 
 
 # Global instance

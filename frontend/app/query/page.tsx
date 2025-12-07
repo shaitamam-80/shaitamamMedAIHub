@@ -41,6 +41,7 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Copy,
@@ -49,6 +50,8 @@ import {
   History,
   Import,
   Loader2,
+  MessageSquareQuote,
+  PenLine,
   Play,
   Plus,
   Search,
@@ -113,6 +116,11 @@ export default function QueryPage() {
   // Project Selection filters
   const [searchTerm, setSearchTerm] = useState("");
   const [filterFramework, setFilterFramework] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "ready" | "in_progress" | "draft">("all");
+  const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
+
+  // Question carousel state
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Use the RTL hook
   const layout = useBidiLayout(detectedLanguage);
@@ -306,17 +314,18 @@ export default function QueryPage() {
   function handleContinueToReview() {
     if (!selectedProject || !searchResults) return;
 
-    // Store query data for review tool
+    // Store query data for screening tool
     sessionStorage.setItem(
       "queryToolData",
       JSON.stringify({
         projectId: selectedProject.id,
         query: currentQuery,
         articleCount: searchResults.count,
+        pmids: searchResults.articles.map(a => a.pmid),
       })
     );
 
-    router.push(`/review?project=${selectedProject.id}&fromQuery=true`);
+    router.push(`/screening?projectId=${selectedProject.id}`);
   }
 
   async function handleViewAbstract(
@@ -430,507 +439,568 @@ export default function QueryPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
-        {/* Step 1: Select Project - Redesigned based on mockup */}
+        {/* Step 1: Select Project - SCOUT/GEMS Design */}
         {currentStep === "select" && (
-          <div className="max-w-5xl mx-auto">
-            <Card className="shadow-sm border border-gray-200 overflow-hidden">
-              {/* Section Header */}
-              <CardHeader className="p-5 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      Select Your Project
-                    </CardTitle>
-                    <CardDescription className="text-sm text-gray-500 mt-1">
-                      Choose a project with completed research question formulation
-                    </CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => router.push("/projects")}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    New Project
-                  </Button>
-                </div>
+          <div className="min-h-[calc(100vh-250px)]">
+            {(() => {
+              // Calculate stats
+              const readyProjects = projects.filter(p =>
+                p.framework_data && Object.keys(p.framework_data).length >= 3
+              );
+              const inProgressProjects = projects.filter(p =>
+                p.framework_data && Object.keys(p.framework_data).length > 0 && Object.keys(p.framework_data).length < 3
+              );
+              const draftProjects = projects.filter(p =>
+                !p.framework_data || Object.keys(p.framework_data).length === 0
+              );
 
-                {/* Search and Filter */}
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search projects..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-                  <Select value={filterFramework} onValueChange={setFilterFramework}>
-                    <SelectTrigger className="w-[180px] bg-gray-50 border-gray-200">
-                      <SelectValue placeholder="All Frameworks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Frameworks</SelectItem>
-                      <SelectItem value="PICO">PICO</SelectItem>
-                      <SelectItem value="SPIDER">SPIDER</SelectItem>
-                      <SelectItem value="PEO">PEO</SelectItem>
-                      <SelectItem value="CoCoPop">CoCoPop</SelectItem>
-                      <SelectItem value="ECLIPSE">ECLIPSE</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
+              const stats = {
+                total: projects.length,
+                ready: readyProjects.length,
+                inProgress: inProgressProjects.length,
+                drafts: draftProjects.length,
+              };
 
-              <CardContent className="p-5">
-                {(() => {
-                  // Filter projects
-                  const filteredProjects = projects.filter(p => {
-                    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-                    const matchesFramework = filterFramework === "all" || p.framework_type === filterFramework;
-                    return matchesSearch && matchesFramework;
-                  });
+              // Apply filters
+              const getProjectStatus = (p: Project) => {
+                if (!p.framework_data || Object.keys(p.framework_data).length === 0) return "draft";
+                if (Object.keys(p.framework_data).length >= 3) return "ready";
+                return "in_progress";
+              };
 
-                  // Separate ready vs in-progress
-                  const readyProjects = filteredProjects.filter(p =>
-                    p.framework_data && Object.keys(p.framework_data).length >= 3
-                  );
-                  const inProgressProjects = filteredProjects.filter(p =>
-                    !p.framework_data || Object.keys(p.framework_data).length < 3
-                  );
+              const filteredProjects = projects.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesFramework = filterFramework === "all" || p.framework_type === filterFramework;
+                const status = getProjectStatus(p);
+                const matchesStatus = filterStatus === "all" || status === filterStatus;
+                return matchesSearch && matchesFramework && matchesStatus;
+              });
 
-                  // Framework color config - matching mockup
-                  const frameworkColors: Record<string, { bg: string; badge: string }> = {
-                    PICO: { bg: "bg-blue-50 border-blue-200", badge: "bg-blue-100 text-blue-700" },
-                    SPIDER: { bg: "bg-purple-50 border-purple-200", badge: "bg-purple-100 text-purple-700" },
-                    PEO: { bg: "bg-emerald-50 border-emerald-200", badge: "bg-emerald-100 text-emerald-700" },
-                    CoCoPop: { bg: "bg-amber-50 border-amber-200", badge: "bg-amber-100 text-amber-700" },
-                    ECLIPSE: { bg: "bg-rose-50 border-rose-200", badge: "bg-rose-100 text-rose-700" },
-                  };
+              // Framework color config
+              const frameworkColors: Record<string, { bg: string; badge: string; border: string }> = {
+                PICO: { bg: "bg-blue-50", badge: "bg-blue-100 text-blue-700", border: "border-blue-200" },
+                SPIDER: { bg: "bg-purple-50", badge: "bg-purple-100 text-purple-700", border: "border-purple-200" },
+                PEO: { bg: "bg-emerald-50", badge: "bg-emerald-100 text-emerald-700", border: "border-emerald-200" },
+                CoCoPop: { bg: "bg-amber-50", badge: "bg-amber-100 text-amber-700", border: "border-amber-200" },
+                ECLIPSE: { bg: "bg-rose-50", badge: "bg-rose-100 text-rose-700", border: "border-rose-200" },
+              };
 
-                  if (filteredProjects.length === 0) {
-                    return (
-                      <div className="text-center py-12">
-                        <FolderKanban className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500">No projects found</p>
-                        <button
-                          onClick={() => router.push("/define")}
-                          className="mt-3 text-blue-600 text-sm font-medium hover:underline"
-                        >
-                          Create your first project
-                        </button>
+              return (
+                <>
+                  {/* Hero Section */}
+                  <div className="pt-12 pb-8 px-4">
+                    <div className="text-center max-w-2xl mx-auto space-y-4">
+                      {/* Icon with gradient shadow */}
+                      <div className="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 p-4 rounded-2xl w-fit mx-auto mb-6 shadow-lg shadow-blue-100 dark:shadow-blue-900/20">
+                        <Sparkles className="h-10 w-10" />
                       </div>
-                    );
-                  }
 
-                  return (
-                    <>
-                      {/* Ready Projects */}
-                      {readyProjects.length > 0 && (
-                        <div className="mb-6">
-                          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            Ready for Query Generation ({readyProjects.length})
-                          </h3>
-                          <div className="grid sm:grid-cols-2 gap-4">
-                            {readyProjects.map(project => {
-                              const colors = frameworkColors[project.framework_type || "PICO"] || frameworkColors.PICO;
-                              const isSelected = selectedProject?.id === project.id;
-
-                              return (
-                                <button
-                                  key={project.id}
-                                  onClick={() => handleProjectSelect(project.id)}
-                                  className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md ${
-                                    isSelected
-                                      ? "border-blue-500 bg-blue-50/50 shadow-md"
-                                      : "border-gray-200 bg-white hover:border-blue-300"
-                                  }`}
-                                >
-                                  {/* Header */}
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm leading-tight">
-                                        {project.name}
-                                      </h4>
-                                      <div className="flex items-center gap-2 mt-1.5">
-                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${colors.badge}`}>
-                                          {project.framework_type || "PICO"}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                          <CheckCircle2 className="w-3 h-3" />
-                                          Ready
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <ArrowRight className={`w-5 h-5 transition-all ${isSelected ? "text-blue-600" : "text-gray-300"}`} />
-                                  </div>
-
-                                  {/* Framework Components Preview */}
-                                  {project.framework_data && (
-                                    <div className={`p-3 rounded-lg border ${colors.bg}`}>
-                                      <div className="space-y-1.5">
-                                        {Object.entries(project.framework_data).slice(0, 3).map(([key, value]) => (
-                                          <div key={key} className="flex items-start gap-2">
-                                            <span className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold ${colors.badge}`}>
-                                              {key}
-                                            </span>
-                                            <span className="text-xs text-gray-600 line-clamp-1">
-                                              {typeof value === 'string' ? value : JSON.stringify(value)}
-                                            </span>
-                                          </div>
-                                        ))}
-                                        {Object.keys(project.framework_data).length > 3 && (
-                                          <span className="text-xs text-gray-400 pl-7">
-                                            +{Object.keys(project.framework_data).length - 3} more...
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Footer */}
-                                  <div className="flex items-center gap-1 mt-3 text-xs text-gray-400">
-                                    <Clock className="w-3 h-3" />
-                                    {project.updated_at
-                                      ? `Updated ${new Date(project.updated_at).toLocaleDateString()}`
-                                      : "Recently created"}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* In Progress Projects */}
-                      {inProgressProjects.length > 0 && (
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-amber-500" />
-                            In Progress ({inProgressProjects.length})
-                          </h3>
-                          <div className="grid sm:grid-cols-2 gap-4">
-                            {inProgressProjects.map(project => {
-                              const colors = frameworkColors[project.framework_type || "PICO"] || frameworkColors.PICO;
-
-                              return (
-                                <button
-                                  key={project.id}
-                                  onClick={() => router.push(`/define?project=${project.id}`)}
-                                  className="w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-amber-300 transition-all hover:shadow-md opacity-75"
-                                >
-                                  {/* Header */}
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm leading-tight">
-                                        {project.name}
-                                      </h4>
-                                      <div className="flex items-center gap-2 mt-1.5">
-                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${colors.badge}`}>
-                                          {project.framework_type || "PICO"}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                                          <AlertCircle className="w-3 h-3" />
-                                          In Progress
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <ArrowRight className="w-5 h-5 text-gray-300" />
-                                  </div>
-
-                                  {/* Message */}
-                                  <p className="text-xs text-amber-600 mt-2">
-                                    Click to complete in Define Tool
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </CardContent>
-
-              {/* Action Footer - shows when project is selected */}
-              {selectedProject && (
-                <div className="p-5 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Selected: <span className="font-semibold text-gray-900">{selectedProject.name}</span>
+                      {/* Title */}
+                      <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+                        Welcome to Query Builder
+                      </h1>
+                      <p className="text-lg text-gray-500 dark:text-gray-400">
+                        Select a project to generate optimized PubMed search strategies
                       </p>
-                      <p className="text-xs text-gray-400">{selectedProject.framework_type || "PICO"} Framework</p>
+
+                      {/* Quick Stats */}
+                      <div className="flex justify-center gap-6 pt-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Total Projects</div>
+                        </div>
+                        <div className="w-px bg-gray-200 dark:bg-gray-700" />
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">{stats.ready}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Ready</div>
+                        </div>
+                        <div className="w-px bg-gray-200 dark:bg-gray-700" />
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-amber-600">{stats.inProgress}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">In Progress</div>
+                        </div>
+                      </div>
                     </div>
-                    <Button
-                      onClick={() => setCurrentStep("generate")}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-sm"
-                    >
-                      Continue to Query Generation
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
-              )}
-            </Card>
+
+                  {/* Actions Bar */}
+                  <div className="max-w-5xl mx-auto px-4 mb-8">
+                    <div className="flex gap-4">
+                      {/* Large Search Input */}
+                      <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search projects by name..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full h-14 pl-12 pr-4 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 shadow-sm"
+                        />
+                      </div>
+
+                      {/* New Project Button */}
+                      <button
+                        onClick={() => router.push("/define")}
+                        className="h-14 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+                      >
+                        <Plus className="h-5 w-5" />
+                        New Project
+                      </button>
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => setFilterStatus("all")}
+                        className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                          filterStatus === "all"
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        All ({stats.total})
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus("ready")}
+                        className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                          filterStatus === "ready"
+                            ? "bg-emerald-600 text-white shadow-md"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Ready ({stats.ready})
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus("in_progress")}
+                        className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                          filterStatus === "in_progress"
+                            ? "bg-amber-600 text-white shadow-md"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        In Progress ({stats.inProgress})
+                      </button>
+                      <button
+                        onClick={() => setFilterStatus("draft")}
+                        className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                          filterStatus === "draft"
+                            ? "bg-gray-600 text-white shadow-md"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Drafts ({stats.drafts})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Projects Grid */}
+                  <div className="max-w-5xl mx-auto px-4 pb-12">
+                    {filteredProjects.length === 0 ? (
+                      /* Empty State */
+                      <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <FolderKanban className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                          {searchTerm || filterStatus !== "all" ? "No matching projects" : "No projects yet"}
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">
+                          {searchTerm || filterStatus !== "all"
+                            ? "Try adjusting your search or filters"
+                            : "Create your first project to get started with query generation"}
+                        </p>
+                        {!searchTerm && filterStatus === "all" && (
+                          <button
+                            onClick={() => router.push("/define")}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+                          >
+                            <Plus className="h-5 w-5" />
+                            Create Your First Project
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {filteredProjects.map((project) => {
+                          const status = getProjectStatus(project);
+                          const colors = frameworkColors[project.framework_type || "PICO"] || frameworkColors.PICO;
+                          const isHovered = hoveredProjectId === project.id;
+
+                          return (
+                            <div
+                              key={project.id}
+                              onMouseEnter={() => setHoveredProjectId(project.id)}
+                              onMouseLeave={() => setHoveredProjectId(null)}
+                              onClick={() => {
+                                if (status === "ready") {
+                                  handleProjectSelect(project.id);
+                                } else {
+                                  router.push(`/define?project=${project.id}`);
+                                }
+                              }}
+                              className={`
+                                relative bg-white dark:bg-gray-900 rounded-2xl border-2 p-5 cursor-pointer
+                                transition-all duration-300 ease-out
+                                ${isHovered
+                                  ? "border-blue-400 shadow-xl shadow-blue-100 dark:shadow-blue-900/20 -translate-y-1"
+                                  : "border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
+                                }
+                              `}
+                            >
+                              {/* Card Header */}
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-gray-900 dark:text-white text-base truncate mb-2">
+                                    {project.name}
+                                  </h3>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Status Badge */}
+                                    {status === "ready" && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-full">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Ready
+                                      </span>
+                                    )}
+                                    {status === "in_progress" && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-full">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        In Progress
+                                      </span>
+                                    )}
+                                    {status === "draft" && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-full">
+                                        <FileText className="w-3.5 h-3.5" />
+                                        Draft
+                                      </span>
+                                    )}
+
+                                    {/* Framework Badge */}
+                                    <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${colors.badge}`}>
+                                      {project.framework_type || "PICO"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Arrow indicator */}
+                                <div className={`
+                                  w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200
+                                  ${isHovered
+                                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                                  }
+                                `}>
+                                  <ArrowRight className={`w-5 h-5 transition-transform duration-200 ${isHovered ? "translate-x-0.5" : ""}`} />
+                                </div>
+                              </div>
+
+                              {/* Framework Components Preview */}
+                              {project.framework_data && Object.keys(project.framework_data).length > 0 && (
+                                <div className={`p-3 rounded-xl ${colors.bg} border ${colors.border} mb-4`}>
+                                  <div className="space-y-2">
+                                    {Object.entries(project.framework_data).slice(0, 3).map(([key, value]) => (
+                                      <div key={key} className="flex items-start gap-2">
+                                        <span className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-bold ${colors.badge}`}>
+                                          {key.length === 1 ? key : key.charAt(0).toUpperCase()}
+                                        </span>
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
+                                          {typeof value === "string" ? value : JSON.stringify(value)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {Object.keys(project.framework_data).length > 3 && (
+                                      <span className="text-xs text-gray-400 dark:text-gray-500 pl-8">
+                                        +{Object.keys(project.framework_data).length - 3} more components...
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Card Footer */}
+                              <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {project.updated_at
+                                    ? `Updated ${new Date(project.updated_at).toLocaleDateString()}`
+                                    : "Recently created"
+                                  }
+                                </div>
+                                {status !== "ready" && (
+                                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                    Click to complete setup
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
-        {/* Step 2: Generate Query - Redesigned */}
+        {/* Step 2: Generate Query - Question Carousel Design */}
         {currentStep === "generate" && selectedProject && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Framework Preview Card - Fixed PICO order and no duplicates */}
-            <Card className="shadow-sm border border-gray-200">
-              <CardHeader className="pb-4 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold text-gray-900">
-                      {selectedProject.name}
-                    </CardTitle>
-                    <CardDescription className="text-gray-500 mt-1">
-                      Framework Components
-                    </CardDescription>
+          <div className="min-h-[calc(100vh-250px)] flex flex-col">
+            {(() => {
+              // Combine AI questions with custom question option
+              const allOptions = [
+                ...researchQuestions.map((q, idx) => ({ type: 'ai' as const, question: q, index: idx })),
+                { type: 'custom' as const, question: '', index: researchQuestions.length }
+              ];
+
+              const totalCards = allOptions.length;
+              const currentOption = allOptions[currentQuestionIndex] || allOptions[0];
+              const isCustomSelected = currentOption?.type === 'custom';
+
+              // Navigation functions
+              const goToPrevious = () => {
+                setCurrentQuestionIndex(prev => (prev > 0 ? prev - 1 : totalCards - 1));
+                setSelectedQuestion('');
+                setCustomQuestion('');
+              };
+
+              const goToNext = () => {
+                setCurrentQuestionIndex(prev => (prev < totalCards - 1 ? prev + 1 : 0));
+                setSelectedQuestion('');
+                setCustomQuestion('');
+              };
+
+              const selectCurrentQuestion = () => {
+                if (currentOption?.type === 'ai' && currentOption.question) {
+                  setSelectedQuestion(currentOption.question);
+                  setCustomQuestion('');
+                }
+              };
+
+              return (
+                <>
+                  {/* Hero Header - Compact */}
+                  <div className="pt-6 pb-4 px-4 flex-shrink-0">
+                    <div className="text-center max-w-2xl mx-auto">
+                      <div className="flex items-center justify-center gap-3 mb-2">
+                        <div className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 text-blue-600 dark:text-blue-400 p-2.5 rounded-xl shadow-md">
+                          <MessageSquareQuote className="h-6 w-6" />
+                        </div>
+                        <div className="text-left">
+                          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            Choose Your Research Question
+                          </h1>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {selectedProject.name}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-sm font-bold px-3 py-1.5">
-                    {selectedProject.framework_type || "PICO"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              {Object.keys(frameworkData).length > 0 && (
-                <CardContent className="pt-5">
-                  {(() => {
-                    // Define component order (PICO standard order)
-                    const componentOrder = ["P", "I", "C", "O", "E", "S", "T", "D", "R"];
 
-                    // Mapping from full words to single letters
-                    const wordToLetter: Record<string, string> = {
-                      population: "P",
-                      intervention: "I",
-                      comparator: "C",
-                      comparison: "C",
-                      outcome: "O",
-                      exposure: "E",
-                      studydesign: "S",
-                      timeframe: "T",
-                      setting: "D",
-                      designtype: "S"
-                    };
-
-                    // Component labels for display
-                    const componentLabels: Record<string, string> = {
-                      P: "Population",
-                      I: "Intervention",
-                      C: "Comparison",
-                      O: "Outcome",
-                      E: "Exposure",
-                      S: "Study Design",
-                      T: "Timeframe",
-                      D: "Setting",
-                      R: "Research Type"
-                    };
-
-                    // Normalize framework data: prefer single-letter keys, skip duplicates
-                    const normalized: Record<string, { key: string; label: string; value: string }> = {};
-
-                    // First pass: Collect single-letter keys
-                    Object.entries(frameworkData).forEach(([key, value]) => {
-                      if (key.length === 1 && value) {
-                        const upperKey = key.toUpperCase();
-                        normalized[upperKey] = {
-                          key: upperKey,
-                          label: componentLabels[upperKey] || upperKey,
-                          value: String(value)
-                        };
-                      }
-                    });
-
-                    // Second pass: Add full-word keys only if letter equivalent doesn't exist
-                    Object.entries(frameworkData).forEach(([key, value]) => {
-                      if (key.length > 1 && value) {
-                        const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, '');
-                        const letterKey = wordToLetter[normalizedKey];
-
-                        // Only add if we found a mapping AND it doesn't already exist
-                        if (letterKey && !normalized[letterKey]) {
-                          normalized[letterKey] = {
-                            key: letterKey,
-                            label: componentLabels[letterKey] || key,
-                            value: String(value)
-                          };
-                        }
-                      }
-                    });
-
-                    // Sort by PICO order
-                    const sortedComponents = Object.values(normalized).sort((a, b) => {
-                      const aIdx = componentOrder.indexOf(a.key);
-                      const bIdx = componentOrder.indexOf(b.key);
-                      const aPos = aIdx === -1 ? 999 : aIdx;
-                      const bPos = bIdx === -1 ? 999 : bIdx;
-                      return aPos - bPos;
-                    });
-
-                    return (
-                      <div className="space-y-3">
-                        {sortedComponents.map(({ key, label, value }) => (
-                          <div
-                            key={key}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100"
+                  {/* Main Carousel Area */}
+                  <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
+                    {isLoadingQuestions ? (
+                      <div className="flex flex-col items-center justify-center py-20">
+                        <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-xl border-2 border-gray-100 dark:border-gray-800">
+                          <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+                          <p className="text-gray-500 dark:text-gray-400 text-center">Loading research questions...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full max-w-4xl">
+                        {/* Carousel Container */}
+                        <div className="relative">
+                          {/* Navigation Buttons - Outside the card */}
+                          <button
+                            onClick={goToPrevious}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-16 z-10 w-12 h-12 lg:w-14 lg:h-14 bg-white dark:bg-gray-800 rounded-full shadow-xl border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-110 transition-all duration-200"
+                            aria-label="Previous question"
                           >
-                            {/* Badge - Blue square with letter */}
-                            <span className="w-8 h-8 rounded bg-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
-                              {key}
-                            </span>
+                            <ChevronLeft className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+                          </button>
 
-                            {/* Label + Value */}
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">
-                                {label}
+                          <button
+                            onClick={goToNext}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-16 z-10 w-12 h-12 lg:w-14 lg:h-14 bg-white dark:bg-gray-800 rounded-full shadow-xl border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-110 transition-all duration-200"
+                            aria-label="Next question"
+                          >
+                            <ChevronRight className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+                          </button>
+
+                          {/* Question Card */}
+                          <div className="bg-white dark:bg-gray-900 rounded-3xl border-2 border-gray-100 dark:border-gray-800 shadow-2xl overflow-hidden mx-8 lg:mx-0">
+                            {/* Card Header */}
+                            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  {isCustomSelected ? (
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                      <PenLine className="h-5 w-5 text-white" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                      <Sparkles className="h-5 w-5 text-white" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                      {isCustomSelected ? 'Write Your Own' : 'AI-Generated Question'}
+                                    </span>
+                                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                      {currentQuestionIndex + 1} of {totalCards}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Framework Badge */}
+                                <span className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md">
+                                  {selectedProject.framework_type || "PICO"}
+                                </span>
                               </div>
-                              <p className="text-sm text-gray-800 leading-relaxed" title={value}>
-                                {value}
-                              </p>
+                            </div>
+
+                            {/* Card Content */}
+                            <div className="p-8 lg:p-10">
+                              {isCustomSelected ? (
+                                /* Custom Question Input */
+                                <div className="space-y-4">
+                                  <div className="text-center mb-6">
+                                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                                      Write Your Custom Question
+                                    </h3>
+                                    <p className="text-gray-500 dark:text-gray-400">
+                                      Enter your own research question for query generation
+                                    </p>
+                                  </div>
+                                  <Textarea
+                                    value={customQuestion}
+                                    onChange={(e) => {
+                                      setCustomQuestion(e.target.value);
+                                      setSelectedQuestion('');
+                                    }}
+                                    placeholder="Type your research question here..."
+                                    className="min-h-[160px] text-lg bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-2xl p-5 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 resize-none transition-all placeholder:text-gray-400"
+                                  />
+                                </div>
+                              ) : (
+                                /* AI Question Display */
+                                <div className="text-center">
+                                  <div className="mb-6">
+                                    <MessageSquareQuote className="h-10 w-10 text-blue-500/30 dark:text-blue-400/20 mx-auto mb-4" />
+                                  </div>
+                                  <p className="text-xl lg:text-2xl font-medium text-gray-900 dark:text-white leading-relaxed px-4">
+                                    {currentOption?.question || 'No question available'}
+                                  </p>
+
+                                  {/* Select Button for AI Questions */}
+                                  <div className="mt-8">
+                                    <button
+                                      onClick={() => {
+                                        selectCurrentQuestion();
+                                      }}
+                                      className={`
+                                        px-8 py-3 rounded-xl font-semibold transition-all duration-200
+                                        ${selectedQuestion === currentOption?.question
+                                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/30"
+                                          : "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-2 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-600"
+                                        }
+                                      `}
+                                    >
+                                      {selectedQuestion === currentOption?.question ? (
+                                        <span className="flex items-center gap-2">
+                                          <Check className="h-5 w-5" />
+                                          Selected
+                                        </span>
+                                      ) : (
+                                        <span className="flex items-center gap-2">
+                                          <Check className="h-5 w-5" />
+                                          Select This Question
+                                        </span>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              )}
-            </Card>
+                        </div>
 
-            {/* Research Question Selection - Card-based UI */}
-            <Card className="shadow-sm border border-gray-200">
-              <CardHeader className="border-b border-gray-100">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  Select Research Question
-                </CardTitle>
-                <CardDescription className="text-gray-500">
-                  Choose a question from Define Tool or enter your own
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-5 space-y-5">
-                {isLoadingQuestions ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                    <span className="ml-3 text-gray-600">Loading questions...</span>
+                        {/* Dot Navigation */}
+                        <div className="flex justify-center items-center gap-2 mt-6">
+                          {allOptions.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setCurrentQuestionIndex(idx);
+                                setSelectedQuestion('');
+                                setCustomQuestion('');
+                              }}
+                              className={`
+                                transition-all duration-200 rounded-full
+                                ${idx === currentQuestionIndex
+                                  ? "w-8 h-3 bg-gradient-to-r from-blue-600 to-indigo-600"
+                                  : "w-3 h-3 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
+                                }
+                              `}
+                              aria-label={`Go to question ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Generate Button */}
+                        <div className="mt-8 max-w-md mx-auto">
+                          <button
+                            onClick={handleGenerateQuery}
+                            disabled={isGenerating || (!selectedQuestion && !customQuestion.trim())}
+                            className={`
+                              w-full h-14 rounded-2xl font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300
+                              ${isGenerating || (!selectedQuestion && !customQuestion.trim())
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border-2 border-gray-200 dark:border-gray-700"
+                                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-200 dark:shadow-blue-900/30 hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02]"
+                              }
+                            `}
+                          >
+                            {isGenerating ? (
+                              <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                Generating Query...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-5 w-5" />
+                                Generate PubMed Query
+                              </>
+                            )}
+                          </button>
+
+                          {/* Status indicator */}
+                          <p className="text-center text-sm text-gray-400 dark:text-gray-500 mt-3">
+                            {selectedQuestion
+                              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Question selected - Ready to generate</span>
+                              : customQuestion.trim()
+                                ? <span className="text-purple-600 dark:text-purple-400 font-medium">Custom question ready</span>
+                                : "Select a question or write your own"
+                            }
+                          </p>
+                        </div>
+
+                        {/* Back button */}
+                        <div className="text-center mt-6">
+                          <button
+                            onClick={() => setCurrentStep("select")}
+                            className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                            Back to Project Selection
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    {/* Questions from Define Tool - Card-based selection */}
-                    {researchQuestions.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                          <Import className="h-4 w-4 text-gray-500" />
-                          Questions from Define Tool ({researchQuestions.length})
-                        </div>
-                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                          {researchQuestions.map((question, idx) => {
-                            const isSelected = selectedQuestion === question;
-
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  setSelectedQuestion(question);
-                                  setCustomQuestion("");
-                                }}
-                                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                                  isSelected
-                                    ? "border-blue-500 bg-blue-50 shadow-md"
-                                    : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
-                                }`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  {/* Custom radio indicator */}
-                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
-                                    isSelected
-                                      ? "border-blue-600 bg-blue-600"
-                                      : "border-gray-300 bg-white"
-                                  }`}>
-                                    {isSelected && (
-                                      <Check className="w-3 h-3 text-white stroke-[3]" />
-                                    )}
-                                  </div>
-
-                                  {/* Question text */}
-                                  <span className={`text-sm leading-relaxed ${
-                                    isSelected ? "text-gray-900 font-medium" : "text-gray-700"
-                                  }`}>
-                                    {question}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Divider - "or enter custom question" */}
-                    {researchQuestions.length > 0 && (
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-gray-200" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                          <span className="px-4 bg-white text-gray-500 font-medium">
-                            or enter custom question
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Custom Question Textarea */}
-                    <div className="space-y-2">
-                      {researchQuestions.length === 0 && (
-                        <Label className="text-sm font-medium text-gray-700">
-                          Enter your research question
-                        </Label>
-                      )}
-                      <Textarea
-                        value={customQuestion}
-                        onChange={(e) => {
-                          setCustomQuestion(e.target.value);
-                          if (e.target.value) {
-                            setSelectedQuestion("");
-                          }
-                        }}
-                        placeholder="Type your research question here..."
-                        className="min-h-[120px] bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
-                      />
-                    </div>
-
-                    {/* Generate Button - Large and prominent */}
-                    <Button
-                      onClick={handleGenerateQuery}
-                      disabled={
-                        isGenerating ||
-                        (!selectedQuestion && !customQuestion.trim())
-                      }
-                      className="w-full h-12 text-base font-semibold shadow-sm hover:shadow-md transition-shadow"
-                      size="lg"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                          Generating Query...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-5 w-5 mr-2" />
-                          Generate PubMed Query
-                        </>
-                      )}
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                </>
+              );
+            })()}
           </div>
         )}
 

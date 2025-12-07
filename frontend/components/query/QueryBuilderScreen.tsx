@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Resizable Panels
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 
 // Types
 import type { QueryGenerateResponseV2 } from "@/lib/api";
@@ -85,25 +78,17 @@ export function QueryBuilderScreen({
     onExecuteSearch(currentQuery);
   };
 
-  // Check if we're on mobile
-  const [isMobileView] = useState(() => {
-    if (typeof window !== "undefined") {
-      return window.innerWidth < 768;
-    }
-    return false;
-  });
-
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col min-h-full">
       {/* Warnings Banner */}
       {queryResult.warnings && queryResult.warnings.length > 0 && (
-        <Card className="mx-4 mt-4 border-yellow-200 bg-yellow-50/50 flex-shrink-0">
+        <Card className="mx-4 mt-4 rounded-2xl border-2 border-amber-200 bg-amber-50/50 shadow-md dark:bg-amber-950/20 dark:border-amber-800 flex-shrink-0">
           <CardContent className="py-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
                 {queryResult.warnings.map((w, i) => (
-                  <p key={i} className="text-sm text-yellow-800">
+                  <p key={i} className="text-sm text-amber-800 dark:text-amber-300">
                     {w.message}
                   </p>
                 ))}
@@ -114,7 +99,7 @@ export function QueryBuilderScreen({
       )}
 
       {/* Page Header with Stepper */}
-      <div className="mx-4 mt-4 bg-card rounded-xl p-4 shadow-sm border border-border flex-shrink-0">
+      <div className="mx-4 mt-4 bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-md border-2 border-gray-100 dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">PubMed Query Architect</h1>
@@ -129,18 +114,18 @@ export function QueryBuilderScreen({
               <div key={step.id} className="flex items-center">
                 <div
                   className={cn(
-                    "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
-                    step.status === "active" && "bg-primary/10 text-primary",
-                    step.status === "completed" && "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400",
-                    step.status === "pending" && "bg-muted text-muted-foreground"
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+                    step.status === "active" && "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300",
+                    step.status === "completed" && "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                    step.status === "pending" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                   )}
                 >
                   <div
                     className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold",
-                      step.status === "active" && "bg-primary text-primary-foreground",
+                      "w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200",
+                      step.status === "active" && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm",
                       step.status === "completed" && "bg-emerald-500 text-white",
-                      step.status === "pending" && "bg-muted-foreground/30 text-muted-foreground"
+                      step.status === "pending" && "bg-gray-300 text-gray-500 dark:bg-gray-600 dark:text-gray-400"
                     )}
                   >
                     {step.status === "completed" ? (
@@ -160,61 +145,12 @@ export function QueryBuilderScreen({
         </div>
       </div>
 
-      {/* Split Screen Workspace */}
-      <div className="flex-1 overflow-hidden p-4">
-        {isMobileView ? (
-          // Mobile: Stacked view
-          <div className="space-y-4 h-full overflow-y-auto">
-            <FrameworkInputPanel
-              concepts={concepts}
-              isEditMode={isEditMode}
-              expandedEntryTerms={expandedEntryTerms}
-              newTermInput={newTermInput}
-              onStartEdit={actions.startEdit}
-              onCancelEdit={actions.cancelEdit}
-              onSaveEdit={actions.saveEdit}
-              onToggleEntryTerms={actions.toggleEntryTermsExpanded}
-              onRemoveTerm={actions.removeTermFromConcept}
-              onAddTerm={actions.addNewTerm}
-              onNewTermInputChange={actions.setNewTermInput}
-              className="min-h-[300px]"
-            />
-            <QueryOutputPanel
-              currentStrategy={currentStrategy}
-              currentQuery={currentQuery}
-              strategy={strategy}
-              addedFilters={addedFilters}
-              showMoreFilters={showMoreFilters}
-              groupedToolbox={groupedToolbox}
-              quickFilters={QUICK_FILTERS}
-              isSearching={isSearching}
-              isQueryEmpty={isQueryEmpty}
-              queryLength={queryLength}
-              perPage={perPage}
-              sortBy={sortBy}
-              onStrategyChange={actions.setStrategy}
-              onQueryChange={actions.setCurrentQuery}
-              onAddFilter={actions.addFilter}
-              onRemoveFilter={actions.removeFilter}
-              onClearAllFilters={actions.clearAllFilters}
-              onToggleMoreFilters={actions.toggleMoreFilters}
-              onExecute={handleExecute}
-              onOpenPubMed={() => onOpenPubMed(currentQuery)}
-              onCopy={() => onCopyQuery(currentQuery, "Query")}
-              onResetQuery={actions.resetToStrategyQuery}
-              setPerPage={setPerPage}
-              setSortBy={setSortBy}
-              className="min-h-[400px]"
-            />
-          </div>
-        ) : (
-          // Desktop: Split view with resizable panels
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="h-full rounded-lg border bg-background"
-          >
-            {/* Left Panel: Concept Analysis */}
-            <ResizablePanel defaultSize={40} minSize={25} maxSize={60}>
+      {/* Split Screen Workspace - Scrollable */}
+      <div className="flex-1 p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Left Panel: Concept Analysis (2/5) */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border-2 border-gray-100 bg-white shadow-md dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
               <FrameworkInputPanel
                 concepts={concepts}
                 isEditMode={isEditMode}
@@ -228,13 +164,12 @@ export function QueryBuilderScreen({
                 onAddTerm={actions.addNewTerm}
                 onNewTermInputChange={actions.setNewTermInput}
               />
-            </ResizablePanel>
+            </div>
+          </div>
 
-            {/* Resize Handle */}
-            <ResizableHandle withHandle />
-
-            {/* Right Panel: Query Builder */}
-            <ResizablePanel defaultSize={60} minSize={40} maxSize={75}>
+          {/* Right Panel: Query Builder (3/5) */}
+          <div className="lg:col-span-3">
+            <div className="rounded-2xl border-2 border-gray-100 bg-white shadow-md dark:bg-gray-900 dark:border-gray-800 overflow-hidden">
               <QueryOutputPanel
                 currentStrategy={currentStrategy}
                 currentQuery={currentQuery}
@@ -261,9 +196,9 @@ export function QueryBuilderScreen({
                 setPerPage={setPerPage}
                 setSortBy={setSortBy}
               />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
