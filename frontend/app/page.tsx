@@ -79,7 +79,7 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.5,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
 };
@@ -190,22 +190,23 @@ export default function HomePage() {
 
     try {
       // Call backend to structure the research question
-      const response = await api.chat({
-        project_id: "demo", // Special demo mode
-        message: `Structure this research topic into PICO format: "${demoInput}"`,
-        framework_type: "PICO",
-      });
+      const response = await api.chat(
+        "demo", // Special demo mode - project_id
+        `Structure this research topic into PICO format: "${demoInput}"`,
+        "PICO",
+        "en"
+      );
 
-      // Extract PICO from framework_data if available
-      if (response.framework_data) {
+      // Extract PICO from extracted_fields if available
+      if (response.extracted_fields) {
         setDemoResult({
-          p: response.framework_data.P || response.framework_data.population || "N/A",
-          i: response.framework_data.I || response.framework_data.intervention || "N/A",
-          c: response.framework_data.C || response.framework_data.comparison || "Standard Care",
-          o: response.framework_data.O || response.framework_data.outcome || "N/A",
+          p: response.extracted_fields.P || response.extracted_fields.population || "N/A",
+          i: response.extracted_fields.I || response.extracted_fields.intervention || "N/A",
+          c: response.extracted_fields.C || response.extracted_fields.comparison || "Standard Care",
+          o: response.extracted_fields.O || response.extracted_fields.outcome || "N/A",
         });
       } else {
-        // Fallback: parse from message
+        // Fallback: show example result
         setDemoResult({
           p: "Adults with the condition",
           i: "The proposed intervention",

@@ -248,16 +248,36 @@ export interface FinerScore {
   reason: string;
 }
 
-export interface FinerAssessmentResponse {
+export interface FinerAssessment {
   F: FinerScore;
   I: FinerScore;
   N: FinerScore;
   E: FinerScore;
   R: FinerScore;
-  overall: "proceed" | "revise" | "reconsider";
-  suggestions: string[];
+  overall?: "proceed" | "revise" | "reconsider";
+  overall_score?: number;
+  recommendation?: "proceed" | "revise" | "reconsider";
+  suggestions?: string[];
+}
+
+export interface FinerAssessmentResponse extends FinerAssessment {
   research_question: string;
   framework_type: string;
+}
+
+export interface FormulatedQuestion {
+  type: "broad" | "focused" | "alternative";
+  hebrew?: string;
+  english: string;
+  finer_assessment?: FinerAssessment;
+}
+
+export interface ChatResponse {
+  message: string;
+  framework_data?: Record<string, string>;
+  extracted_fields?: Record<string, string>;
+  finer_assessment?: FinerAssessment;
+  formulated_questions?: FormulatedQuestion[];
 }
 
 export interface BatchAnalysisResponse {

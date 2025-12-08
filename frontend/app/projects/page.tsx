@@ -23,7 +23,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { apiClient, type Project } from "@/lib/api";
-import { AlertTriangle, FolderOpen, Plus, Trash2 } from "lucide-react";
+import { ProjectCard } from "@/components/molecules/ProjectCard";
+import { EmptyState } from "@/components/molecules/EmptyState";
+import { AlertTriangle, FolderOpen, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function ProjectsPage() {
@@ -115,6 +117,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="container mx-auto px-6 py-12">
+      {/* Page Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
@@ -176,57 +179,30 @@ export default function ProjectsPage() {
         </Card>
       )}
 
-      {/* Projects Grid */}
+      {/* Projects Grid - Using ProjectCard molecule */}
       {projects.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="text-lg font-medium">No projects yet</p>
-            <p className="text-sm text-muted-foreground">
-              Create your first project to get started
-            </p>
+          <CardContent>
+            <EmptyState
+              icon={FolderOpen}
+              title="No projects yet"
+              description="Create your first project to start your systematic review journey"
+              actionLabel="Create Project"
+              onAction={() => setShowCreateForm(true)}
+            />
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card
+            <ProjectCard
               key={project.id}
-              className="flex flex-col group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-md"
-            >
-              <CardHeader>
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <FolderOpen className="h-5 w-5" />
-                </div>
-                <CardTitle className="mt-4 line-clamp-1" title={project.name}>
-                  {project.name}
-                </CardTitle>
-                <CardDescription className="line-clamp-2 min-h-[2.5rem]">
-                  {project.description || "No description provided"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div className="text-xs text-muted-foreground">
-                  Created: {new Date(project.created_at).toLocaleDateString()}
-                </div>
-              </CardContent>
-              <CardFooter className="gap-2 pt-0">
-                <Button variant="outline" className="flex-1" asChild>
-                  <a href={`/define?project=${project.id}`}>Open Project</a>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    setProjectToDelete(project);
-                    setDeleteConfirmation("");
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
+              project={project}
+              onDelete={(p) => {
+                setProjectToDelete(p);
+                setDeleteConfirmation("");
+              }}
+            />
           ))}
         </div>
       )}
@@ -247,7 +223,7 @@ export default function ProjectsPage() {
               project
               <span className="font-bold text-foreground">
                 {" "}
-                "{projectToDelete?.name}"{" "}
+                &ldquo;{projectToDelete?.name}&rdquo;{" "}
               </span>
               and all associated data, including:
               <ul className="list-disc list-inside mt-2 mb-2">

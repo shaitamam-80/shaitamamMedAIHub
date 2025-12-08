@@ -65,9 +65,28 @@ import { useRouter } from "next/navigation";
 // Import new screen components
 import { QueryBuilderScreen } from "@/components/query/QueryBuilderScreen";
 import { SearchResultsScreen } from "@/components/query/SearchResultsScreen";
+import { ProcessStepper, type Step as StepperStep } from "@/components/ui/process-stepper";
 
 // Step type for wizard - simplified to two-screen flow
 type Step = "select" | "generate" | "builder" | "results";
+
+// Step configuration for ProcessStepper
+const QUERY_STEPS: StepperStep[] = [
+  { id: 1, label: "Select", icon: FileText },
+  { id: 2, label: "Generate", icon: Sparkles },
+  { id: 3, label: "Builder", icon: Play },
+  { id: 4, label: "Results", icon: BookOpen },
+];
+
+// Map string step keys to numeric indices
+const stepKeyToIndex: Record<Step, number> = {
+  select: 1,
+  generate: 2,
+  builder: 3,
+  results: 4,
+};
+
+const stepIndexToKey: Step[] = ["select", "generate", "builder", "results"];
 
 export default function QueryPage() {
   const router = useRouter();
@@ -346,16 +365,6 @@ export default function QueryPage() {
     );
   }
 
-  // Stepper component - updated for two-screen flow
-  const steps = [
-    { key: "select", label: "Select Project", icon: FileText },
-    { key: "generate", label: "Generate Query", icon: Sparkles },
-    { key: "builder", label: "Query Builder", icon: Play },
-    { key: "results", label: "Search Results", icon: BookOpen },
-  ];
-
-  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
-
   return (
     <div
       className="min-h-screen bg-gradient-to-b from-background to-muted/20"
@@ -390,49 +399,14 @@ export default function QueryPage() {
           </div>
 
           {/* Progress Stepper */}
-          <div className="mt-6 flex items-center justify-center">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = step.key === currentStep;
-              const isCompleted = index < currentStepIndex;
-              const isClickable = index <= currentStepIndex;
-
-              return (
-                <div key={step.key} className="flex items-center">
-                  <button
-                    onClick={() =>
-                      isClickable && setCurrentStep(step.key as Step)
-                    }
-                    disabled={!isClickable}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : isCompleted
-                          ? "bg-primary/20 text-primary hover:bg-primary/30"
-                          : "bg-muted text-muted-foreground"
-                    } ${isClickable ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
-                  >
-                    {isCompleted ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline text-sm font-medium">
-                      {step.label}
-                    </span>
-                  </button>
-                  {index < steps.length - 1 && (
-                    <ChevronRight
-                      className={`h-4 w-4 mx-2 ${
-                        index < currentStepIndex
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
+          <div className="mt-6">
+            <ProcessStepper
+              steps={QUERY_STEPS}
+              currentStep={stepKeyToIndex[currentStep]}
+              onStepClick={(stepId) => setCurrentStep(stepIndexToKey[stepId - 1])}
+              restrictNavigation={true}
+              size="sm"
+            />
           </div>
         </div>
       </div>

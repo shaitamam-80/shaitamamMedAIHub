@@ -11,9 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { apiClient, ChatMessage, FrameworkSchema, Project, FinerAssessmentResponse } from "@/lib/api";
+import { apiClient, ChatMessage, FrameworkSchema, Project } from "@/lib/api";
 import {
-  CheckCircle2,
   Download,
   FileText,
   Loader2,
@@ -21,32 +20,12 @@ import {
   Send,
   Sparkles,
   Trash2,
-  ClipboardCheck,
-  AlertTriangle,
-  XCircle,
-  RefreshCw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { LanguageSelector } from "./components/LanguageSelector";
-import { ChatMessage as ChatMessageComponent } from "./components/ChatMessage";
-
-// Helper function to parse markdown-like content into structured sections
-const parseAssistantMessage = (content: string) => {
-  // Check if it's raw JSON (error case)
-  if (
-    content.startsWith('{"chat_response"') ||
-    content.startsWith('{"chat_response"')
-  ) {
-    try {
-      const parsed = JSON.parse(content);
-      return parsed.chat_response || content;
-    } catch {
-      return content;
-    }
-  }
-  return content;
-};
+import { ChatMessage as ChatMessageComponent, parseAssistantMessage } from "./components/ChatMessage";
+import type { FormulatedQuestion } from "@/lib/api";
 
 export default function DefinePage() {
   // State
@@ -66,12 +45,8 @@ export default function DefinePage() {
     "he" | "en" | null
   >(null);
   const [showProtocol, setShowProtocol] = useState(false);
-  const [showFinerDialog, setShowFinerDialog] = useState(false);
-  const [finerQuestion, setFinerQuestion] = useState("");
-  const [finerResults, setFinerResults] = useState<Map<string, FinerAssessmentResponse>>(new Map());
-  const [isFinerLoading, setIsFinerLoading] = useState(false);
-  const [extractedQuestions, setExtractedQuestions] = useState<string[]>([]);
-  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
+  // Store formulated questions with FINER assessments indexed by message position
+  const [formulatedQuestionsMap, setFormulatedQuestionsMap] = useState<Record<number, FormulatedQuestion[]>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load projects and frameworks on mount
@@ -182,11 +157,22 @@ export default function DefinePage() {
         preferredLanguage || "en"
       );
 
+      // Calculate the index for this assistant message (current messages + user message)
+      const newMessageIndex = messages.length + 1;
+
       // Add AI response to chat
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: data.message },
       ]);
+
+      // Store formulated questions with FINER assessments if present
+      if (data.formulated_questions && data.formulated_questions.length > 0) {
+        setFormulatedQuestionsMap((prev) => ({
+          ...prev,
+          [newMessageIndex]: data.formulated_questions!,
+        }));
+      }
 
       // Update framework data if extracted
       if (data.extracted_fields) {
@@ -273,37 +259,6 @@ export default function DefinePage() {
       lines.push(``);
     });
 
-    // Add FINER Assessment Results if available
-    if (finerResults.size > 0) {
-      lines.push(`## FINER Quality Assessment`);
-      lines.push(``);
-
-      let questionNum = 1;
-      finerResults.forEach((result, question) => {
-        lines.push(`### Assessment ${questionNum}: ${question}`);
-        lines.push(``);
-        lines.push(`**Overall Recommendation:** ${result.overall.toUpperCase()}`);
-        lines.push(``);
-        lines.push(`| Criterion | Score | Reason |`);
-        lines.push(`|-----------|-------|--------|`);
-        lines.push(`| Feasible | ${result.F.score} | ${result.F.reason} |`);
-        lines.push(`| Interesting | ${result.I.score} | ${result.I.reason} |`);
-        lines.push(`| Novel | ${result.N.score} | ${result.N.reason} |`);
-        lines.push(`| Ethical | ${result.E.score} | ${result.E.reason} |`);
-        lines.push(`| Relevant | ${result.R.score} | ${result.R.reason} |`);
-        lines.push(``);
-
-        if (result.suggestions && result.suggestions.length > 0) {
-          lines.push(`**Suggestions for Improvement:**`);
-          result.suggestions.forEach((suggestion, idx) => {
-            lines.push(`${idx + 1}. ${suggestion}`);
-          });
-          lines.push(``);
-        }
-        questionNum++;
-      });
-    }
-
     if (messages.length > 0) {
       lines.push(`## Conversation History`);
       lines.push(``);
@@ -350,6 +305,7 @@ export default function DefinePage() {
     try {
       await apiClient.clearConversation(selectedProjectId);
       setMessages([]);
+      setFormulatedQuestionsMap({});
       setPreferredLanguage(null);
       toast.success(
         preferredLanguage === "he" ? "ההיסטוריה נמחקה" : "Chat history cleared"
@@ -371,230 +327,6 @@ export default function DefinePage() {
       );
     } catch (error) {
       toast.error("Failed to save project");
-    }
-  };
-
-  // Extract research questions from chat messages
-  // Focus on finding actual formulated questions, not explanatory text
-  const extractQuestionsFromChat = (): string[] => {
-    const questions: string[] = [];
-
-    messages.forEach((msg) => {
-      if (msg.role === "assistant") {
-        const content = parseAssistantMessage(msg.content);
-
-        // Hebrew: Look for questions in quotes after formulation labels
-        // Pattern: "שאלה" or quoted text after ניסוח רחב/ממוקד
-        const hebrewQuotedPatterns = [
-          // Questions in Hebrew quotes after labels
-          /"([^"]+\?[^"]*)"/g,
-          /"([^"]+\?[^"]*)"/g,
-        ];
-
-        // English: Look for questions in quotes
-        const englishQuotedPatterns = [
-          /"([^"]+\?[^"]*)"/g,
-        ];
-
-        // Determine language based on content
-        const isHebrew = /[\u0590-\u05FF]/.test(content);
-        const patterns = isHebrew ? hebrewQuotedPatterns : englishQuotedPatterns;
-
-        patterns.forEach((pattern) => {
-          let match;
-          const regex = new RegExp(pattern.source, pattern.flags);
-          while ((match = regex.exec(content)) !== null) {
-            let question = match[1].trim();
-
-            // Clean up the question - remove leading/trailing punctuation
-            question = question.replace(/^[\s\-–—:]+/, "").replace(/[\s\-–—:]+$/, "");
-
-            // Validate: Must be a substantial question (30+ chars), end with ?, and not be English translation marker
-            const isValidQuestion =
-              question.length >= 30 &&
-              question.endsWith("?") &&
-              !question.toLowerCase().startsWith("what is the") && // Skip if it's English in Hebrew mode
-              !question.includes("English Translation") &&
-              !question.includes("🔤") &&
-              !questions.some((q) => q === question || q.includes(question) || question.includes(q));
-
-            if (isValidQuestion) {
-              questions.push(question);
-            }
-          }
-        });
-
-        // Fallback: If no quoted questions found and content is Hebrew,
-        // look for lines starting with common question words
-        if (questions.length === 0 && isHebrew) {
-          const lines = content.split("\n");
-          lines.forEach((line: string) => {
-            const trimmed = line.trim();
-            // Hebrew questions often start with: מהי, מהו, האם, כיצד, מה, איך
-            if (
-              /^[""]?(מהי|מהו|האם|כיצד|מה|איך|בקרב)/.test(trimmed) &&
-              trimmed.includes("?") &&
-              trimmed.length >= 30 &&
-              trimmed.length <= 500 // Not too long (avoid paragraphs)
-            ) {
-              const question = trimmed.replace(/^[""]/, "").replace(/[""]$/, "").trim();
-              if (!questions.includes(question)) {
-                questions.push(question);
-              }
-            }
-          });
-        }
-      }
-    });
-
-    // Limit to max 5 questions to avoid overwhelming the user
-    return questions.slice(0, 5);
-  };
-
-  // Handle opening FINER dialog - auto-extract questions
-  const handleOpenFinerDialog = (open: boolean) => {
-    setShowFinerDialog(open);
-    if (open) {
-      // Auto-extract questions when dialog opens
-      const extracted = extractQuestionsFromChat();
-      setExtractedQuestions(extracted);
-      // Pre-select all extracted questions
-      setSelectedQuestions(new Set(extracted));
-      // Clear previous results when opening fresh
-      setFinerResults(new Map());
-      setFinerQuestion("");
-    }
-  };
-
-  // Toggle question selection
-  const toggleQuestionSelection = (question: string) => {
-    setSelectedQuestions((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(question)) {
-        newSet.delete(question);
-      } else {
-        newSet.add(question);
-      }
-      return newSet;
-    });
-  };
-
-  const handleFinerAssessment = async () => {
-    if (!selectedProjectId) return;
-
-    // Gather questions to assess (selected extracted + manual input)
-    const questionsToAssess: string[] = [];
-
-    // Add selected extracted questions
-    selectedQuestions.forEach((q) => questionsToAssess.push(q));
-
-    // Add manual question if provided and not already included
-    if (finerQuestion.trim() && !questionsToAssess.includes(finerQuestion.trim())) {
-      questionsToAssess.push(finerQuestion.trim());
-    }
-
-    if (questionsToAssess.length === 0) {
-      toast.error(
-        preferredLanguage === "he"
-          ? "אנא בחר או הזן שאלת מחקר להערכה"
-          : "Please select or enter a research question to assess"
-      );
-      return;
-    }
-
-    setIsFinerLoading(true);
-    const newResults = new Map<string, FinerAssessmentResponse>();
-
-    // Assess each question
-    for (const question of questionsToAssess) {
-      try {
-        const result = await apiClient.assessFiner(
-          selectedProjectId,
-          question,
-          selectedFramework,
-          frameworkData,
-          preferredLanguage || "en"
-        );
-        newResults.set(question, result);
-      } catch (error) {
-        console.error(`Failed to assess question: ${question}`, error);
-      }
-    }
-
-    setFinerResults(newResults);
-    setIsFinerLoading(false);
-
-    if (newResults.size > 0) {
-      toast.success(
-        preferredLanguage === "he"
-          ? `הושלמו ${newResults.size} הערכות FINER!`
-          : `Completed ${newResults.size} FINER assessment(s)!`
-      );
-    } else {
-      toast.error(
-        preferredLanguage === "he"
-          ? "שגיאה בביצוע הערכת FINER"
-          : "Failed to assess research questions"
-      );
-    }
-  };
-
-  // Send question with FINER suggestions back to chat for revision
-  const handleSendForRevision = (question: string, result: FinerAssessmentResponse) => {
-    // Build a message with the question and suggestions
-    const suggestionsText = result.suggestions.join("\n- ");
-    const revisionMessage = preferredLanguage === "he"
-      ? `אני רוצה לשפר את שאלת המחקר הבאה על סמך הערכת FINER:\n\nשאלה: "${question}"\n\nהמלצות לשיפור:\n- ${suggestionsText}\n\nאנא עזור לי לנסח מחדש את השאלה בהתאם להמלצות אלו.`
-      : `I want to improve the following research question based on FINER assessment:\n\nQuestion: "${question}"\n\nSuggestions for improvement:\n- ${suggestionsText}\n\nPlease help me reformulate the question according to these suggestions.`;
-
-    // Close FINER dialog
-    setShowFinerDialog(false);
-
-    // Set the message in the input and send it
-    setInputMessage(revisionMessage);
-
-    // Small delay to allow state update, then send
-    setTimeout(() => {
-      handleSendMessage();
-    }, 100);
-  };
-
-  const getScoreColor = (score: string) => {
-    switch (score) {
-      case "high":
-        return "text-green-600 dark:text-green-400";
-      case "medium":
-        return "text-yellow-600 dark:text-yellow-400";
-      case "low":
-        return "text-red-600 dark:text-red-400";
-      default:
-        return "text-muted-foreground";
-    }
-  };
-
-  const getScoreIcon = (score: string) => {
-    switch (score) {
-      case "high":
-        return <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />;
-      case "medium":
-        return <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
-      case "low":
-        return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
-      default:
-        return null;
-    }
-  };
-
-  const getOverallColor = (overall: string) => {
-    switch (overall) {
-      case "proceed":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-      case "revise":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-      case "reconsider":
-        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-      default:
-        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -763,217 +495,6 @@ export default function DefinePage() {
             </DialogContent>
           </Dialog>
 
-          {/* FINER Assessment Button & Dialog */}
-          <Dialog open={showFinerDialog} onOpenChange={handleOpenFinerDialog}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!selectedProjectId}
-                className="gap-2"
-                title="FINER Assessment"
-              >
-                <ClipboardCheck className="h-4 w-4" />
-                <span className="hidden md:inline">FINER</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" dir={preferredLanguage === "he" ? "rtl" : "ltr"}>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-primary" />
-                  {preferredLanguage === "he" ? "הערכת FINER" : "FINER Assessment"}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="flex-1 overflow-y-auto space-y-4 py-4">
-                {/* Description */}
-                <p className="text-sm text-muted-foreground">
-                  {preferredLanguage === "he"
-                    ? "הערך את איכות שאלות המחקר שלך לפי קריטריוני FINER: ישימות, עניין, חדשנות, אתיקה ורלוונטיות."
-                    : "Evaluate your research question(s) quality using FINER criteria: Feasible, Interesting, Novel, Ethical, and Relevant."}
-                </p>
-
-                {/* Extracted Questions Section */}
-                {extractedQuestions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      {preferredLanguage === "he"
-                        ? `שאלות שזוהו מהשיחה (${extractedQuestions.length}):`
-                        : `Questions detected from chat (${extractedQuestions.length}):`}
-                    </Label>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-2">
-                      {extractedQuestions.map((question, idx) => (
-                        <label
-                          key={idx}
-                          className={`flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 ${
-                            selectedQuestions.has(question) ? "bg-primary/10" : ""
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedQuestions.has(question)}
-                            onChange={() => toggleQuestionSelection(question)}
-                            className="mt-1 h-4 w-4 rounded border-border"
-                          />
-                          <span className="text-sm flex-1">{question}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedQuestions(new Set(extractedQuestions))}
-                        className="text-primary hover:underline"
-                      >
-                        {preferredLanguage === "he" ? "בחר הכל" : "Select All"}
-                      </button>
-                      <span className="text-muted-foreground">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedQuestions(new Set())}
-                        className="text-primary hover:underline"
-                      >
-                        {preferredLanguage === "he" ? "נקה בחירה" : "Clear Selection"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Manual Research Question Input */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    {preferredLanguage === "he"
-                      ? extractedQuestions.length > 0 ? "או הוסף שאלה ידנית:" : "שאלת המחקר"
-                      : extractedQuestions.length > 0 ? "Or add a question manually:" : "Research Question"}
-                  </Label>
-                  <Textarea
-                    value={finerQuestion}
-                    onChange={(e) => setFinerQuestion(e.target.value)}
-                    placeholder={
-                      preferredLanguage === "he"
-                        ? "הדבק או כתוב שאלת מחקר נוספת להערכה..."
-                        : "Paste or type an additional research question to evaluate..."
-                    }
-                    className="min-h-[80px] resize-none text-sm"
-                  />
-                </div>
-
-                {/* Assess Button */}
-                <Button
-                  onClick={handleFinerAssessment}
-                  disabled={isFinerLoading || (selectedQuestions.size === 0 && !finerQuestion.trim())}
-                  className="w-full"
-                >
-                  {isFinerLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {preferredLanguage === "he" ? "מעריך..." : "Assessing..."}
-                    </>
-                  ) : (
-                    <>
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      {preferredLanguage === "he"
-                        ? `בצע הערכת FINER (${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0)} שאלות)`
-                        : `Run FINER Assessment (${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0)} question${selectedQuestions.size + (finerQuestion.trim() ? 1 : 0) !== 1 ? "s" : ""})`}
-                    </>
-                  )}
-                </Button>
-
-                {/* FINER Results - Multiple Questions */}
-                {finerResults.size > 0 && (
-                  <div className="space-y-6 pt-4 border-t">
-                    {Array.from(finerResults.entries()).map(([question, result], questionIdx) => (
-                      <div key={questionIdx} className="space-y-4">
-                        {/* Question Header */}
-                        <div className="flex items-start gap-2 bg-muted/50 rounded-lg p-3">
-                          <Badge variant="outline" className="shrink-0 mt-0.5">
-                            {preferredLanguage === "he" ? `שאלה ${questionIdx + 1}` : `Q${questionIdx + 1}`}
-                          </Badge>
-                          <p className="text-sm font-medium flex-1">{question}</p>
-                        </div>
-
-                        {/* Overall Score */}
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">
-                            {preferredLanguage === "he" ? "המלצה כללית:" : "Overall:"}
-                          </span>
-                          <Badge className={`${getOverallColor(result.overall)} text-sm px-3 py-1`}>
-                            {result.overall === "proceed"
-                              ? preferredLanguage === "he" ? "✅ המשך" : "✅ Proceed"
-                              : result.overall === "revise"
-                              ? preferredLanguage === "he" ? "⚠️ תקן" : "⚠️ Revise"
-                              : preferredLanguage === "he" ? "❌ שקול מחדש" : "❌ Reconsider"}
-                          </Badge>
-                        </div>
-
-                        {/* Individual Scores */}
-                        <div className="space-y-3">
-                          {[
-                            { key: "F", label: preferredLanguage === "he" ? "ישימות (Feasible)" : "Feasible", data: result.F },
-                            { key: "I", label: preferredLanguage === "he" ? "עניין (Interesting)" : "Interesting", data: result.I },
-                            { key: "N", label: preferredLanguage === "he" ? "חדשנות (Novel)" : "Novel", data: result.N },
-                            { key: "E", label: preferredLanguage === "he" ? "אתיקה (Ethical)" : "Ethical", data: result.E },
-                            { key: "R", label: preferredLanguage === "he" ? "רלוונטיות (Relevant)" : "Relevant", data: result.R },
-                          ].map(({ key, label, data }) => (
-                            <div key={key} className="rounded-lg border p-3 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-sm">{label}</span>
-                                <div className="flex items-center gap-1.5">
-                                  {getScoreIcon(data.score)}
-                                  <span className={`text-sm font-medium ${getScoreColor(data.score)}`}>
-                                    {data.score === "high"
-                                      ? preferredLanguage === "he" ? "גבוה" : "High"
-                                      : data.score === "medium"
-                                      ? preferredLanguage === "he" ? "בינוני" : "Medium"
-                                      : preferredLanguage === "he" ? "נמוך" : "Low"}
-                                  </span>
-                                </div>
-                              </div>
-                              <p className="text-xs text-muted-foreground">{data.reason}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Suggestions */}
-                        {result.suggestions && result.suggestions.length > 0 && (
-                          <div className="space-y-2">
-                            <span className="font-medium text-sm">
-                              {preferredLanguage === "he" ? "הצעות לשיפור:" : "Suggestions:"}
-                            </span>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                              {result.suggestions.map((suggestion, idx) => (
-                                <li key={idx}>{suggestion}</li>
-                              ))}
-                            </ul>
-
-                            {/* Send for Revision Button - only show if overall is revise or reconsider */}
-                            {(result.overall === "revise" || result.overall === "reconsider") && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSendForRevision(question, result)}
-                                className="mt-3 gap-2"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                                {preferredLanguage === "he"
-                                  ? "שלח לתיקון בצ'אט"
-                                  : "Send for revision in chat"}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Separator between questions */}
-                        {questionIdx < finerResults.size - 1 && (
-                          <hr className="border-border" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
 
           <Button
             variant="ghost"
@@ -990,7 +511,7 @@ export default function DefinePage() {
 
       {/* Main Content - Centralized Chat */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-4 md:p-6">
+        <div className="max-w-6xl mx-auto p-4 md:p-6">
           <div
             className={`flex flex-col gap-6 ${
               preferredLanguage === "he" ? "items-end" : "items-start"
@@ -1054,6 +575,7 @@ export default function DefinePage() {
                 content={message.content}
                 role={message.role}
                 preferredLanguage={preferredLanguage}
+                cards={message.role === "assistant" ? formulatedQuestionsMap[index] : undefined}
               />
             ))}
 
@@ -1091,7 +613,7 @@ export default function DefinePage() {
         className="border-t border-border bg-card p-4"
         dir={preferredLanguage === "he" ? "rtl" : "ltr"}
       >
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="relative flex gap-2">
             <Textarea
               value={inputMessage}

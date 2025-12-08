@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, ArrowRight, Check, X, FileText, Settings, Sliders, Play } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { ProcessStepper } from "@/components/ui/process-stepper";
 import apiClient from "@/lib/api";
 
 // Step Components
@@ -30,6 +30,14 @@ interface ScreeningWizardProps {
   onComplete?: (result: ScreeningResult) => void;
   onCancel?: () => void;
 }
+
+// Stepper Configuration
+const WIZARD_STEPS = [
+  { id: 1, label: "Framework", icon: FileText },
+  { id: 2, label: "Method", icon: Settings },
+  { id: 3, label: "Criteria", icon: Sliders },
+  { id: 4, label: "Execute", icon: Play },
+];
 
 export function ScreeningWizard({
   projectId,
@@ -239,47 +247,32 @@ export function ScreeningWizard({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Wizard Header */}
-      <div className="border-b bg-white dark:bg-gray-900 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Smart Screener</h1>
-            <p className="text-sm text-muted-foreground">
-              {projectName}
-            </p>
+    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-950/30">
+      {/* Wizard Header with ProcessStepper */}
+      <div className="border-b bg-white dark:bg-gray-900 px-6 py-4 shadow-sm">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                Smart Screener
+                <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {projectName}
+                </span>
+              </h1>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <X className="h-4 w-4 mr-1" /> Close
+            </Button>
           </div>
 
-          {/* Step Indicator */}
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4].map((step) => (
-              <React.Fragment key={step}>
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-all",
-                    currentStep === step &&
-                      "bg-blue-600 text-white shadow-md scale-110",
-                    currentStep > step && "bg-emerald-500 text-white",
-                    currentStep < step && "bg-gray-200 text-gray-500 dark:bg-gray-700"
-                  )}
-                >
-                  {currentStep > step ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    step
-                  )}
-                </div>
-                {step < 4 && (
-                  <div
-                    className={cn(
-                      "h-0.5 w-12 transition-all",
-                      currentStep > step ? "bg-emerald-500" : "bg-gray-200 dark:bg-gray-700"
-                    )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+          {/* Process Stepper */}
+          <ProcessStepper
+            steps={WIZARD_STEPS}
+            currentStep={currentStep}
+            onStepClick={(stepId) => stepId < currentStep && setCurrentStep(stepId)}
+            restrictNavigation={true}
+            size="sm"
+          />
         </div>
       </div>
 
@@ -324,18 +317,13 @@ export function ScreeningWizard({
       </div>
 
       {/* Navigation Footer */}
-      <Card className="border-t rounded-none shadow-lg">
-        <div className="flex items-center justify-between px-6 py-4">
-          {/* Cancel/Back */}
+      <div className="border-t bg-white dark:bg-gray-900 px-6 py-4">
+        <div className="mx-auto max-w-5xl flex items-center justify-between">
+          {/* Back Button */}
           <div>
-            {currentStep === 1 ? (
-              <Button variant="ghost" onClick={onCancel}>
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            ) : (
+            {currentStep > 1 && (
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={handleBack}
                 disabled={isRunning}
               >
@@ -345,26 +333,23 @@ export function ScreeningWizard({
             )}
           </div>
 
-          {/* Step Label */}
-          <div className="text-sm text-muted-foreground">
-            Step {currentStep} of 4
-          </div>
-
-          {/* Next */}
+          {/* Next/Finish Button */}
           <div>
             {currentStep < 4 ? (
               <Button
                 onClick={handleNext}
                 disabled={!canProceed()}
+                className="min-w-[120px]"
               >
-                Next
+                Next Step
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <Button
                 onClick={() => onComplete?.(result!)}
                 disabled={!result}
-                variant="default"
+                variant={result ? "default" : "secondary"}
+                className="min-w-[120px]"
               >
                 <Check className="mr-2 h-4 w-4" />
                 Finish
@@ -372,7 +357,7 @@ export function ScreeningWizard({
             )}
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

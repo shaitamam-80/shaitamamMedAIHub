@@ -34,8 +34,8 @@ async def get_frameworks():
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("10/minute")
 async def chat(
-    http_request: Request,
-    request: ChatRequest,
+    request: Request,
+    chat_request: ChatRequest,
     current_user: UserPayload = Depends(get_current_user)
 ):
     """
@@ -50,7 +50,7 @@ async def chat(
     """
     try:
         # Verify project exists
-        project = await db_service.get_project(request.project_id)
+        project = await db_service.get_project(chat_request.project_id)
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -65,14 +65,14 @@ async def chat(
         # Save user message
         await db_service.save_message(
             {
-                "project_id": str(request.project_id),
+                "project_id": str(chat_request.project_id),
                 "role": "user",
-                "content": request.message,
+                "content": chat_request.message,
             }
         )
 
         # Get conversation history
-        conversation = await db_service.get_conversation(request.project_id)
+        conversation = await db_service.get_conversation(chat_request.project_id)
 
         # Convert to format expected by AI service
         chat_history = [
@@ -80,10 +80,10 @@ async def chat(
         ]
 
         # Get AI response (returns dict with chat_response and framework_data)
-        framework_type = request.framework_type or project.get("framework_type", "PICO")
-        language = request.language or "en"
+        framework_type = chat_request.framework_type or project.get("framework_type", "PICO")
+        language = chat_request.language or "en"
         ai_result = await ai_service.chat_for_define(
-            message=request.message,
+            message=chat_request.message,
             conversation_history=chat_history,
             framework_type=framework_type,
             language=language,
@@ -93,11 +93,12 @@ async def chat(
         ai_response = ai_result.get("chat_response", "")
         extracted_data = ai_result.get("framework_data", {})
         finer_assessment = ai_result.get("finer_assessment")
+        formulated_questions = ai_result.get("formulated_questions")
 
         # Save AI response (only the chat_response text, not the full JSON)
         await db_service.save_message(
             {
-                "project_id": str(request.project_id),
+                "project_id": str(chat_request.project_id),
                 "role": "assistant",
                 "content": ai_response,
             }
@@ -106,7 +107,7 @@ async def chat(
         # Update project with extracted data if any
         if extracted_data:
             await db_service.update_project(
-                request.project_id,
+                chat_request.project_id,
                 {
                     "framework_type": framework_type,
                     "framework_data": extracted_data,
@@ -118,12 +119,13 @@ async def chat(
             framework_data=extracted_data if extracted_data else None,
             extracted_fields=extracted_data if extracted_data else None,
             finer_assessment=finer_assessment,
+            formulated_questions=formulated_questions,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Error in chat for project {request.project_id}: {e}")
+        logger.exception(f"Error in chat for project {chat_request.project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing your message.",

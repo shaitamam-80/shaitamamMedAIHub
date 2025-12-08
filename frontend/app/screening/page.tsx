@@ -36,13 +36,18 @@ function ScreeningContent() {
       const projectData = await apiClient.getProject(projectId);
       setProject(projectData);
 
-      // TODO: Load PMIDs from search results or uploaded files
-      // For now, we'll use an empty array as placeholder
-      // In production, you would fetch from:
-      // - Recent PubMed search results
-      // - Uploaded MEDLINE files
-      // const abstractsData = await apiClient.getAbstracts(projectId);
-      // setPmids(abstractsData.map(a => a.pmid));
+      // Load PMIDs from abstracts table (uploaded MEDLINE files or search results)
+      try {
+        const abstractsData = await apiClient.getAbstracts(projectId);
+        const validPmids = abstractsData
+          .map((a) => a.pmid)
+          .filter((pmid): pmid is string => Boolean(pmid));
+        setPmids(validPmids);
+      } catch {
+        // If no abstracts found, continue with empty PMIDs
+        // User can still configure criteria
+        setPmids([]);
+      }
 
       setLoading(false);
     } catch (err) {

@@ -219,8 +219,14 @@ class AIService:
         # Parse the hybrid JSON response
         result = self._extract_json(response.content, find_object=True)
 
-        if result and "chat_response" in result and "framework_data" in result:
-            return result
+        if result and "chat_response" in result:
+            # Return all parsed fields including formulated_questions and finer_assessment
+            return {
+                "chat_response": result.get("chat_response", ""),
+                "framework_data": result.get("framework_data", {}),
+                "formulated_questions": result.get("formulated_questions"),
+                "finer_assessment": result.get("finer_assessment"),
+            }
         else:
             # Fallback if AI didn't follow format
             return {

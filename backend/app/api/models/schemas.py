@@ -153,7 +153,17 @@ class FinerAssessment(BaseModel):
     E: Optional[FinerScore] = Field(None, description="Ethical - Can this be conducted ethically?")
     R: Optional[FinerScore] = Field(None, description="Relevant - Will results matter?")
     overall: Optional[str] = Field(None, pattern="^(proceed|revise|reconsider)$")
+    overall_score: Optional[int] = Field(None, ge=0, le=100, description="Numeric score 0-100")
+    recommendation: Optional[str] = Field(None, pattern="^(proceed|revise|reconsider)$")
     suggestions: Optional[List[str]] = None
+
+
+class FormulatedQuestion(BaseModel):
+    """A formulated research question with FINER assessment"""
+    type: str = Field(..., description="Question type: broad, focused, or alternative")
+    hebrew: Optional[str] = Field(None, description="Hebrew version of the question")
+    english: str = Field(..., description="English version of the question")
+    finer_assessment: Optional[FinerAssessment] = None
 
 
 class ChatResponse(BaseModel):
@@ -161,6 +171,10 @@ class ChatResponse(BaseModel):
     framework_data: Optional[Dict[str, Any]] = None
     extracted_fields: Optional[Dict[str, str]] = None
     finer_assessment: Optional[FinerAssessment] = None
+    formulated_questions: Optional[List[FormulatedQuestion]] = Field(
+        None,
+        description="Formulated questions with automatic FINER assessment"
+    )
 
 
 class FinerAssessmentRequest(BaseModel):

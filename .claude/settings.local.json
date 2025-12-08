@@ -60,7 +60,10 @@
       "Bash(forfiles /P \"C:\\Users\\shait\\Downloads\" /M \"desc2025.gz\" /C \"cmd /c echo @fsize bytes\")",
       "Bash(source:*)",
       "Bash(timeout 5 python:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(\".venv\\Scripts\\python.exe\" main.py)",
+      "Bash(npm run storybook:*)",
+      "Bash(move \".storybook\\preview.ts\" \".storybook\\preview.tsx\")"
     ],
     "deny": [],
     "ask": []

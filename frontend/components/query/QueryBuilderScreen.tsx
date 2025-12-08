@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle } from "lucide-react";
+import { CompactStepper } from "@/components/ui/process-stepper";
 
 // Types
 import type { QueryGenerateResponseV2 } from "@/lib/api";
@@ -32,14 +32,14 @@ interface QueryBuilderScreenProps {
 }
 
 // ============================================================================
-// Stepper Configuration
+// Stepper Configuration (for CompactStepper)
 // ============================================================================
 
-const steps = [
-  { id: 1, label: "Define Question", status: "completed" as const },
-  { id: 2, label: "Expand Terms", status: "completed" as const },
-  { id: 3, label: "Build Query", status: "active" as const },
-  { id: 4, label: "Execute & Screen", status: "pending" as const },
+const BUILDER_STEPS = [
+  { id: 1, label: "Define Question" },
+  { id: 2, label: "Expand Terms" },
+  { id: 3, label: "Build Query" },
+  { id: 4, label: "Execute" },
 ];
 
 // ============================================================================
@@ -108,40 +108,12 @@ export function QueryBuilderScreen({
             </p>
           </div>
 
-          {/* Mini Stepper */}
-          <div className="hidden md:flex items-center gap-1">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
-                    step.status === "active" && "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 dark:from-blue-900/40 dark:to-indigo-900/40 dark:text-blue-300",
-                    step.status === "completed" && "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-                    step.status === "pending" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200",
-                      step.status === "active" && "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm",
-                      step.status === "completed" && "bg-emerald-500 text-white",
-                      step.status === "pending" && "bg-gray-300 text-gray-500 dark:bg-gray-600 dark:text-gray-400"
-                    )}
-                  >
-                    {step.status === "completed" ? (
-                      <Check className="h-2.5 w-2.5" />
-                    ) : (
-                      step.id
-                    )}
-                  </div>
-                  <span className="hidden lg:inline">{step.label}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="w-4 h-px bg-border mx-1" />
-                )}
-              </div>
-            ))}
-          </div>
+          {/* Mini Stepper - Step 3 is active in Builder view */}
+          <CompactStepper
+            steps={BUILDER_STEPS}
+            currentStep={3}
+            className="hidden md:flex"
+          />
         </div>
       </div>
 

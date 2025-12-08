@@ -228,3 +228,58 @@ COMMENT ON COLUMN screening_criteria.intervention_criteria IS 'I - Intervention 
 COMMENT ON COLUMN screening_criteria.comparator_criteria IS 'C - Comparator criteria';
 COMMENT ON COLUMN screening_criteria.outcome_criteria IS 'O - Outcome criteria';
 COMMENT ON COLUMN screening_criteria.study_design_criteria IS 'S - Study design criteria and quality pack';
+
+-- ============================================================================
+-- ARTICLE DECISIONS TABLE (Smart Screener Results)
+-- Stores AI and rule-based screening decisions for each article
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS article_decisions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    pmid VARCHAR(20) NOT NULL,
+    title TEXT,
+
+    -- Decision source: 'rule_engine', 'ai_model', 'human_override'
+    source VARCHAR(50) NOT NULL DEFAULT 'ai_model',
+
+    -- Decision status: 'included', 'excluded', 'unclear'
+    status VARCHAR(20) NOT NULL,
+
+    -- Reasoning and evidence
+    reason TEXT,
+    evidence_quote VARCHAR(500), -- Supporting quote from abstract
+    study_type_classification VARCHAR(50), -- RCT, Cohort, Case-Control, etc.
+    confidence DECIMAL(3,2), -- AI confidence score 0.00-1.00
+
+    -- Human override fields
+    human_override_status VARCHAR(20),
+    human_notes TEXT,
+
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Unique constraint: one decision per article per project
+    UNIQUE(project_id, pmid)
+);
+
+-- Indexes for fast queries
+CREATE INDEX IF NOT EXISTS idx_article_decisions_project_id ON article_decisions(project_id);
+CREATE INDEX IF NOT EXISTS idx_article_decisions_status ON article_decisions(status);
+CREATE INDEX IF NOT EXISTS idx_article_decisions_pmid ON article_decisions(pmid);
+CREATE INDEX IF NOT EXISTS idx_article_decisions_source ON article_decisions(source);
+
+-- Trigger to update updated_at timestamp
+DROP TRIGGER IF EXISTS update_article_decisions_timestamp ON article_decisions;
+CREATE TRIGGER update_article_decisions_timestamp
+    BEFORE UPDATE ON article_decisions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Comments
+COMMENT ON TABLE article_decisions IS 'Smart Screener results - stores AI and rule-based screening decisions';
+COMMENT ON COLUMN article_decisions.source IS 'Decision source: rule_engine (deterministic), ai_model (Gemini), human_override';
+COMMENT ON COLUMN article_decisions.status IS 'Screening decision: included, excluded, unclear';
+COMMENT ON COLUMN article_decisions.evidence_quote IS 'Supporting text extracted from abstract (max 500 chars)';
+COMMENT ON COLUMN article_decisions.confidence IS 'AI confidence score between 0.00 and 1.00';
