@@ -63,7 +63,8 @@
       "Bash(pytest:*)",
       "Bash(\".venv\\Scripts\\python.exe\" main.py)",
       "Bash(npm run storybook:*)",
-      "Bash(move \".storybook\\preview.ts\" \".storybook\\preview.tsx\")"
+      "Bash(move \".storybook\\preview.ts\" \".storybook\\preview.tsx\")",
+      "Bash(git -C \"c:\\Users\\shait\\OneDrive\\Documentos\\GitHub\\shaitamamMedAIHub\" status)"
     ],
     "deny": [],
     "ask": []
