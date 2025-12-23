@@ -4,21 +4,18 @@ Manages the Smart Screener pipeline: Fetch -> Parse -> Rule Engine -> AI -> Save
 """
 
 import logging
-import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from app.api.models.screening import (
-    CriteriaConfig,
     ArticleDecisionCreate,
-    ScreeningCriteriaCreate,
+    CriteriaConfig,
 )
-from app.services.pubmed_service import pubmed_service
-from app.services.medline_parser import MedlineParser
-from app.services.rule_engine import RuleEngine
-from app.services.database import db_service
 from app.services.ai_service import ai_service
+from app.services.database import db_service
+from app.services.medline_parser import MedlineParser
+from app.services.pubmed_service import pubmed_service
+from app.services.rule_engine import RuleEngine
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +56,8 @@ class ScreeningService:
         return response.data[0]["id"]
 
     async def process_pmids(
-        self, project_id: UUID, pmids: List[str], criteria_config: CriteriaConfig, user_id: str
-    ) -> Dict[str, Any]:
+        self, project_id: UUID, pmids: list[str], criteria_config: CriteriaConfig, user_id: str
+    ) -> dict[str, Any]:
         """
         Run the full screening pipeline on a list of PMIDs.
         """
@@ -132,7 +129,7 @@ class ScreeningService:
                     title=abstract.title or "",
                     framework_data=framework_data,
                     criteria_codes=all_criteria_codes,
-                    review_type=criteria_config.review_type
+                    review_type=criteria_config.review_type,
                 )
 
                 # Update decision with AI results

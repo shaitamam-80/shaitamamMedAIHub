@@ -5,16 +5,12 @@ System prompts for research question formulation with framework extraction
 Implements the "Architect, Don't Answer" methodology from QUESTION ARCHITECT.
 """
 
-from typing import Dict, Any, List
-from .shared import (
-    FRAMEWORK_SCHEMAS,
-    get_framework_components,
-    FRAMEWORK_CHEAT_SHEET,
-    CROSS_TYPE_GUIDANCE,
-    INSUFFICIENT_INFO_RESPONSES,
-    HEBREW_GUIDELINES,
-)
+from typing import Any
 
+from .shared import (
+    FRAMEWORK_CHEAT_SHEET,
+    FRAMEWORK_SCHEMAS,
+)
 
 # Visual Decision Tree for Framework Selection (Updated from V2.1 Document)
 VISUAL_DECISION_TREE = """
@@ -185,9 +181,7 @@ def get_define_system_prompt(
     labels = framework_schema["labels"]
 
     # Build component descriptions for the current context
-    component_descriptions = "\n".join(
-        [f"  - **{comp}** ({labels[comp]})" for comp in components]
-    )
+    "\n".join([f"  - **{comp}** ({labels[comp]})" for comp in components])
 
     # Start with the Core Instructions
     prompt = CORE_INSTRUCTIONS
@@ -204,7 +198,7 @@ def get_define_system_prompt(
 
 ## CURRENT CONTEXT (Starting Point)
 The user has currently selected (or defaulted to): **{framework_type}**
-**Components:** {', '.join(components)}
+**Components:** {", ".join(components)}
 
 **INSTRUCTION:** If the user's intent matches {framework_type}, proceed. **IF NOT**, politely suggest switching to the correct framework based on the Decision Tree and explain why.
 
@@ -218,7 +212,7 @@ The user has currently selected (or defaulted to): **{framework_type}**
 {{
   "chat_response": "Your FULL conversational response in Markdown format (see REQUIRED CONTENT below)",
   "framework_data": {{
-    {', '.join([f'"{comp}": "extracted value or empty string"' for comp in components])}
+    {", ".join([f'"{comp}": "extracted value or empty string"' for comp in components])}
   }},
   "formulated_questions": [
     {{
@@ -244,7 +238,7 @@ The user has currently selected (or defaulted to): **{framework_type}**
 **The content language depends on the user's selected language (Hebrew or English) - see language-specific instructions below.**
 
 ### Rules for `framework_data`:
-1. Use the **exact component keys** for the *currently active* framework: {', '.join([f'"{c}"' for c in components])}
+1. Use the **exact component keys** for the *currently active* framework: {", ".join([f'"{c}"' for c in components])}
 2. Use **empty string `""`** if component is not yet defined.
 3. If you suggest **switching frameworks** (e.g., PICO -> CoCoPop), keep `framework_data` empty or map relevant fields, but explain the switch in `chat_response`. The system will update the schema in the next turn.
 
@@ -461,9 +455,7 @@ When the user selects English:
     return prompt
 
 
-def get_extraction_prompt(
-    conversation_history: List[Dict[str, str]], framework_type: str
-) -> str:
+def get_extraction_prompt(conversation_history: list[dict[str, str]], framework_type: str) -> str:
     """
     Returns a prompt for extracting framework data from conversation history.
     """
@@ -476,9 +468,7 @@ def get_extraction_prompt(
         [f"{msg['role'].upper()}: {msg['content']}" for msg in conversation_history]
     )
 
-    component_list = "\n".join(
-        [f'  - "{comp}": "{labels[comp]}"' for comp in components]
-    )
+    component_list = "\n".join([f'  - "{comp}": "{labels[comp]}"' for comp in components])
 
     return f"""# Task: Extract Framework Data
 
@@ -496,7 +486,7 @@ Extract values for:
 Return ONLY a valid JSON object:
 ```json
 {{
-  {', '.join([f'"{comp}": "extracted value or empty string"' for comp in components])}
+  {", ".join([f'"{comp}": "extracted value or empty string"' for comp in components])}
 }}
 ```
 """
@@ -519,8 +509,8 @@ def get_response_template(complexity_level: str = "standard") -> str:
 def get_finer_assessment_prompt(
     research_question: str,
     framework_type: str,
-    framework_data: Dict[str, Any],
-    language: str = "en"
+    framework_data: dict[str, Any],
+    language: str = "en",
 ) -> str:
     """
     Returns the system prompt for FINER assessment of a research question.
@@ -535,11 +525,9 @@ def get_finer_assessment_prompt(
         System prompt for FINER evaluation
     """
 
-    framework_text = "\n".join([
-        f"- **{key}:** {value}"
-        for key, value in framework_data.items()
-        if value
-    ])
+    framework_text = "\n".join(
+        [f"- **{key}:** {value}" for key, value in framework_data.items() if value]
+    )
 
     language_instruction = ""
     if language == "he":

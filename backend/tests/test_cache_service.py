@@ -5,24 +5,25 @@ Tests both MemoryCache and the cache_service module functions.
 Redis tests are skipped if Redis is not available.
 """
 
-import pytest
-from datetime import timedelta
 import asyncio
-from unittest.mock import patch, AsyncMock, MagicMock
+from datetime import timedelta
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.services.cache_service import (
-    MemoryCache,
     CacheInterface,
+    MemoryCache,
+    create_cache,
+    get_cached_or_compute,
     mesh_cache_key,
     translation_cache_key,
-    get_cached_or_compute,
-    create_cache,
 )
-
 
 # ============================================================================
 # MemoryCache Tests
 # ============================================================================
+
 
 class TestMemoryCache:
     """Tests for in-memory cache implementation"""
@@ -161,11 +162,11 @@ class TestMemoryCache:
         complex_data = {
             "mesh_terms": [
                 {"descriptor_name": "Diabetes Mellitus", "entry_terms": ["DM", "Sugar Disease"]},
-                {"descriptor_name": "Type 2 Diabetes", "entry_terms": ["T2D", "NIDDM"]}
+                {"descriptor_name": "Type 2 Diabetes", "entry_terms": ["T2D", "NIDDM"]},
             ],
             "free_text_terms": ["diabetes", "diabetic"],
             "entry_terms": ["DM", "Sugar Disease"],
-            "original_term": "diabetes"
+            "original_term": "diabetes",
         }
 
         await cache.set("complex_key", complex_data)
@@ -179,6 +180,7 @@ class TestMemoryCache:
 # ============================================================================
 # Cache Key Generation Tests
 # ============================================================================
+
 
 class TestCacheKeyGeneration:
     """Tests for cache key generation functions"""
@@ -237,6 +239,7 @@ class TestCacheKeyGeneration:
 # get_cached_or_compute Tests
 # ============================================================================
 
+
 class TestGetCachedOrCompute:
     """Tests for the get_cached_or_compute utility function"""
 
@@ -253,7 +256,7 @@ class TestGetCachedOrCompute:
             compute_called = True
             return {"computed": "data"}
 
-        with patch('app.services.cache_service.get_cache', return_value=mock_cache):
+        with patch("app.services.cache_service.get_cache", return_value=mock_cache):
             result = await get_cached_or_compute("test_key", compute_fn)
 
         assert result == {"cached": "data"}
@@ -269,7 +272,7 @@ class TestGetCachedOrCompute:
         async def compute_fn():
             return {"computed": "data"}
 
-        with patch('app.services.cache_service.get_cache', return_value=mock_cache):
+        with patch("app.services.cache_service.get_cache", return_value=mock_cache):
             result = await get_cached_or_compute("test_key", compute_fn, ttl=timedelta(hours=1))
 
         assert result == {"computed": "data"}
@@ -287,7 +290,7 @@ class TestGetCachedOrCompute:
         async def compute_fn():
             return "value"
 
-        with patch('app.services.cache_service.get_cache', return_value=mock_cache):
+        with patch("app.services.cache_service.get_cache", return_value=mock_cache):
             await get_cached_or_compute("key", compute_fn, ttl=ttl)
 
         # Check that set was called with the TTL (positional arg)
@@ -298,11 +301,13 @@ class TestGetCachedOrCompute:
 # Cache Factory Tests
 # ============================================================================
 
+
 class TestCacheFactory:
     """Tests for cache factory function"""
 
     def test_creates_memory_cache_without_redis_url(self):
         """Test that MemoryCache is created when REDIS_URL is not set"""
+
         # Mock getenv to return None for REDIS_URL and "10000" for CACHE_MAX_SIZE
         def mock_getenv(key, default=None):
             if key == "REDIS_URL":
@@ -311,7 +316,7 @@ class TestCacheFactory:
                 return "10000"
             return default
 
-        with patch('app.services.cache_service.os.getenv', side_effect=mock_getenv):
+        with patch("app.services.cache_service.os.getenv", side_effect=mock_getenv):
             cache = create_cache()
             assert isinstance(cache, MemoryCache)
 
@@ -320,24 +325,30 @@ class TestCacheFactory:
         # Skip if redis is not installed
         pytest.importorskip("redis")
 
-        with patch.dict('os.environ', {'REDIS_URL': 'redis://localhost:6379'}):
-            with patch('os.getenv', return_value='redis://localhost:6379'):
+        with patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379"}):
+            with patch("os.getenv", return_value="redis://localhost:6379"):
                 from app.services.cache_service import RedisCache
+
                 cache = create_cache()
                 assert isinstance(cache, RedisCache)
 
     def test_respects_cache_max_size_env(self):
         """Test that CACHE_MAX_SIZE env var is respected"""
-        with patch.dict('os.environ', {'CACHE_MAX_SIZE': '5000'}):
-            with patch('os.getenv', side_effect=lambda k, d=None: '5000' if k == 'CACHE_MAX_SIZE' else d):
-                cache = create_cache()
-                assert isinstance(cache, MemoryCache)
-                assert cache._max_size == 5000
+        with (
+            patch.dict("os.environ", {"CACHE_MAX_SIZE": "5000"}),
+            patch(
+                "os.getenv", side_effect=lambda k, d=None: "5000" if k == "CACHE_MAX_SIZE" else d
+            ),
+        ):
+            cache = create_cache()
+            assert isinstance(cache, MemoryCache)
+            assert cache._max_size == 5000
 
 
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestCacheIntegration:
     """Integration tests for cache service"""
@@ -356,11 +367,11 @@ class TestCacheIntegration:
                     "descriptor_name": "Diabetes Mellitus",
                     "entry_terms": ["DM", "Diabetes"],
                     "tree_numbers": ["C18.452.394.750"],
-                    "scope_note": "A group of metabolic diseases..."
+                    "scope_note": "A group of metabolic diseases...",
                 }
             ],
             "free_text_terms": ['"diabetes mellitus"', "diabetes*"],
-            "entry_terms": ["DM", "Diabetes"]
+            "entry_terms": ["DM", "Diabetes"],
         }
 
         key = mesh_cache_key("diabetes mellitus")

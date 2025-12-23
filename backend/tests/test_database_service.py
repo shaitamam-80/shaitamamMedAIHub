@@ -4,9 +4,10 @@ Tests for Supabase database operations with mocked client
 These tests verify the service methods work correctly with a mocked Supabase client.
 """
 
-import pytest
 from unittest.mock import MagicMock
 from uuid import uuid4
+
+import pytest
 
 
 class TestDatabaseServiceProjects:
@@ -28,7 +29,9 @@ class TestDatabaseServiceProjects:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_get_project_found(self, mock_supabase_client, sample_project_data, sample_project_id):
+    async def test_get_project_found(
+        self, mock_supabase_client, sample_project_data, sample_project_id
+    ):
         """Test getting an existing project"""
         mock_supabase_client.execute.return_value = MagicMock(data=[sample_project_data])
 
@@ -57,7 +60,9 @@ class TestDatabaseServiceProjects:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_update_project(self, mock_supabase_client, sample_project_data, sample_project_id):
+    async def test_update_project(
+        self, mock_supabase_client, sample_project_data, sample_project_id
+    ):
         """Test updating a project"""
         updated_data = {**sample_project_data, "name": "Updated Name"}
         mock_supabase_client.execute.return_value = MagicMock(data=[updated_data])
@@ -75,7 +80,9 @@ class TestDatabaseServiceProjects:
     @pytest.mark.asyncio
     async def test_list_projects(self, mock_supabase_client, sample_project_data):
         """Test listing projects"""
-        mock_supabase_client.execute.return_value = MagicMock(data=[sample_project_data, sample_project_data])
+        mock_supabase_client.execute.return_value = MagicMock(
+            data=[sample_project_data, sample_project_data]
+        )
 
         from app.services.database import DatabaseService
 
@@ -112,7 +119,7 @@ class TestDatabaseServiceFiles:
             "project_id": str(sample_project_id),
             "filename": "test.txt",
             "file_type": "medline",
-            "status": "uploaded"
+            "status": "uploaded",
         }
         mock_supabase_client.execute.return_value = MagicMock(data=[file_data])
 
@@ -147,7 +154,7 @@ class TestDatabaseServiceFiles:
         """Test getting files for a project"""
         files = [
             {"id": str(uuid4()), "filename": "file1.txt"},
-            {"id": str(uuid4()), "filename": "file2.txt"}
+            {"id": str(uuid4()), "filename": "file2.txt"},
         ]
         mock_supabase_client.execute.return_value = MagicMock(data=files)
 
@@ -171,7 +178,7 @@ class TestDatabaseServiceChatMessages:
             "id": str(uuid4()),
             "project_id": str(sample_project_id),
             "role": "user",
-            "content": "Test message"
+            "content": "Test message",
         }
         mock_supabase_client.execute.return_value = MagicMock(data=[message_data])
 
@@ -190,7 +197,7 @@ class TestDatabaseServiceChatMessages:
         """Test getting conversation history"""
         messages = [
             {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
+            {"role": "assistant", "content": "Hi there!"},
         ]
         mock_supabase_client.execute.return_value = MagicMock(data=messages)
 
@@ -253,7 +260,9 @@ class TestDatabaseServiceAbstracts:
         assert len(result) == 2
 
     @pytest.mark.asyncio
-    async def test_get_abstracts_by_project(self, mock_supabase_client, sample_project_id, sample_abstract_data):
+    async def test_get_abstracts_by_project(
+        self, mock_supabase_client, sample_project_id, sample_abstract_data
+    ):
         """Test getting abstracts for a project"""
         mock_supabase_client.execute.return_value = MagicMock(data=[sample_abstract_data])
 
@@ -279,8 +288,7 @@ class TestDatabaseServiceAbstracts:
         db._client = mock_supabase_client
 
         result = await db.update_abstract_decision(
-            abstract_id,
-            {"status": "include", "ai_decision": "include"}
+            abstract_id, {"status": "include", "ai_decision": "include"}
         )
 
         assert result["status"] == "include"
@@ -296,7 +304,7 @@ class TestDatabaseServiceAnalysisRuns:
             "id": str(uuid4()),
             "project_id": str(sample_project_id),
             "status": "running",
-            "total_abstracts": 100
+            "total_abstracts": 100,
         }
         mock_supabase_client.execute.return_value = MagicMock(data=[run_data])
 
@@ -337,7 +345,7 @@ class TestDatabaseServiceQueryStrings:
             "id": str(uuid4()),
             "project_id": str(sample_project_id),
             "query_type": "broad",
-            "query_string": "(diabetes) AND (metformin)"
+            "query_string": "(diabetes) AND (metformin)",
         }
         mock_supabase_client.execute.return_value = MagicMock(data=[query_data])
 
@@ -356,7 +364,7 @@ class TestDatabaseServiceQueryStrings:
         """Test getting query history for a project"""
         queries = [
             {"query_type": "broad", "query_string": "(diabetes)"},
-            {"query_type": "focused", "query_string": "(diabetes[MeSH])"}
+            {"query_type": "focused", "query_string": "(diabetes[MeSH])"},
         ]
         mock_supabase_client.execute.return_value = MagicMock(data=queries)
 

@@ -3,8 +3,7 @@ MedAI Hub - MEDLINE Parser Tests
 Tests for the MEDLINE file parser functionality
 """
 
-import pytest
-from app.services.medline_parser import MedlineParser, MedlineAbstract
+from app.services.medline_parser import MedlineAbstract, MedlineParser
 
 
 class TestMedlineAbstract:

@@ -3,9 +3,8 @@ MedAI Hub - MEDLINE File Parser
 Parses PubMed MEDLINE format (.txt) files into structured abstracts
 """
 
-from typing import List, Dict, Optional
-from datetime import datetime
 import re
+
 import chardet
 
 
@@ -13,16 +12,16 @@ class MedlineAbstract:
     """Represents a single MEDLINE abstract"""
 
     def __init__(self):
-        self.pmid: Optional[str] = None
-        self.title: Optional[str] = None
-        self.abstract: Optional[str] = None
-        self.authors: Optional[str] = None
-        self.journal: Optional[str] = None
-        self.publication_date: Optional[str] = None
-        self.publication_types: List[str] = []
-        self.language: Optional[str] = None
-        self.keywords: List[str] = []
-        self.metadata: Dict[str, str] = {}
+        self.pmid: str | None = None
+        self.title: str | None = None
+        self.abstract: str | None = None
+        self.authors: str | None = None
+        self.journal: str | None = None
+        self.publication_date: str | None = None
+        self.publication_types: list[str] = []
+        self.language: str | None = None
+        self.keywords: list[str] = []
+        self.metadata: dict[str, str] = {}
 
     def to_dict(self) -> dict:
         """Convert to dictionary for database storage"""
@@ -61,9 +60,9 @@ class MedlineParser:
     TAG_MESH = "MH"
 
     def __init__(self):
-        self.abstracts: List[MedlineAbstract] = []
+        self.abstracts: list[MedlineAbstract] = []
 
-    def parse_file(self, file_path: str) -> List[MedlineAbstract]:
+    def parse_file(self, file_path: str) -> list[MedlineAbstract]:
         """
         Parse a MEDLINE format file with automatic encoding detection.
 
@@ -82,7 +81,7 @@ class MedlineParser:
             encoding = "latin-1"  # Safe fallback that handles most Western encodings
 
         # Read file with detected encoding
-        with open(file_path, "r", encoding=encoding, errors="replace") as f:
+        with open(file_path, encoding=encoding, errors="replace") as f:
             content = f.read()
 
         # Normalize line endings
@@ -90,7 +89,7 @@ class MedlineParser:
 
         return self.parse_content(content)
 
-    def parse_content(self, content: str) -> List[MedlineAbstract]:
+    def parse_content(self, content: str) -> list[MedlineAbstract]:
         """Parse MEDLINE content string"""
         # Split by PMID entries
         # Pattern: "PMID- " at start of line
@@ -108,7 +107,7 @@ class MedlineParser:
         self.abstracts = abstracts
         return abstracts
 
-    def _parse_entry(self, entry: str) -> Optional[MedlineAbstract]:
+    def _parse_entry(self, entry: str) -> MedlineAbstract | None:
         """Parse a single MEDLINE entry"""
         abstract = MedlineAbstract()
         lines = entry.split("\n")
@@ -185,7 +184,7 @@ class MedlineParser:
             # Store unknown tags in metadata
             abstract.metadata[tag] = value
 
-    def get_abstracts_dict(self) -> List[dict]:
+    def get_abstracts_dict(self) -> list[dict]:
         """Get all abstracts as dictionaries"""
         return [abstract.to_dict() for abstract in self.abstracts]
 

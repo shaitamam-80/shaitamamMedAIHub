@@ -4,11 +4,10 @@ Handles JWT validation with Supabase
 """
 
 import logging
-from typing import Optional
 
 import httpx
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -22,13 +21,14 @@ security = HTTPBearer(auto_error=False)
 
 class UserPayload(BaseModel):
     """Validated user information from JWT"""
+
     id: str  # Supabase user UUID
-    email: Optional[str] = None
+    email: str | None = None
     role: str = "authenticated"
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> UserPayload:
     """
     Validate JWT token with Supabase and return user info.
@@ -53,7 +53,7 @@ async def get_current_user(
                 headers={
                     "Authorization": f"Bearer {token}",
                     "apikey": settings.SUPABASE_KEY,
-                }
+                },
             )
 
             if response.status_code == 200:
@@ -84,8 +84,8 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[UserPayload]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> UserPayload | None:
     """
     Optional authentication - returns None if no token provided.
     Useful for routes that work with or without authentication.

@@ -3,10 +3,12 @@ MedAI Hub - PubMed Service
 Handles PubMed E-utilities API interactions for query execution
 """
 
-import httpx
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any
 from xml.etree import ElementTree
+
+import httpx
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ class PubMedService:
         self.api_key = settings.NCBI_API_KEY
         self.email = settings.NCBI_EMAIL
 
-    def _add_auth_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _add_auth_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Add API key and email to request params if configured"""
         if self.api_key:
             params["api_key"] = self.api_key
@@ -38,7 +40,7 @@ class PubMedService:
         max_results: int = 20,
         sort: str = "relevance",
         retstart: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute a PubMed search query and return results.
 
@@ -90,9 +92,7 @@ class PubMedService:
             )
 
             async with httpx.AsyncClient(timeout=30.0) as client:
-                esummary_response = await client.get(
-                    esummary_url, params=esummary_params
-                )
+                esummary_response = await client.get(esummary_url, params=esummary_params)
                 esummary_response.raise_for_status()
                 esummary_data = esummary_response.json()
 
@@ -116,9 +116,7 @@ class PubMedService:
                         {
                             "pmid": pmid,
                             "title": article_data.get("title", "No title"),
-                            "authors": (
-                                ", ".join(author_names) if author_names else "Unknown"
-                            ),
+                            "authors": (", ".join(author_names) if author_names else "Unknown"),
                             "journal": article_data.get(
                                 "fulljournalname", article_data.get("source", "Unknown")
                             ),
@@ -145,7 +143,7 @@ class PubMedService:
             logger.exception(f"PubMed search error: {e}")
             raise Exception(f"Failed to search PubMed: {str(e)}")
 
-    async def get_abstract(self, pmid: str) -> Optional[Dict[str, Any]]:
+    async def get_abstract(self, pmid: str) -> dict[str, Any] | None:
         """
         Fetch full abstract for a specific PMID.
 
@@ -157,9 +155,7 @@ class PubMedService:
         """
         try:
             efetch_url = f"{self.base_url}/efetch.fcgi"
-            efetch_params = self._add_auth_params(
-                {"db": "pubmed", "id": pmid, "retmode": "xml"}
-            )
+            efetch_params = self._add_auth_params({"db": "pubmed", "id": pmid, "retmode": "xml"})
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(efetch_url, params=efetch_params)
@@ -240,7 +236,7 @@ class PubMedService:
             logger.exception(f"Error fetching abstract for PMID {pmid}: {e}")
             return None
 
-    async def validate_query(self, query: str) -> Dict[str, Any]:
+    async def validate_query(self, query: str) -> dict[str, Any]:
         """
         Validate a PubMed query syntax and return count without fetching results.
 
@@ -288,7 +284,7 @@ class PubMedService:
                 "errors": [str(e)],
             }
 
-    async def fetch_by_pmids(self, pmids: List[str]) -> List[Dict[str, Any]]:
+    async def fetch_by_pmids(self, pmids: list[str]) -> list[dict[str, Any]]:
         """
         Fetch full article details for a list of PMIDs.
 
@@ -410,7 +406,7 @@ class PubMedService:
             logger.exception(f"Error fetching PMIDs: {e}")
             raise Exception(f"Failed to fetch articles: {str(e)}")
 
-    async def fetch_details_as_medline(self, pmids: List[str]) -> str:
+    async def fetch_details_as_medline(self, pmids: list[str]) -> str:
         """
         Fetch article details in MEDLINE text format.
 

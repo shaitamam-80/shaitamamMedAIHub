@@ -3,10 +3,12 @@ Integration test for Smart Screener AI Layer B
 Tests the complete pipeline: Rule Engine -> AI Analysis
 """
 
-import pytest
 import asyncio
+
+import pytest
+
+from app.core.prompts.screening import get_criteria_text_for_prompt, get_screening_prompt
 from app.services.ai_service import ai_service
-from app.core.prompts.screening import get_screening_prompt, get_criteria_text_for_prompt
 
 
 class TestScreeningIntegration:
@@ -29,14 +31,16 @@ class TestScreeningIntegration:
         Conclusions: Supervised exercise is an effective intervention for depression in elderly adults.
         """
 
-        title = "Efficacy of Exercise for Depression in Elderly Adults: A Randomized Controlled Trial"
+        title = (
+            "Efficacy of Exercise for Depression in Elderly Adults: A Randomized Controlled Trial"
+        )
 
         framework_data = {
             "P": "Elderly adults with depression",
             "I": "Exercise intervention",
             "C": "Standard care",
             "O": "Depression symptoms",
-            "framework_type": "PICO"
+            "framework_type": "PICO",
         }
 
         criteria_codes = ["P1", "S2", "I1"]  # Adults, RCTs, Intervention mentioned
@@ -46,15 +50,23 @@ class TestScreeningIntegration:
             title=title,
             framework_data=framework_data,
             criteria_codes=criteria_codes,
-            review_type="systematic"
+            review_type="systematic",
         )
 
         # Assertions
         assert result["status"] in ["included", "excluded", "unclear"]
         assert len(result["reason"]) > 0
-        assert result["study_type"] in ["RCT", "Cohort", "Case-Control", "Cross-sectional",
-                                         "Case Report", "Review", "Meta-analysis",
-                                         "Qualitative", "Other"]
+        assert result["study_type"] in [
+            "RCT",
+            "Cohort",
+            "Case-Control",
+            "Cross-sectional",
+            "Case Report",
+            "Review",
+            "Meta-analysis",
+            "Qualitative",
+            "Other",
+        ]
         assert 0.0 <= result["confidence"] <= 1.0
         assert isinstance(result["evidence_quote"], str)
 
@@ -85,7 +97,7 @@ class TestScreeningIntegration:
             "I": "Exercise intervention",
             "C": "Standard care",
             "O": "Depression symptoms",
-            "framework_type": "PICO"
+            "framework_type": "PICO",
         }
 
         criteria_codes = ["P1", "S2", "S-Ex1"]  # Adults, RCTs, Exclude animals
@@ -95,7 +107,7 @@ class TestScreeningIntegration:
             title=title,
             framework_data=framework_data,
             criteria_codes=criteria_codes,
-            review_type="systematic"
+            review_type="systematic",
         )
 
         # Should be excluded (animal study)
@@ -119,7 +131,7 @@ class TestScreeningIntegration:
             "I": "Exercise intervention",
             "C": "Standard care",
             "O": "Depression symptoms",
-            "framework_type": "PICO"
+            "framework_type": "PICO",
         }
 
         criteria_codes = ["P1", "S2"]
@@ -129,7 +141,7 @@ class TestScreeningIntegration:
             title=title,
             framework_data=framework_data,
             criteria_codes=criteria_codes,
-            review_type="systematic"
+            review_type="systematic",
         )
 
         # Should be unclear (insufficient information)
@@ -161,7 +173,7 @@ class TestScreeningIntegration:
             framework_data=framework_data,
             framework_type="PICO",
             criteria_text=criteria_text,
-            review_type="systematic"
+            review_type="systematic",
         )
 
         assert "Test abstract text" in prompt
@@ -179,7 +191,7 @@ class TestScreeningIntegration:
             title="",
             framework_data={},
             criteria_codes=[],
-            review_type="systematic"
+            review_type="systematic",
         )
 
         assert result["status"] == "unclear"
@@ -191,9 +203,9 @@ class TestScreeningIntegration:
 # Manual test function for CLI testing
 async def manual_test():
     """Manual test for CLI validation"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SMART SCREENER AI LAYER B - MANUAL INTEGRATION TEST")
-    print("="*70)
+    print("=" * 70)
 
     # Test case: RCT matching PICO criteria
     abstract = """
@@ -211,7 +223,7 @@ async def manual_test():
         "I": "Cognitive behavioral therapy",
         "C": "Standard care",
         "O": "Anxiety symptoms",
-        "framework_type": "PICO"
+        "framework_type": "PICO",
     }
 
     criteria_codes = ["P1", "S2", "I1", "I2"]
@@ -228,18 +240,18 @@ async def manual_test():
         title=title,
         framework_data=framework_data,
         criteria_codes=criteria_codes,
-        review_type="systematic"
+        review_type="systematic",
     )
 
-    print("\n" + "-"*70)
+    print("\n" + "-" * 70)
     print("AI DECISION:")
-    print("-"*70)
+    print("-" * 70)
     print(f"Status:      {result['status'].upper()}")
     print(f"Study Type:  {result['study_type']}")
     print(f"Confidence:  {result['confidence']:.2f}")
     print(f"Reason:      {result['reason']}")
     print(f"Evidence:    {result['evidence_quote'][:150]}...")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

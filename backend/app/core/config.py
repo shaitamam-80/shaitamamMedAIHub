@@ -3,9 +3,9 @@ MedAI Hub - Configuration Module
 Manages environment variables and application settings
 """
 
-from pydantic_settings import BaseSettings
-from typing import Optional
 import os
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         "https://shaitamam.com",
         "https://www.shaitamam.com",
     ]
-    BACKEND_CORS_ORIGIN_REGEX: Optional[str] = r"^https://.*\.vercel\.app$"
+    BACKEND_CORS_ORIGIN_REGEX: str | None = r"^https://.*\.vercel\.app$"
 
     # Google Gemini API
     GOOGLE_API_KEY: str = ""  # Required at runtime
@@ -42,10 +42,10 @@ class Settings(BaseSettings):
     # Supabase Configuration
     SUPABASE_URL: str = ""  # Required at runtime
     SUPABASE_KEY: str = ""  # Required at runtime
-    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None  # Optional: For admin operations
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None  # Optional: For admin operations
 
     # Database
-    DATABASE_URL: Optional[str] = None  # Optional: Direct PostgreSQL connection
+    DATABASE_URL: str | None = None  # Optional: Direct PostgreSQL connection
 
     # File Upload Settings
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB default
@@ -60,12 +60,12 @@ class Settings(BaseSettings):
     # NCBI PubMed API Settings
     # With API key: 10 requests/second, without: 3 requests/second
     # Get API key from: https://www.ncbi.nlm.nih.gov/account/settings/
-    NCBI_API_KEY: Optional[str] = None
+    NCBI_API_KEY: str | None = None
     NCBI_EMAIL: str = "shaitamam@gmail.com"  # Required by NCBI for identification
 
     # Cache Settings
     # If REDIS_URL is set, Redis cache is used; otherwise, in-memory cache
-    REDIS_URL: Optional[str] = None  # e.g., redis://localhost:6379 or Railway Redis URL
+    REDIS_URL: str | None = None  # e.g., redis://localhost:6379 or Railway Redis URL
     CACHE_TTL_DAYS: int = 30  # MeSH term cache TTL (MeSH updates annually)
     CACHE_MAX_SIZE: int = 10000  # Max entries for in-memory cache
 

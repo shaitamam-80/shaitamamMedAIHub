@@ -10,13 +10,14 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.api.routes import define, projects, query, review, screening
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, query, review, screening
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -30,9 +31,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
         )
@@ -152,8 +151,6 @@ async def health_check(detailed: bool = False):
     if detailed:
         # Check database connection
         try:
-            from app.services.database import db_service
-
             # Simple query to verify connection
             health["database"] = "connected"
         except Exception as e:

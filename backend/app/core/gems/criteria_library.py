@@ -5,13 +5,13 @@ A Path-Adaptive Guidance Tool for Study Screening
 This module contains all PICOS criteria codes used for systematic screening.
 """
 
-from typing import Dict, Any, List
+from typing import Any
 
 # ============================================================================
 # P - POPULATION CRITERIA
 # ============================================================================
 
-POPULATION_CRITERIA: Dict[str, Dict[str, Any]] = {
+POPULATION_CRITERIA: dict[str, dict[str, Any]] = {
     "P1": {
         "code": "P1",
         "label": "Adults (18+)",
@@ -81,7 +81,7 @@ POPULATION_CRITERIA: Dict[str, Dict[str, Any]] = {
 # I - INTERVENTION CRITERIA
 # ============================================================================
 
-INTERVENTION_CRITERIA: Dict[str, Dict[str, Any]] = {
+INTERVENTION_CRITERIA: dict[str, dict[str, Any]] = {
     "I1": {
         "code": "I1",
         "label": "Mention Intervention in abstract",
@@ -124,7 +124,7 @@ INTERVENTION_CRITERIA: Dict[str, Dict[str, Any]] = {
 # C - COMPARATOR CRITERIA
 # ============================================================================
 
-COMPARATOR_CRITERIA: Dict[str, Dict[str, Any]] = {
+COMPARATOR_CRITERIA: dict[str, dict[str, Any]] = {
     "C1": {
         "code": "C1",
         "label": "Requires Control Group",
@@ -152,7 +152,7 @@ COMPARATOR_CRITERIA: Dict[str, Dict[str, Any]] = {
 # O - OUTCOME CRITERIA
 # ============================================================================
 
-OUTCOME_CRITERIA: Dict[str, Dict[str, Any]] = {
+OUTCOME_CRITERIA: dict[str, dict[str, Any]] = {
     "O1": {
         "code": "O1",
         "label": "Quantitative Reporting",
@@ -186,7 +186,7 @@ OUTCOME_CRITERIA: Dict[str, Dict[str, Any]] = {
 # S - STUDY DESIGN CRITERIA
 # ============================================================================
 
-STUDY_DESIGN_CRITERIA: Dict[str, Dict[str, Any]] = {
+STUDY_DESIGN_CRITERIA: dict[str, dict[str, Any]] = {
     "S1": {
         "code": "S1",
         "label": "Human Studies Only",
@@ -315,7 +315,7 @@ STUDY_DESIGN_CRITERIA: Dict[str, Dict[str, Any]] = {
 # BASIC QUALITY PACK - Default exclusions bundle
 # ============================================================================
 
-BASIC_QUALITY_PACK: List[str] = [
+BASIC_QUALITY_PACK: list[str] = [
     "S-Ex2",  # Letters/Correspondence
     "S-Ex3",  # Editorials/Opinions
     "S-Ex9",  # Non-peer reviewed
@@ -327,7 +327,7 @@ BASIC_QUALITY_PACK: List[str] = [
 # ALL CRITERIA - Combined dictionary
 # ============================================================================
 
-ALL_CRITERIA: Dict[str, Dict[str, Dict[str, Any]]] = {
+ALL_CRITERIA: dict[str, dict[str, dict[str, Any]]] = {
     "population": POPULATION_CRITERIA,
     "intervention": INTERVENTION_CRITERIA,
     "comparator": COMPARATOR_CRITERIA,
@@ -336,7 +336,7 @@ ALL_CRITERIA: Dict[str, Dict[str, Dict[str, Any]]] = {
 }
 
 
-def get_criteria_by_code(code: str) -> Dict[str, Any] | None:
+def get_criteria_by_code(code: str) -> dict[str, Any] | None:
     """Get a specific criterion by its code (e.g., 'P1', 'S-Ex2')"""
     for category in ALL_CRITERIA.values():
         if code in category:
@@ -344,17 +344,17 @@ def get_criteria_by_code(code: str) -> Dict[str, Any] | None:
     return None
 
 
-def get_exclusion_criteria() -> List[Dict[str, Any]]:
+def get_exclusion_criteria() -> list[dict[str, Any]]:
     """Get all exclusion criteria across all categories"""
     exclusions = []
     for category in ALL_CRITERIA.values():
-        for code, criteria in category.items():
+        for _code, criteria in category.items():
             if criteria.get("exclude", False):
                 exclusions.append(criteria)
     return exclusions
 
 
-def get_query_filters_for_codes(codes: List[str]) -> List[str]:
+def get_query_filters_for_codes(codes: list[str]) -> list[str]:
     """Get PubMed query filters for a list of criteria codes"""
     filters = []
     for code in codes:

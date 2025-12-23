@@ -3,27 +3,31 @@ MedAI Hub - Query Tool API Routes
 Handles PubMed search query generation and execution
 """
 
-import logging
-from uuid import UUID
-from typing import Optional, List
-import asyncio
-from datetime import datetime
 import csv
 import io
+import logging
+from datetime import datetime
+from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from pydantic import BaseModel, Field
+
 from app.api.models.schemas import QueryGenerateRequest, QueryGenerateResponse
-from app.services.database import db_service
+from app.core.auth import UserPayload, get_current_user
+from app.core.exceptions import (
+    DatabaseError,
+    TranslationError,
+    ValidationError,
+    convert_to_http_exception,
+)
 from app.services.ai_service import ai_service
+from app.services.database import db_service
+from app.services.mesh_service import mesh_service
 from app.services.pubmed_service import pubmed_service
 from app.services.query_builder import query_builder
-from app.services.mesh_service import mesh_service
-from app.core.auth import get_current_user, UserPayload
-from app.core.exceptions import TranslationError, ValidationError, DatabaseError, convert_to_http_exception
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +39,10 @@ limiter = Limiter(key_func=get_remote_address)
 # Additional Pydantic Models for New Endpoints
 # ============================================================================
 
+
 class PubMedSearchRequest(BaseModel):
     """Request to execute a PubMed search"""
+
     query: str = Field(..., min_length=3, description="PubMed search query")
     max_results: int = Field(default=20, ge=1, le=100, description="Max results per page")
     page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
@@ -45,50 +51,58 @@ class PubMedSearchRequest(BaseModel):
 
 class PubMedArticle(BaseModel):
     """Summary of a PubMed article"""
+
     pmid: str
     title: str
     authors: str
     journal: str
     pubdate: str
-    doi: Optional[str] = None
-    pubtype: Optional[List[str]] = None
+    doi: str | None = None
+    pubtype: list[str] | None = None
 
 
 class PubMedSearchResponse(BaseModel):
     """Response from PubMed search with pagination"""
+
     count: int = Field(..., description="Total matching articles")
     returned: int = Field(..., description="Number of articles in this page")
     page: int = Field(..., description="Current page number")
     total_pages: int = Field(..., description="Total pages available")
-    articles: List[PubMedArticle]
+    articles: list[PubMedArticle]
     query: str
 
 
 class QueryValidationResponse(BaseModel):
     """Response from query validation"""
+
     valid: bool
     count: int
     query_translation: str
-    errors: List[str]
+    errors: list[str]
 
 
 class ResearchQuestionRequest(BaseModel):
     """Request to generate query from a research question"""
+
     project_id: UUID
     research_question: str = Field(..., min_length=10, description="Research question text")
-    framework_type: Optional[str] = None
+    framework_type: str | None = None
 
 
 class MedlineExportRequest(BaseModel):
     """Request to export search results"""
+
     query: str = Field(..., description="PubMed query to export")
-    pmids: Optional[List[str]] = Field(default=None, description="Specific PMIDs to export (if None, export from query)")
+    pmids: list[str] | None = Field(
+        default=None, description="Specific PMIDs to export (if None, export from query)"
+    )
     max_results: int = Field(default=100, ge=1, le=500, description="Max articles to export")
     format: str = Field(default="medline", pattern="^(medline|csv)$", description="Export format")
 
 
 class ConceptTerm(BaseModel):
     """A single term (MeSH or free-text) for a concept"""
+
     term: str
     source: str = Field(..., description="'mesh', 'entry_term', or 'ai_generated'")
     selected: bool = True
@@ -96,30 +110,33 @@ class ConceptTerm(BaseModel):
 
 class ConceptAnalysisItem(BaseModel):
     """Analysis of a single framework component"""
+
     key: str = Field(..., description="Component key (P, I, C, O, etc.)")
     label: str = Field(..., description="Full label (Population, Intervention, etc.)")
     original_value: str = Field(..., description="User's original input")
-    mesh_terms: List[ConceptTerm] = Field(default_factory=list)
-    free_text_terms: List[ConceptTerm] = Field(default_factory=list)
+    mesh_terms: list[ConceptTerm] = Field(default_factory=list)
+    free_text_terms: list[ConceptTerm] = Field(default_factory=list)
 
 
 class ConceptAnalysisResponse(BaseModel):
     """Response from concept analysis endpoint"""
+
     project_id: str
     framework_type: str
-    concepts: List[ConceptAnalysisItem]
+    concepts: list[ConceptAnalysisItem]
 
 
 # ============================================================================
 # Existing Endpoints (Updated)
 # ============================================================================
 
+
 @router.post("/generate")
 @limiter.limit("20/minute")
 async def generate_query(
     http_request: Request,
     request: QueryGenerateRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """
     Generate PubMed boolean search query from framework data
@@ -131,15 +148,11 @@ async def generate_query(
         # Verify project exists
         project = await db_service.get_project(request.project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Use project's framework data if not provided
         framework_data = request.framework_data
@@ -147,7 +160,9 @@ async def generate_query(
             framework_data = project.get("framework_data", {})
 
         if not framework_data:
-            raise ValidationError("No framework data available. Please complete the Define tool first.")
+            raise ValidationError(
+                "No framework data available. Please complete the Define tool first."
+            )
 
         # Get framework_type from project
         framework_type = project.get("framework_type", "PICO")
@@ -161,7 +176,6 @@ async def generate_query(
             english_framework_data = framework_data
 
         # Step 2: Build query using programmatic MeSH expansion (no AI, ~5 seconds)
-        method_used = "query_builder"
         try:
             result = await query_builder.build_query_strategy(
                 english_framework_data, framework_type
@@ -175,8 +189,9 @@ async def generate_query(
 
         except Exception as build_error:
             # Use SIMPLE programmatic fallback (no external API calls)
-            logger.warning(f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback")
-            method_used = "simple_fallback"
+            logger.warning(
+                f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback"
+            )
 
             # Generate simple Boolean query without external APIs
             fallback_query = ai_service.generate_simple_fallback_query(
@@ -185,8 +200,10 @@ async def generate_query(
 
             # Build complete response structure
             result = ai_service.build_fallback_response(
-                fallback_query, framework_type, english_framework_data,
-                reason=f"MeSH API/Builder failed: {type(build_error).__name__}"
+                fallback_query,
+                framework_type,
+                english_framework_data,
+                reason=f"MeSH API/Builder failed: {type(build_error).__name__}",
             )
 
         # Save the focused query to database (primary query)
@@ -214,7 +231,7 @@ async def generate_query(
                     "config": {
                         "framework_data": english_framework_data,
                         "framework_type": framework_type,
-                        "method": "mesh_expansion"  # Track which method was used
+                        "method": "mesh_expansion",  # Track which method was used
                     },
                 }
             )
@@ -241,17 +258,14 @@ async def generate_query(
 
 @router.get("/history/{project_id}")
 async def get_query_history(
-    project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
+    project_id: UUID, current_user: UserPayload = Depends(get_current_user)
 ):
     """Get all generated queries for a project"""
     try:
         # Verify project ownership
         project = await db_service.get_project(project_id)
         if project and project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         queries = await db_service.get_query_strings_by_project(project_id)
         return {"queries": queries}
@@ -269,11 +283,9 @@ async def get_query_history(
 # New Endpoint: Concept Analysis
 # ============================================================================
 
+
 @router.get("/analyze-concepts/{project_id}", response_model=ConceptAnalysisResponse)
-async def analyze_concepts(
-    project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
-):
+async def analyze_concepts(project_id: UUID, current_user: UserPayload = Depends(get_current_user)):
     """
     Analyze framework components and generate concept table for query building.
 
@@ -291,22 +303,18 @@ async def analyze_concepts(
         # Verify project exists and user has access
         project = await db_service.get_project(project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         framework_data = project.get("framework_data", {})
         framework_type = project.get("framework_type", "PICO")
 
         if not framework_data:
-            raise ValidationError("No framework data available. Please complete the Define tool first.")
+            raise ValidationError(
+                "No framework data available. Please complete the Define tool first."
+            )
 
         # Step 1: Translate Hebrew to English if needed
         try:
@@ -345,22 +353,21 @@ async def analyze_concepts(
             all_mesh_results[key] = {
                 "mesh_terms": key_mesh_terms,
                 "entry_terms": key_entry_terms,
-                "decomposed_terms": decomposed_terms
+                "decomposed_terms": decomposed_terms,
             }
 
         # Step 4: Generate AI free-text terms (parallel call)
-        ai_terms = await ai_service.generate_free_text_terms(
-            english_framework_data, framework_type
-        )
+        ai_terms = await ai_service.generate_free_text_terms(english_framework_data, framework_type)
 
         # Step 5: Build response with labels
         from app.core.prompts.shared import FRAMEWORK_SCHEMAS
+
         schema = FRAMEWORK_SCHEMAS.get(framework_type, FRAMEWORK_SCHEMAS["PICO"])
         component_labels = schema.get("labels", {})
 
         concepts = []
         for key, value in english_framework_data.items():
-            if not value or key.lower() in ['research_question', 'framework_type']:
+            if not value or key.lower() in ["research_question", "framework_type"]:
                 continue
 
             # Get MeSH data for this component (from decomposed search)
@@ -372,18 +379,12 @@ async def analyze_concepts(
             # Build mesh_terms list
             mesh_terms = []
             for mt in mesh_terms_list:
-                mesh_terms.append(ConceptTerm(
-                    term=mt.descriptor_name,
-                    source="mesh",
-                    selected=True
-                ))
+                mesh_terms.append(
+                    ConceptTerm(term=mt.descriptor_name, source="mesh", selected=True)
+                )
             # Add entry terms
             for entry in entry_terms_list[:5]:
-                mesh_terms.append(ConceptTerm(
-                    term=entry,
-                    source="entry_term",
-                    selected=False
-                ))
+                mesh_terms.append(ConceptTerm(term=entry, source="entry_term", selected=False))
 
             # Build free_text_terms list
             free_text_terms = []
@@ -391,39 +392,36 @@ async def analyze_concepts(
             for term in decomposed_terms:
                 # Don't add if it's already a MeSH term
                 if not any(mt.term.lower() == term.lower() for mt in mesh_terms):
-                    free_text_terms.append(ConceptTerm(
-                        term=term,
-                        source="mesh_derived",
-                        selected=True
-                    ))
+                    free_text_terms.append(
+                        ConceptTerm(term=term, source="mesh_derived", selected=True)
+                    )
 
             # From AI-generated terms
             ai_key_terms = ai_terms.get(key, [])
             for term in ai_key_terms:
                 # Avoid duplicates
                 if not any(ft.term.lower() == term.lower() for ft in free_text_terms):
-                    free_text_terms.append(ConceptTerm(
-                        term=term,
-                        source="ai_generated",
-                        selected=True
-                    ))
+                    free_text_terms.append(
+                        ConceptTerm(term=term, source="ai_generated", selected=True)
+                    )
 
-            concepts.append(ConceptAnalysisItem(
-                key=key,
-                label=component_labels.get(key, key),
-                original_value=value,
-                mesh_terms=mesh_terms,
-                free_text_terms=free_text_terms
-            ))
+            concepts.append(
+                ConceptAnalysisItem(
+                    key=key,
+                    label=component_labels.get(key, key),
+                    original_value=value,
+                    mesh_terms=mesh_terms,
+                    free_text_terms=free_text_terms,
+                )
+            )
 
         # Sort concepts by PICO order
         from app.core.search_config import PICO_PRIORITY
+
         concepts.sort(key=lambda c: PICO_PRIORITY.get(c.key.upper(), 99))
 
         return ConceptAnalysisResponse(
-            project_id=str(project_id),
-            framework_type=framework_type,
-            concepts=concepts
+            project_id=str(project_id), framework_type=framework_type, concepts=concepts
         )
 
     except HTTPException:
@@ -434,7 +432,7 @@ async def analyze_concepts(
         logger.exception(f"Error analyzing concepts for project {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while analyzing concepts."
+            detail="An error occurred while analyzing concepts.",
         )
 
 
@@ -442,10 +440,10 @@ async def analyze_concepts(
 # New Endpoints: PubMed Search Execution
 # ============================================================================
 
+
 @router.post("/execute", response_model=PubMedSearchResponse)
 async def execute_pubmed_search(
-    request: PubMedSearchRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    request: PubMedSearchRequest, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Execute a PubMed search query and return paginated results.
@@ -458,10 +456,7 @@ async def execute_pubmed_search(
         offset = (request.page - 1) * request.max_results
 
         result = await pubmed_service.search(
-            query=request.query,
-            max_results=request.max_results,
-            sort=request.sort,
-            retstart=offset
+            query=request.query, max_results=request.max_results, sort=request.sort, retstart=offset
         )
 
         # Calculate total pages
@@ -474,21 +469,17 @@ async def execute_pubmed_search(
             page=request.page,
             total_pages=total_pages,
             articles=[PubMedArticle(**article) for article in result["articles"]],
-            query=result["query"]
+            query=result["query"],
         )
 
     except Exception as e:
         logger.exception(f"Error executing PubMed search: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/validate", response_model=QueryValidationResponse)
 async def validate_query(
-    request: PubMedSearchRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    request: PubMedSearchRequest, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Validate a PubMed query syntax and return the result count.
@@ -501,17 +492,11 @@ async def validate_query(
 
     except Exception as e:
         logger.exception(f"Error validating query: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.get("/abstract/{pmid}")
-async def get_abstract(
-    pmid: str,
-    current_user: UserPayload = Depends(get_current_user)
-):
+async def get_abstract(pmid: str, current_user: UserPayload = Depends(get_current_user)):
     """
     Fetch full abstract for a specific PubMed article.
 
@@ -523,8 +508,7 @@ async def get_abstract(
 
         if result is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Article with PMID {pmid} not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Article with PMID {pmid} not found"
             )
 
         return result
@@ -533,20 +517,17 @@ async def get_abstract(
         raise
     except Exception as e:
         logger.exception(f"Error fetching abstract for PMID {pmid}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 # ============================================================================
 # New Endpoint: Get Research Questions from Project
 # ============================================================================
 
+
 @router.get("/research-questions/{project_id}")
 async def get_research_questions(
-    project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
+    project_id: UUID, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Get research questions extracted from a project's Define chat.
@@ -558,16 +539,10 @@ async def get_research_questions(
         # Verify project ownership
         project = await db_service.get_project(project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Get conversation history
         conversation = await db_service.get_conversation(project_id)
@@ -618,11 +593,12 @@ async def get_research_questions(
             """Check if text contains Hebrew characters"""
             if not isinstance(text, str):
                 return False
-            return any('\u0590' <= char <= '\u05FF' for char in text)
+            return any("\u0590" <= char <= "\u05ff" for char in text)
 
         # Check all framework data fields for Hebrew
         hebrew_fields = [
-            key for key, value in english_framework_data.items()
+            key
+            for key, value in english_framework_data.items()
             if isinstance(value, str) and contains_hebrew(value)
         ]
 
@@ -637,7 +613,7 @@ async def get_research_questions(
             "project_name": project.get("name", ""),
             "framework_type": project.get("framework_type", "PICO"),
             "framework_data": english_framework_data,
-            "research_questions": questions[:5]  # Max 5 questions
+            "research_questions": questions[:5],  # Max 5 questions
         }
 
     except HTTPException:
@@ -654,8 +630,7 @@ async def get_research_questions(
 
 @router.post("/generate-from-question", response_model=QueryGenerateResponse)
 async def generate_query_from_question(
-    request: ResearchQuestionRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    request: ResearchQuestionRequest, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Generate PubMed query from a specific research question.
@@ -670,17 +645,11 @@ async def generate_query_from_question(
         # Verify project exists
         project = await db_service.get_project(request.project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Get framework data from project
         framework_data = project.get("framework_data", {})
@@ -706,7 +675,9 @@ async def generate_query_from_question(
             if not result.get("strategies") or not result["strategies"].get("comprehensive"):
                 raise ValueError("Query Builder returned empty strategies")
 
-            logger.info(f"Query built successfully using Query Builder for project {request.project_id}")
+            logger.info(
+                f"Query built successfully using Query Builder for project {request.project_id}"
+            )
 
             # Add research question to result metadata
             result["research_question"] = request.research_question
@@ -714,7 +685,9 @@ async def generate_query_from_question(
         except Exception as build_error:
             # Step 3: Use SIMPLE programmatic fallback (no external API calls)
             # This avoids the AI fallback which can fail with JSON parsing errors
-            logger.warning(f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback")
+            logger.warning(
+                f"Query Builder failed ({type(build_error).__name__}: {build_error}), using simple fallback"
+            )
             method_used = "simple_fallback"
 
             # Generate simple Boolean query without external APIs
@@ -724,8 +697,10 @@ async def generate_query_from_question(
 
             # Build complete V2 response structure
             result = ai_service.build_fallback_response(
-                fallback_query, framework_type, english_framework_data,
-                reason=f"MeSH API/Builder failed: {type(build_error).__name__}"
+                fallback_query,
+                framework_type,
+                english_framework_data,
+                reason=f"MeSH API/Builder failed: {type(build_error).__name__}",
             )
 
             # Add research question to result
@@ -757,7 +732,7 @@ async def generate_query_from_question(
                         "framework_data": english_framework_data,
                         "framework_type": framework_type,
                         "research_question": request.research_question,
-                        "method": method_used
+                        "method": method_used,
                     },
                 }
             )
@@ -786,7 +761,8 @@ async def generate_query_from_question(
 # Helper Functions for MEDLINE Export
 # ============================================================================
 
-def format_as_medline(articles: List[dict]) -> str:
+
+def format_as_medline(articles: list[dict]) -> str:
     """Format articles as MEDLINE text"""
     output = []
 
@@ -862,7 +838,7 @@ def format_as_medline(articles: List[dict]) -> str:
     return "\n\n".join(output)
 
 
-def format_as_csv(articles: List[dict]) -> str:
+def format_as_csv(articles: list[dict]) -> str:
     """Format articles as CSV"""
     output = io.StringIO()
     writer = csv.writer(output)
@@ -872,15 +848,19 @@ def format_as_csv(articles: List[dict]) -> str:
 
     # Data
     for article in articles:
-        writer.writerow([
-            article.get("pmid", ""),
-            article.get("title", ""),
-            article.get("authors", ""),
-            article.get("journal", ""),
-            article.get("pubdate", ""),
-            article.get("doi", ""),
-            article.get("abstract", "")[:500] if article.get("abstract") else ""  # Truncate abstract
-        ])
+        writer.writerow(
+            [
+                article.get("pmid", ""),
+                article.get("title", ""),
+                article.get("authors", ""),
+                article.get("journal", ""),
+                article.get("pubdate", ""),
+                article.get("doi", ""),
+                article.get("abstract", "")[:500]
+                if article.get("abstract")
+                else "",  # Truncate abstract
+            ]
+        )
 
     return output.getvalue()
 
@@ -889,10 +869,10 @@ def format_as_csv(articles: List[dict]) -> str:
 # New Endpoint: MEDLINE Export
 # ============================================================================
 
+
 @router.post("/export")
 async def export_results(
-    request: MedlineExportRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    request: MedlineExportRequest, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Export search results in MEDLINE or CSV format.
@@ -906,20 +886,17 @@ async def export_results(
         else:
             # Export from query
             result = await pubmed_service.search(
-                query=request.query,
-                max_results=request.max_results,
-                sort="relevance"
+                query=request.query, max_results=request.max_results, sort="relevance"
             )
             articles = result.get("articles", [])
 
         if not articles:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No articles found to export"
+                status_code=status.HTTP_404_NOT_FOUND, detail="No articles found to export"
             )
 
         # Generate file content based on format
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if request.format == "medline":
             content = format_as_medline(articles)
@@ -931,19 +908,16 @@ async def export_results(
             filename = f"pubmed_export_{timestamp}.csv"
 
         return StreamingResponse(
-            iter([content.encode('utf-8')]),
+            iter([content.encode("utf-8")]),
             media_type=media_type,
             headers={
                 "Content-Disposition": f"attachment; filename={filename}",
-                "Access-Control-Expose-Headers": "Content-Disposition"
-            }
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
         )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"Error exporting results: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

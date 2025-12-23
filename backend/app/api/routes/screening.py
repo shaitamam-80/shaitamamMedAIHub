@@ -3,19 +3,18 @@ MedAI Hub - Screening Routes
 API endpoints for the Smart Screener module.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import List, Dict, Any
+from typing import Any
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.api.models.screening import (
     CriteriaConfig,
-    ScreeningCriteriaResponse,
-    ArticleDecisionCreate,
 )
-from app.services.screening_service import screening_service
+from app.core.auth import UserPayload, get_current_user
 from app.core.gems.criteria_library import ALL_CRITERIA
-from app.core.auth import get_current_user, UserPayload
+from app.services.screening_service import screening_service
 
 router = APIRouter(prefix="/screening", tags=["screening"])
 
@@ -29,7 +28,7 @@ class InitCriteriaRequest(BaseModel):
 
 class ProcessPmidsRequest(BaseModel):
     project_id: UUID
-    pmids: List[str]
+    pmids: list[str]
     criteria_config: CriteriaConfig
 
 
@@ -41,7 +40,7 @@ async def get_criteria_library(
     return ALL_CRITERIA
 
 
-@router.post("/init-criteria", response_model=Dict[str, Any])
+@router.post("/init-criteria", response_model=dict[str, Any])
 async def init_criteria(
     request: InitCriteriaRequest,
     current_user: UserPayload = Depends(get_current_user),

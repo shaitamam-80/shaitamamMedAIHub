@@ -9,17 +9,18 @@ This service builds queries WITHOUT AI, using:
 """
 
 import logging
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
+from typing import Any
 
-from .mesh_service import mesh_service, ExpandedTerms, MeSHTerm
-from app.core.prompts.query import VALIDATED_HEDGES, FRAMEWORK_QUERY_LOGIC
-from app.core.search_config import TOOLBOX_FILTERS, PICO_PRIORITY
+from app.core.prompts.query import FRAMEWORK_QUERY_LOGIC, VALIDATED_HEDGES
+from app.core.search_config import PICO_PRIORITY, TOOLBOX_FILTERS
+
+from .mesh_service import ExpandedTerms, mesh_service
 
 logger = logging.getLogger(__name__)
 
 
-async def decompose_value_to_concepts(value: str) -> List[str]:
+async def decompose_value_to_concepts(value: str) -> list[str]:
     """
     Decompose a composite phrase into individual MeSH-searchable concepts using AI.
 
@@ -37,9 +38,7 @@ async def decompose_value_to_concepts(value: str) -> List[str]:
 
     try:
         # Use AI to decompose the value
-        result = await ai_service.decompose_to_mesh_concepts(
-            {"concept": value}, "GENERIC"
-        )
+        result = await ai_service.decompose_to_mesh_concepts({"concept": value}, "GENERIC")
         if result and "concept" in result:
             return result["concept"]
     except Exception as e:
@@ -62,10 +61,11 @@ class ConceptBlock:
 
     Within each sub-concept, synonyms are ALWAYS connected with OR.
     """
+
     key: str  # P, I, C, O, etc.
     label: str  # Full name from framework
     original_value: str  # User's input
-    expanded_list: List[ExpandedTerms] = field(default_factory=list)  # List of sub-concepts
+    expanded_list: list[ExpandedTerms] = field(default_factory=list)  # List of sub-concepts
 
     def _get_join_operator(self) -> str:
         """
@@ -137,17 +137,27 @@ class ConceptBlock:
         join_op = self._get_join_operator()
         return join_op.join(sub_queries)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization - matches ConceptAnalysis schema"""
         # Use PICO_PRIORITY from search_config for consistent numbering
         # For full-word keys, normalize to single letter first
         key_normalization = {
-            "population": "P", "intervention": "I", "comparator": "C",
-            "comparison": "C", "outcome": "O", "exposure": "E",
-            "timeframe": "T", "study": "S", "factor": "F"
+            "population": "P",
+            "intervention": "I",
+            "comparator": "C",
+            "comparison": "C",
+            "outcome": "O",
+            "exposure": "E",
+            "timeframe": "T",
+            "study": "S",
+            "factor": "F",
         }
         # Normalize key: single letter stays as-is, full word maps to letter
-        normalized_key = self.key.upper() if len(self.key) == 1 else key_normalization.get(self.key.lower(), self.key[0].upper())
+        normalized_key = (
+            self.key.upper()
+            if len(self.key) == 1
+            else key_normalization.get(self.key.lower(), self.key[0].upper())
+        )
         concept_number = PICO_PRIORITY.get(normalized_key, 99)  # Use centralized priority
 
         result = {
@@ -162,7 +172,7 @@ class ConceptBlock:
             "original_value": self.original_value,
             "entry_terms": [],
             # Show decomposed sub-concepts
-            "sub_concepts": []
+            "sub_concepts": [],
         }
 
         # Aggregate all MeSH terms and free-text from all sub-concepts
@@ -175,11 +185,13 @@ class ConceptBlock:
             all_mesh.extend([m.descriptor_name for m in expanded.mesh_terms])
             all_free_text.extend(expanded.free_text_terms)
             all_entry_terms.extend(expanded.entry_terms[:5])  # Limit per sub-concept
-            sub_concepts.append({
-                "term": expanded.original_term,
-                "mesh_terms": [m.descriptor_name for m in expanded.mesh_terms],
-                "free_text": expanded.free_text_terms
-            })
+            sub_concepts.append(
+                {
+                    "term": expanded.original_term,
+                    "mesh_terms": [m.descriptor_name for m in expanded.mesh_terms],
+                    "free_text": expanded.free_text_terms,
+                }
+            )
 
         result["mesh_terms"] = all_mesh
         result["free_text_terms"] = all_free_text
@@ -192,16 +204,17 @@ class ConceptBlock:
 @dataclass
 class QueryStrategy:
     """Represents a complete search strategy"""
+
     name: str
     purpose: str
     formula: str
     query: str
     expected_yield: str
-    use_cases: List[str] = field(default_factory=list)
-    hedge_applied: Optional[str] = None
-    hedge_citation: Optional[str] = None
+    use_cases: list[str] = field(default_factory=list)
+    hedge_applied: str | None = None
+    hedge_citation: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         result = {
             "name": self.name,
@@ -209,7 +222,7 @@ class QueryStrategy:
             "formula": self.formula,
             "query": self.query,
             "expected_yield": self.expected_yield,
-            "use_cases": self.use_cases
+            "use_cases": self.use_cases,
         }
         if self.hedge_applied:
             result["hedge_applied"] = self.hedge_applied
@@ -231,10 +244,8 @@ class QueryBuilder:
         self.mesh_service = mesh_service
 
     async def build_query_strategy(
-        self,
-        framework_data: Dict[str, str],
-        framework_type: str
-    ) -> Dict[str, Any]:
+        self, framework_data: dict[str, str], framework_type: str
+    ) -> dict[str, Any]:
         """
         Build complete query strategy from framework data.
 
@@ -250,10 +261,9 @@ class QueryBuilder:
         # Step 1: Decompose composite phrases into individual MeSH-searchable concepts
         # Example: "Adults with GAD" -> ["Adults", "Generalized Anxiety Disorder"]
         from .ai_service import ai_service
+
         try:
-            decomposed = await ai_service.decompose_to_mesh_concepts(
-                framework_data, framework_type
-            )
+            decomposed = await ai_service.decompose_to_mesh_concepts(framework_data, framework_type)
             logger.info(f"Decomposed concepts: {decomposed}")
         except Exception as e:
             logger.warning(f"AI decomposition failed: {e}, using original values")
@@ -263,21 +273,27 @@ class QueryBuilder:
         # IMPORTANT: Keep each decomposed term SEPARATE, don't merge!
         # "Adults with GAD" decomposes to ["Adults", "GAD"]
         # Each should be its own sub-query connected with AND, not merged with OR
-        expanded_terms: Dict[str, List[ExpandedTerms]] = {}  # List of ExpandedTerms per key
+        expanded_terms: dict[str, list[ExpandedTerms]] = {}  # List of ExpandedTerms per key
         for key, terms in decomposed.items():
             expanded_list = []
             for term in terms:
                 term_expanded = await self.mesh_service.expand_term(term)
-                if term_expanded and (term_expanded.mesh_terms or term_expanded.entry_terms or term_expanded.free_text_terms):
+                if term_expanded and (
+                    term_expanded.mesh_terms
+                    or term_expanded.entry_terms
+                    or term_expanded.free_text_terms
+                ):
                     expanded_list.append(term_expanded)
                 else:
                     # No MeSH found, create simple free-text ExpandedTerms
-                    expanded_list.append(ExpandedTerms(
-                        original_term=term,
-                        mesh_terms=[],
-                        entry_terms=[],
-                        free_text_terms=[f'"{term}"']
-                    ))
+                    expanded_list.append(
+                        ExpandedTerms(
+                            original_term=term,
+                            mesh_terms=[],
+                            entry_terms=[],
+                            free_text_terms=[f'"{term}"'],
+                        )
+                    )
             expanded_terms[key] = expanded_list
 
         # Step 3: Build concept blocks
@@ -298,40 +314,35 @@ class QueryBuilder:
             "strategies": {
                 "comprehensive": strategies[0].to_dict(),
                 "direct": strategies[1].to_dict(),
-                "clinical": strategies[2].to_dict()
+                "clinical": strategies[2].to_dict(),
             },
             "toolbox": TOOLBOX_FILTERS,
             "formatted_report": self._generate_formatted_report(
                 framework_type, concepts, strategies
             ),
-
             # Legacy compatibility
             "queries": {
                 "broad": strategies[0].query,
                 "focused": strategies[1].query,
-                "clinical_filtered": strategies[2].query
+                "clinical_filtered": strategies[2].query,
             },
             "message": f"Query strategy generated for {framework_type} framework using MeSH expansion.",
-
             # Metadata
             "framework_type": framework_type,
             "framework_data": framework_data,
-
             # Transparency (V2)
             "warnings": [],  # Empty - no warnings from programmatic builder
             "translation_status": {
                 "success": True,
                 "fields_translated": [],
                 "fields_failed": [],
-                "method": "programmatic"
-            }
+                "method": "programmatic",
+            },
         }
 
     def _build_concepts(
-        self,
-        framework_data: Dict[str, str],
-        expanded_terms: Dict[str, List[ExpandedTerms]]
-    ) -> List[ConceptBlock]:
+        self, framework_data: dict[str, str], expanded_terms: dict[str, list[ExpandedTerms]]
+    ) -> list[ConceptBlock]:
         """
         Build concept blocks from framework data and expansions.
 
@@ -344,9 +355,15 @@ class QueryBuilder:
 
         # Map full-word keys to single-letter keys for normalization
         key_normalization = {
-            "population": "P", "intervention": "I", "comparator": "C",
-            "comparison": "C", "outcome": "O", "exposure": "E",
-            "timeframe": "T", "study": "S", "factor": "F"
+            "population": "P",
+            "intervention": "I",
+            "comparator": "C",
+            "comparison": "C",
+            "outcome": "O",
+            "exposure": "E",
+            "timeframe": "T",
+            "study": "S",
+            "factor": "F",
         }
 
         # Prioritize single-letter keys (P, I, C, O) over full-word keys, then by PICO order
@@ -354,13 +371,13 @@ class QueryBuilder:
             framework_data.keys(),
             key=lambda k: (
                 len(k) > 1,  # Single-letter keys first
-                PICO_PRIORITY.get(k.upper(), 99)  # Then by PICO priority (P=1, I=2, C=3, O=4...)
-            )
+                PICO_PRIORITY.get(k.upper(), 99),  # Then by PICO priority (P=1, I=2, C=3, O=4...)
+            ),
         )
 
         for key in sorted_keys:
             value = framework_data[key]
-            if not value or key.lower() in ['research_question', 'framework_type']:
+            if not value or key.lower() in ["research_question", "framework_type"]:
                 continue
 
             # Normalize key to get the component label
@@ -384,7 +401,7 @@ class QueryBuilder:
                 key=display_key,
                 label=label,
                 original_value=value,
-                expanded_list=expanded_list  # Pass the list, not single item
+                expanded_list=expanded_list,  # Pass the list, not single item
             )
             concepts.append(concept)
 
@@ -415,16 +432,12 @@ class QueryBuilder:
             # Title case variants
             "Condition": "Condition",
             "Context": "Context",
-            "Population": "Population"
+            "Population": "Population",
         }
         # Try exact match first, then lowercase
         return labels.get(key, labels.get(key.lower(), key.title()))
 
-    def _combine_concepts_broad(
-        self,
-        concepts: List[ConceptBlock],
-        operator: str = "OR"
-    ) -> str:
+    def _combine_concepts_broad(self, concepts: list[ConceptBlock], operator: str = "OR") -> str:
         """
         Combine multiple ConceptBlocks into a single query block.
 
@@ -452,11 +465,7 @@ class QueryBuilder:
 
         return f" {operator} ".join(parts)
 
-    def _combine_concepts_focused(
-        self,
-        concepts: List[ConceptBlock],
-        operator: str = "OR"
-    ) -> str:
+    def _combine_concepts_focused(self, concepts: list[ConceptBlock], operator: str = "OR") -> str:
         """
         Combine multiple ConceptBlocks into a single focused query block.
 
@@ -485,11 +494,8 @@ class QueryBuilder:
         return f" {operator} ".join(parts)
 
     def _build_strategies(
-        self,
-        concepts: List[ConceptBlock],
-        framework_type: str,
-        hedge_key: Optional[str]
-    ) -> List[QueryStrategy]:
+        self, concepts: list[ConceptBlock], framework_type: str, hedge_key: str | None
+    ) -> list[QueryStrategy]:
         """
         Build three search strategies using Outcome-OR model.
 
@@ -530,7 +536,7 @@ class QueryBuilder:
 
         # O: All outcome terms joined with OR
         o_broad = self._combine_concepts_broad(o_concepts, "OR") if o_concepts else ""
-        o_focused = self._combine_concepts_focused(o_concepts, "OR") if o_concepts else ""
+        self._combine_concepts_focused(o_concepts, "OR") if o_concepts else ""
 
         # Combine I and C into single block with OR (Outcome-OR model)
         intervention_combined = ""
@@ -574,8 +580,8 @@ class QueryBuilder:
                 "Systematic reviews (Cochrane, JBI)",
                 "Scoping reviews",
                 "Evidence mapping",
-                "When missing studies is unacceptable"
-            ]
+                "When missing studies is unacceptable",
+            ],
         )
 
         # Strategy B: Direct/Focused (Higher Precision)
@@ -584,7 +590,9 @@ class QueryBuilder:
             # For comparison questions: require BOTH I and C to be mentioned
             focused_query = f"{p_focused} AND {i_focused} AND {c_focused} AND {o_broad}"
             focused_formula = "P[Mesh/tiab] AND I[Mesh/tiab] AND C[Mesh/tiab] AND O[Mesh/tiab]"
-            focused_purpose = "Head-to-head comparison studies - requires both interventions mentioned"
+            focused_purpose = (
+                "Head-to-head comparison studies - requires both interventions mentioned"
+            )
         elif p_focused and intervention_focused_combined and o_broad:
             # Standard PICO structure for focused
             focused_query = f"{p_focused} AND {intervention_focused_combined} AND {o_broad}"
@@ -602,22 +610,28 @@ class QueryBuilder:
             focused_purpose = "Balanced precision-recall for targeted searches"
 
         direct = QueryStrategy(
-            name="Focused Search (High Precision)" if not has_comparison else "Direct Comparison (Head-to-Head)",
+            name="Focused Search (High Precision)"
+            if not has_comparison
+            else "Direct Comparison (Head-to-Head)",
             purpose=focused_purpose,
             formula=focused_formula,
             query=focused_query,
-            expected_yield="Medium (50-500 results)" if not has_comparison else "Medium-Low (20-300 results)",
+            expected_yield="Medium (50-500 results)"
+            if not has_comparison
+            else "Medium-Low (20-300 results)",
             use_cases=[
                 "Rapid reviews",
                 "Clinical questions",
                 "Initial scoping",
-                "Time-limited searches"
-            ] if not has_comparison else [
+                "Time-limited searches",
+            ]
+            if not has_comparison
+            else [
                 "Clinical guidelines requiring direct comparison data",
                 "Meta-analyses of head-to-head RCTs",
                 "Comparative effectiveness research",
-                "Health technology assessment"
-            ]
+                "Health technology assessment",
+            ],
         )
 
         # Strategy C: Clinical Filtered
@@ -632,14 +646,14 @@ class QueryBuilder:
 
         # Use comprehensive as base, fall back to focused if comprehensive is empty
         base_query = comprehensive_query if comprehensive_query else focused_query
-        if hedge_query:
-            clinical_query = f"({base_query}) AND ({hedge_query})"
-        else:
-            clinical_query = base_query
+        clinical_query = f"({base_query}) AND ({hedge_query})" if hedge_query else base_query
 
         # Add humans filter only if not already present in hedge/query
         # (Cochrane hedge already contains "NOT (animals[mh] NOT humans[mh])")
-        if "animals[mh]" not in clinical_query.lower() and "animals[mesh]" not in clinical_query.lower():
+        if (
+            "animals[mh]" not in clinical_query.lower()
+            and "animals[mesh]" not in clinical_query.lower()
+        ):
             clinical_query += " NOT (animals[Mesh] NOT humans[Mesh])"
 
         clinical = QueryStrategy(
@@ -652,19 +666,15 @@ class QueryBuilder:
                 "Clinical guidelines",
                 "Evidence-based practice",
                 "Health technology assessment",
-                "GRADE evidence profiles"
+                "GRADE evidence profiles",
             ],
             hedge_applied=hedge_key,
-            hedge_citation=hedge_citation
+            hedge_citation=hedge_citation,
         )
 
         return [comprehensive, direct, clinical]
 
-    def _generate_report_intro(
-        self,
-        framework_type: str,
-        concepts: List[ConceptBlock]
-    ) -> str:
+    def _generate_report_intro(self, framework_type: str, concepts: list[ConceptBlock]) -> str:
         """Generate introduction text for the report"""
         concept_count = len(concepts)
         # Count concepts that have at least one MeSH term in any sub-concept
@@ -692,22 +702,16 @@ This search strategy was generated for a **{framework_type}** research framework
 {comparison_note}
 Three search strategies are provided:
 1. **Comprehensive** - High sensitivity for systematic reviews
-2. **{'Direct Comparison' if has_comparison else 'Focused'}** - {'Head-to-head studies' if has_comparison else 'Balanced precision-recall'}
+2. **{"Direct Comparison" if has_comparison else "Focused"}** - {"Head-to-head studies" if has_comparison else "Balanced precision-recall"}
 3. **Clinical Filtered** - With validated methodological hedge
 """
         return intro
 
     def _generate_formatted_report(
-        self,
-        framework_type: str,
-        concepts: List[ConceptBlock],
-        strategies: List[QueryStrategy]
+        self, framework_type: str, concepts: list[ConceptBlock], strategies: list[QueryStrategy]
     ) -> str:
         """Generate complete formatted markdown report"""
-        report_parts = [
-            f"# PubMed Search Strategy: {framework_type}\n",
-            "## Concept Analysis\n"
-        ]
+        report_parts = [f"# PubMed Search Strategy: {framework_type}\n", "## Concept Analysis\n"]
 
         # Concepts table
         for concept in concepts:
@@ -716,7 +720,9 @@ Three search strategies are provided:
 
             # Show decomposed sub-concepts if multiple
             if len(concept.expanded_list) > 1:
-                report_parts.append(f"**Decomposed into:** {len(concept.expanded_list)} sub-concepts (connected with AND)\n")
+                report_parts.append(
+                    f"**Decomposed into:** {len(concept.expanded_list)} sub-concepts (connected with AND)\n"
+                )
 
             # Aggregate MeSH terms and synonyms from all sub-concepts
             all_mesh_names = []

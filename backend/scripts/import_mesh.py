@@ -6,40 +6,42 @@ Usage:
     python scripts/import_mesh.py --file path/to/desc2025.gz
 """
 
-import gzip
 import argparse
-import asyncio
-import sys
-from pathlib import Path
-from xml.etree import ElementTree as ET
-from typing import Generator, Dict, List, Any
-from dataclasses import dataclass, asdict
+import gzip
 import json
+import sys
+from collections.abc import Generator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+from xml.etree import ElementTree as ET
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from supabase import Client, create_client
+
 from app.core.config import settings
-from supabase import create_client, Client
 
 
 @dataclass
 class MeSHDescriptor:
     """Represents a MeSH Descriptor from XML"""
-    descriptor_ui: str           # D000001
-    descriptor_name: str         # Calcimycin
-    entry_terms: List[str]       # Synonyms
-    tree_numbers: List[str]      # Hierarchy codes
-    scope_note: str              # Definition
 
-    def to_db_record(self) -> Dict[str, Any]:
+    descriptor_ui: str  # D000001
+    descriptor_name: str  # Calcimycin
+    entry_terms: list[str]  # Synonyms
+    tree_numbers: list[str]  # Hierarchy codes
+    scope_note: str  # Definition
+
+    def to_db_record(self) -> dict[str, Any]:
         """Convert to database record format"""
         return {
             "descriptor_ui": self.descriptor_ui,
             "descriptor_name": self.descriptor_name,
             "entry_terms": self.entry_terms,
             "tree_numbers": self.tree_numbers,
-            "scope_note": self.scope_note[:2000] if self.scope_note else None
+            "scope_note": self.scope_note[:2000] if self.scope_note else None,
         }
 
 
@@ -57,24 +59,24 @@ def parse_mesh_xml(file_path: Path, limit: int = None) -> Generator[MeSHDescript
     count = 0
 
     # Check if file is actually gzipped by reading first bytes
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         magic = f.read(2)
 
-    is_gzipped = magic == b'\x1f\x8b'  # Gzip magic number
+    is_gzipped = magic == b"\x1f\x8b"  # Gzip magic number
 
     if is_gzipped:
         print("  Detected gzipped file")
-        file_handle = gzip.open(file_path, 'rb')
+        file_handle = gzip.open(file_path, "rb")
     else:
         print("  Detected XML file (not gzipped)")
-        file_handle = open(file_path, 'rb')
+        file_handle = open(file_path, "rb")
 
     try:
         # Use iterparse for memory efficiency
-        context = ET.iterparse(file_handle, events=('end',))
+        context = ET.iterparse(file_handle, events=("end",))
 
-        for event, elem in context:
-            if elem.tag == 'DescriptorRecord':
+        for _event, elem in context:
+            if elem.tag == "DescriptorRecord":
                 try:
                     descriptor = parse_descriptor_record(elem)
                     if descriptor:
@@ -118,14 +120,14 @@ def parse_descriptor_record(elem: ET.Element) -> MeSHDescriptor:
     """
     try:
         # Get DescriptorUI
-        ui_elem = elem.find('DescriptorUI')
+        ui_elem = elem.find("DescriptorUI")
         descriptor_ui = ui_elem.text if ui_elem is not None else None
 
         if not descriptor_ui:
             return None
 
         # Get DescriptorName
-        name_elem = elem.find('DescriptorName/String')
+        name_elem = elem.find("DescriptorName/String")
         descriptor_name = name_elem.text if name_elem is not None else ""
 
         if not descriptor_name:
@@ -133,7 +135,7 @@ def parse_descriptor_record(elem: ET.Element) -> MeSHDescriptor:
 
         # Get TreeNumbers
         tree_numbers = []
-        for tree_elem in elem.findall('TreeNumberList/TreeNumber'):
+        for tree_elem in elem.findall("TreeNumberList/TreeNumber"):
             if tree_elem.text:
                 tree_numbers.append(tree_elem.text)
 
@@ -141,16 +143,16 @@ def parse_descriptor_record(elem: ET.Element) -> MeSHDescriptor:
         entry_terms = []
         scope_note = ""
 
-        for concept in elem.findall('ConceptList/Concept'):
+        for concept in elem.findall("ConceptList/Concept"):
             # Get scope note from first concept that has one
             if not scope_note:
-                scope_elem = concept.find('ScopeNote')
+                scope_elem = concept.find("ScopeNote")
                 if scope_elem is not None and scope_elem.text:
                     scope_note = scope_elem.text
 
             # Get all terms (entry terms / synonyms)
-            for term in concept.findall('TermList/Term'):
-                term_string = term.find('String')
+            for term in concept.findall("TermList/Term"):
+                term_string = term.find("String")
                 if term_string is not None and term_string.text:
                     term_text = term_string.text
                     # Don't include the main descriptor name as an entry term
@@ -162,7 +164,7 @@ def parse_descriptor_record(elem: ET.Element) -> MeSHDescriptor:
             descriptor_name=descriptor_name,
             entry_terms=entry_terms[:50],  # Limit to 50 synonyms
             tree_numbers=tree_numbers,
-            scope_note=scope_note
+            scope_note=scope_note,
         )
 
     except Exception as e:
@@ -170,7 +172,7 @@ def parse_descriptor_record(elem: ET.Element) -> MeSHDescriptor:
         return None
 
 
-def batch_insert(supabase: Client, records: List[Dict], batch_size: int = 500):
+def batch_insert(supabase: Client, records: list[dict], batch_size: int = 500):
     """
     Insert records in batches with upsert.
 
@@ -183,25 +185,21 @@ def batch_insert(supabase: Client, records: List[Dict], batch_size: int = 500):
     inserted = 0
 
     for i in range(0, total, batch_size):
-        batch = records[i:i + batch_size]
+        batch = records[i : i + batch_size]
 
         try:
-            result = supabase.table('mesh_terms').upsert(
-                batch,
-                on_conflict='descriptor_ui'
-            ).execute()
+            (supabase.table("mesh_terms").upsert(batch, on_conflict="descriptor_ui").execute())
 
             inserted += len(batch)
             print(f"  Inserted {inserted}/{total} records...")
 
         except Exception as e:
-            print(f"Error inserting batch {i}-{i+batch_size}: {e}")
+            print(f"Error inserting batch {i}-{i + batch_size}: {e}")
             # Try one by one
             for record in batch:
                 try:
-                    supabase.table('mesh_terms').upsert(
-                        record,
-                        on_conflict='descriptor_ui'
+                    supabase.table("mesh_terms").upsert(
+                        record, on_conflict="descriptor_ui"
                     ).execute()
                     inserted += 1
                 except Exception as e2:
@@ -211,11 +209,11 @@ def batch_insert(supabase: Client, records: List[Dict], batch_size: int = 500):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Import MeSH XML to Supabase')
-    parser.add_argument('--file', '-f', required=True, help='Path to desc2025.xml or desc2025.gz')
-    parser.add_argument('--limit', '-l', type=int, help='Limit number of records (for testing)')
-    parser.add_argument('--dry-run', action='store_true', help='Parse only, do not insert')
-    parser.add_argument('--output-json', '-o', help='Output parsed data to JSON file')
+    parser = argparse.ArgumentParser(description="Import MeSH XML to Supabase")
+    parser.add_argument("--file", "-f", required=True, help="Path to desc2025.xml or desc2025.gz")
+    parser.add_argument("--limit", "-l", type=int, help="Limit number of records (for testing)")
+    parser.add_argument("--dry-run", action="store_true", help="Parse only, do not insert")
+    parser.add_argument("--output-json", "-o", help="Output parsed data to JSON file")
 
     args = parser.parse_args()
 
@@ -224,8 +222,8 @@ def main():
         print(f"Error: File not found: {file_path}")
         sys.exit(1)
 
-    print(f"MeSH Import Script")
-    print(f"=" * 50)
+    print("MeSH Import Script")
+    print("=" * 50)
     print(f"File: {file_path}")
     print(f"Limit: {args.limit or 'None'}")
     print(f"Dry run: {args.dry_run}")
@@ -247,14 +245,14 @@ def main():
         print(f"  UI: {sample['descriptor_ui']}")
         print(f"  Name: {sample['descriptor_name']}")
         print(f"  Entry Terms: {len(sample['entry_terms'])} terms")
-        if sample['entry_terms']:
+        if sample["entry_terms"]:
             print(f"    First 3: {sample['entry_terms'][:3]}")
         print(f"  Tree Numbers: {sample['tree_numbers']}")
 
     # Output to JSON if requested
     if args.output_json:
         print(f"\nWriting to {args.output_json}...")
-        with open(args.output_json, 'w', encoding='utf-8') as f:
+        with open(args.output_json, "w", encoding="utf-8") as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
         print(f"Written {len(records)} records to JSON")
 
@@ -266,10 +264,7 @@ def main():
             print("Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
             sys.exit(1)
 
-        supabase = create_client(
-            settings.SUPABASE_URL,
-            settings.SUPABASE_SERVICE_ROLE_KEY
-        )
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
         inserted = batch_insert(supabase, records)
         print(f"\nDone! Inserted {inserted} records to mesh_terms table")
@@ -278,5 +273,5 @@ def main():
         print("\nDry run complete. No data inserted.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

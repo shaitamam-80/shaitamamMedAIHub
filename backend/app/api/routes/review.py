@@ -6,25 +6,34 @@ Handles MEDLINE file upload, parsing, and AI-powered abstract screening
 import logging
 import os
 import re
-import aiofiles
 from datetime import datetime
-from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, status, BackgroundTasks, Depends, Query
+import aiofiles
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+
 from app.api.models.schemas import (
-    FileUploadResponse,
     AbstractResponse,
     AbstractUpdateDecision,
     BatchAnalysisRequest,
     BatchAnalysisResponse,
+    FileUploadResponse,
     PaginatedAbstractsResponse,
 )
-from app.services.database import db_service
-from app.services.ai_service import ai_service
-from app.services.medline_parser import MedlineParser
+from app.core.auth import UserPayload, get_current_user
 from app.core.config import settings
-from app.core.auth import get_current_user, UserPayload
+from app.services.ai_service import ai_service
+from app.services.database import db_service
+from app.services.medline_parser import MedlineParser
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +58,9 @@ def validate_medline_content(content: bytes) -> bool:
     """
     try:
         # Decode first 2000 bytes for performance
-        text = content.decode('utf-8', errors='replace')[:2000]
+        text = content.decode("utf-8", errors="replace")[:2000]
         # MEDLINE files should have PMID tags
-        return 'PMID-' in text or 'PMID -' in text
+        return "PMID-" in text or "PMID -" in text
     except Exception:
         return False
 
@@ -73,15 +82,11 @@ async def upload_medline_file(
         # Verify project exists
         project = await db_service.get_project(project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Validate file type
         file_ext = os.path.splitext(file.filename)[1].lower()
@@ -96,7 +101,7 @@ async def upload_medline_file(
 
         # Sanitize filename to prevent path traversal
         safe_basename = os.path.basename(file.filename)
-        safe_basename = re.sub(r'[^\w\-_.]', '_', safe_basename)
+        safe_basename = re.sub(r"[^\w\-_.]", "_", safe_basename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = f"{timestamp}_{safe_basename}"
         file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
@@ -113,7 +118,7 @@ async def upload_medline_file(
             if total_size > MAX_FILE_SIZE:
                 raise HTTPException(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail=f"File exceeds maximum size of {MAX_FILE_SIZE // (1024*1024)}MB",
+                    detail=f"File exceeds maximum size of {MAX_FILE_SIZE // (1024 * 1024)}MB",
                 )
             chunks.append(chunk)
 
@@ -144,9 +149,7 @@ async def upload_medline_file(
         )
 
         # Parse MEDLINE file in background
-        background_tasks.add_task(
-            parse_medline_file, file_path, project_id, file_record["id"]
-        )
+        background_tasks.add_task(parse_medline_file, file_path, project_id, file_record["id"])
 
         return FileUploadResponse(
             id=file_record["id"],
@@ -170,9 +173,12 @@ async def parse_medline_file(file_path: str, project_id: str, file_id: str):
     """Background task to parse MEDLINE file"""
     try:
         # Update file status
-        await db_service.client.table("files").update({"status": "processing"}).eq(
-            "id", file_id
-        ).execute()
+        await (
+            db_service.client.table("files")
+            .update({"status": "processing"})
+            .eq("id", file_id)
+            .execute()
+        )
 
         # Parse file
         parser = MedlineParser()
@@ -201,22 +207,30 @@ async def parse_medline_file(file_path: str, project_id: str, file_id: str):
             await db_service.bulk_create_abstracts(abstract_records)
 
         # Update file status
-        await db_service.client.table("files").update(
-            {"status": "completed", "metadata": {"total_abstracts": len(abstracts)}}
-        ).eq("id", file_id).execute()
+        await (
+            db_service.client.table("files")
+            .update({"status": "completed", "metadata": {"total_abstracts": len(abstracts)}})
+            .eq("id", file_id)
+            .execute()
+        )
 
     except Exception as e:
         logger.exception(f"Error parsing MEDLINE file {file_id}: {e}")
         # Update file status to error (with generic message for security)
-        await db_service.client.table("files").update(
-            {"status": "error", "metadata": {"error": "Failed to parse file"}}
-        ).eq("id", file_id).execute()
+        await (
+            db_service.client.table("files")
+            .update({"status": "error", "metadata": {"error": "Failed to parse file"}})
+            .eq("id", file_id)
+            .execute()
+        )
 
 
 @router.get("/abstracts/{project_id}", response_model=PaginatedAbstractsResponse)
 async def get_abstracts(
     project_id: UUID,
-    filter_status: str = Query(None, description="Filter by status: pending, included, excluded, maybe"),
+    filter_status: str = Query(
+        None, description="Filter by status: pending, included, excluded, maybe"
+    ),
     limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
     current_user: UserPayload = Depends(get_current_user),
@@ -226,13 +240,9 @@ async def get_abstracts(
         # Verify project exists and ownership
         project = await db_service.get_project(project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Get total count for pagination metadata
         total = await db_service.count_abstracts_by_project(project_id, filter_status)
@@ -246,11 +256,7 @@ async def get_abstracts(
         has_more = (offset + limit) < total
 
         return PaginatedAbstractsResponse(
-            items=abstracts,
-            total=total,
-            limit=limit,
-            offset=offset,
-            has_more=has_more
+            items=abstracts, total=total, limit=limit, offset=offset, has_more=has_more
         )
     except HTTPException:
         raise
@@ -278,15 +284,11 @@ async def analyze_abstracts(
         # Verify project exists
         project = await db_service.get_project(request.project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Create analysis run
         analysis_run = await db_service.create_analysis_run(
@@ -302,9 +304,7 @@ async def analyze_abstracts(
         )
 
         # Get pending abstracts
-        abstracts = await db_service.get_abstracts_by_project(
-            request.project_id, status="pending"
-        )
+        abstracts = await db_service.get_abstracts_by_project(request.project_id, status="pending")
 
         # Run analysis in background
         background_tasks.add_task(
@@ -333,7 +333,7 @@ async def analyze_abstracts(
 
 
 async def run_batch_analysis(
-    abstracts: List[dict], criteria: dict, batch_size: int, analysis_run_id: str
+    abstracts: list[dict], criteria: dict, batch_size: int, analysis_run_id: str
 ):
     """Background task to run AI analysis on abstracts"""
     try:
@@ -350,9 +350,7 @@ async def run_batch_analysis(
             # Update abstracts with decisions
             for result in results:
                 # Find matching abstract
-                matching = next(
-                    (a for a in batch if a["pmid"] == result.get("pmid")), None
-                )
+                matching = next((a for a in batch if a["pmid"] == result.get("pmid")), None)
                 if matching:
                     await db_service.update_abstract_decision(
                         matching["id"],
@@ -399,27 +397,19 @@ async def update_abstract_decision(
         # 1. Get the abstract first
         abstract = await db_service.get_abstract(abstract_id)
         if not abstract:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Abstract not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abstract not found")
 
         # 2. Get the file to find project_id
         file_record = await db_service.get_file(abstract["file_id"])
         if not file_record:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
         # 3. Verify project ownership
         project = await db_service.get_project(file_record["project_id"])
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # 4. Now safe to update
         updated = await db_service.update_abstract_decision(

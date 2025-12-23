@@ -5,12 +5,13 @@ IMPORTANT: Environment variables must be set BEFORE importing any app modules.
 This is because pydantic-settings loads settings at module import time.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from uuid import uuid4
-from datetime import datetime
 import os
 import sys
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
 
 # Set environment variables BEFORE any app imports
 # This prevents pydantic-settings validation errors
@@ -26,6 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ============================================================================
 # Sample Data Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_project_id():
@@ -51,11 +53,11 @@ def sample_project_data(sample_project_id, sample_user_id):
             "population": "Adults with diabetes",
             "intervention": "Metformin",
             "comparison": "Placebo",
-            "outcome": "HbA1c levels"
+            "outcome": "HbA1c levels",
         },
         "user_id": sample_user_id,
         "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat()
+        "updated_at": datetime.now().isoformat(),
     }
 
 
@@ -118,7 +120,10 @@ def sample_chat_messages():
     """Sample chat conversation history"""
     return [
         {"role": "user", "content": "I want to study diabetes treatment with metformin"},
-        {"role": "assistant", "content": "I understand you want to research diabetes treatment. Let me help you define your research question using the PICO framework."},
+        {
+            "role": "assistant",
+            "content": "I understand you want to research diabetes treatment. Let me help you define your research question using the PICO framework.",
+        },
         {"role": "user", "content": "Yes, specifically in type 2 diabetes adults"},
     ]
 
@@ -138,13 +143,14 @@ def sample_abstract_data(sample_project_id):
         "publication_date": "2023 Mar 15",
         "keywords": ["Diabetes", "Metformin"],
         "status": "pending",
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
     }
 
 
 # ============================================================================
 # Mock Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_db_service():
@@ -181,33 +187,38 @@ def mock_ai_service():
     """Mock AI service"""
     mock = MagicMock()
 
-    mock.chat_for_define = AsyncMock(return_value={
-        "message": "I'll help you define your research question.",
-        "extracted_fields": {"population": "Adults with diabetes"}
-    })
+    mock.chat_for_define = AsyncMock(
+        return_value={
+            "message": "I'll help you define your research question.",
+            "extracted_fields": {"population": "Adults with diabetes"},
+        }
+    )
 
-    mock.extract_framework_data = AsyncMock(return_value={
-        "population": "Adults with diabetes",
-        "intervention": "Metformin",
-        "comparison": "Placebo",
-        "outcome": "HbA1c levels"
-    })
+    mock.extract_framework_data = AsyncMock(
+        return_value={
+            "population": "Adults with diabetes",
+            "intervention": "Metformin",
+            "comparison": "Placebo",
+            "outcome": "HbA1c levels",
+        }
+    )
 
-    mock.generate_query = AsyncMock(return_value={
-        "message": "Query generated successfully",
-        "concepts": [],
-        "queries": {
-            "broad": "(diabetes) AND (metformin)",
-            "focused": "(diabetes[MeSH]) AND (metformin[MeSH])",
-            "clinical_filtered": "(diabetes) AND (metformin) AND (clinical trial)"
-        },
-        "toolbox": []
-    })
+    mock.generate_query = AsyncMock(
+        return_value={
+            "message": "Query generated successfully",
+            "concepts": [],
+            "queries": {
+                "broad": "(diabetes) AND (metformin)",
+                "focused": "(diabetes[MeSH]) AND (metformin[MeSH])",
+                "clinical_filtered": "(diabetes) AND (metformin) AND (clinical trial)",
+            },
+            "toolbox": [],
+        }
+    )
 
-    mock.analyze_abstract = AsyncMock(return_value={
-        "decision": "include",
-        "reasoning": "Relevant to research question"
-    })
+    mock.analyze_abstract = AsyncMock(
+        return_value={"decision": "include", "reasoning": "Relevant to research question"}
+    )
 
     return mock
 
@@ -232,19 +243,20 @@ def mock_supabase_client():
 # FastAPI Test Client Fixture
 # ============================================================================
 
+
 @pytest.fixture
 def mock_current_user(sample_user_id):
     """Mock authenticated user"""
     from app.core.auth import UserPayload
+
     return UserPayload(id=sample_user_id, email="test@example.com")
 
 
 @pytest.fixture
 def app_with_mocks(mock_db_service, mock_ai_service, mock_current_user):
     """Create FastAPI app with mocked dependencies"""
-    from fastapi.testclient import TestClient
-    from main import app
     from app.core.auth import get_current_user
+    from main import app
 
     # Override dependencies
     def override_get_current_user():
@@ -259,6 +271,7 @@ def app_with_mocks(mock_db_service, mock_ai_service, mock_current_user):
 def test_client(app_with_mocks):
     """Test client with mocked dependencies"""
     from fastapi.testclient import TestClient
+
     return TestClient(app_with_mocks)
 
 
@@ -266,21 +279,21 @@ def test_client(app_with_mocks):
 # Additional Fixtures (QA Agent additions)
 # ============================================================================
 
+
 @pytest.fixture
 def client():
     """Simple test client without dependency overrides"""
     from fastapi.testclient import TestClient
+
     from main import app
+
     return TestClient(app)
 
 
 @pytest.fixture
 def mock_auth_user():
     """Mock auth user for testing"""
-    return {
-        "id": "test-user-id",
-        "email": "test@example.com"
-    }
+    return {"id": "test-user-id", "email": "test@example.com"}
 
 
 @pytest.fixture
@@ -292,6 +305,7 @@ def auth_headers():
 # ============================================================================
 # Utility Functions
 # ============================================================================
+
 
 def create_temp_medline_file(tmp_path, content: str, filename: str = "test.txt"):
     """Create a temporary MEDLINE file for testing"""

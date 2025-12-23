@@ -5,19 +5,20 @@ Handles research question formulation with AI chat
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
 from app.api.models.schemas import (
     ChatRequest,
     ChatResponse,
-    FrameworkSchemaResponse,
     FinerAssessmentRequest,
     FinerAssessmentResponse,
+    FrameworkSchemaResponse,
 )
-from app.services.database import db_service
+from app.core.auth import UserPayload, get_current_user
 from app.services.ai_service import ai_service
-from app.core.auth import get_current_user, UserPayload
+from app.services.database import db_service
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ async def get_frameworks():
 async def chat(
     request: Request,
     chat_request: ChatRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """
     Handle chat interaction for research question formulation
@@ -52,15 +53,11 @@ async def chat(
         # Verify project exists
         project = await db_service.get_project(chat_request.project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Save user message
         await db_service.save_message(
@@ -75,9 +72,7 @@ async def chat(
         conversation = await db_service.get_conversation(chat_request.project_id)
 
         # Convert to format expected by AI service
-        chat_history = [
-            {"role": msg["role"], "content": msg["content"]} for msg in conversation
-        ]
+        chat_history = [{"role": msg["role"], "content": msg["content"]} for msg in conversation]
 
         # Get AI response (returns dict with chat_response and framework_data)
         framework_type = chat_request.framework_type or project.get("framework_type", "PICO")
@@ -133,18 +128,13 @@ async def chat(
 
 
 @router.get("/conversation/{project_id}")
-async def get_conversation(
-    project_id: str,
-    current_user: UserPayload = Depends(get_current_user)
-):
+async def get_conversation(project_id: str, current_user: UserPayload = Depends(get_current_user)):
     """Get full conversation history for a project"""
     try:
         # Verify project ownership
         project = await db_service.get_project(project_id)
         if project and project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         conversation = await db_service.get_conversation(project_id)
         return {"messages": conversation}
@@ -160,17 +150,14 @@ async def get_conversation(
 
 @router.delete("/conversation/{project_id}")
 async def clear_conversation(
-    project_id: str,
-    current_user: UserPayload = Depends(get_current_user)
+    project_id: str, current_user: UserPayload = Depends(get_current_user)
 ):
     """Clear all chat history for a project"""
     try:
         # Verify project ownership
         project = await db_service.get_project(project_id)
         if project and project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         success = await db_service.clear_conversation(project_id)
         if success:
@@ -178,7 +165,7 @@ async def clear_conversation(
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to clear conversation"
+                detail="Failed to clear conversation",
             )
     except HTTPException:
         raise
@@ -192,8 +179,7 @@ async def clear_conversation(
 
 @router.post("/finer-assessment", response_model=FinerAssessmentResponse)
 async def assess_finer(
-    request: FinerAssessmentRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    request: FinerAssessmentRequest, current_user: UserPayload = Depends(get_current_user)
 ):
     """
     Evaluate a research question using the FINER criteria.
@@ -213,14 +199,10 @@ async def assess_finer(
         # Verify project exists and user has access
         project = await db_service.get_project(request.project_id)
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Get framework data from request or project
         framework_type = request.framework_type or project.get("framework_type", "PICO")
@@ -232,7 +214,7 @@ async def assess_finer(
             research_question=request.research_question,
             framework_type=framework_type,
             framework_data=framework_data,
-            language=language
+            language=language,
         )
 
         # Add metadata to response

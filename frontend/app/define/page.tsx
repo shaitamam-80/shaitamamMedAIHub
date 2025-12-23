@@ -556,7 +556,7 @@ export default function DefinePage() {
                     <>
                       <p className="text-sm font-semibold mb-2">Hello! 👋</p>
                       <p className="text-sm mb-2">
-                        I'll analyze your research topic and automatically
+                        I&apos;ll analyze your research topic and automatically
                         identify the most appropriate theoretical framework.
                       </p>
                       <p className="text-sm text-muted-foreground">

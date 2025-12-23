@@ -3,8 +3,8 @@ MedAI Hub - Structured JSON Logging Configuration
 Provides JSON-formatted logging for production monitoring and debugging
 """
 
-import logging
 import json
+import logging
 from datetime import datetime
 
 

@@ -1,6 +1,5 @@
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 
 class TestHealthEndpoints:
     def test_health_check_basic(self, client):
@@ -20,11 +19,12 @@ class TestHealthEndpoints:
         """Test readiness endpoint"""
         response = client.get("/ready")
         assert response.status_code == 200
-        assert response.json()["ready"] == True
+        assert response.json()["ready"]
+
 
 class TestProjectsEndpoints:
-    @patch('app.core.auth.get_current_user')
-    @patch('app.services.database.db_service')
+    @patch("app.core.auth.get_current_user")
+    @patch("app.services.database.db_service")
     def test_get_projects_authenticated(self, mock_db, mock_auth, client, mock_auth_user):
         """Test getting projects with auth"""
         mock_auth.return_value = mock_auth_user

@@ -20,7 +20,7 @@ export function LanguageSelector({ onSelect }: LanguageSelectorProps) {
           Welcome to MedAI Hub
         </h3>
         <p className="text-sm text-muted-foreground mb-6 text-center">
-          I'll help you formulate your research question and extract
+          I&apos;ll help you formulate your research question and extract
           the key components.
         </p>
         <p className="text-sm font-medium mb-4 text-center">

@@ -19,15 +19,15 @@ Usage:
     await cache_service.set(key, expanded_terms_dict)
 """
 
-import json
 import hashlib
+import json
 import logging
 import os
-from abc import ABC, abstractmethod
-from typing import Optional, Any, Dict
-from datetime import timedelta
-from collections import OrderedDict
 import time
+from abc import ABC, abstractmethod
+from collections import OrderedDict
+from datetime import timedelta
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class CacheInterface(ABC):
     """
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get value from cache.
 
@@ -54,7 +54,7 @@ class CacheInterface(ABC):
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[timedelta] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> bool:
         """
         Set value in cache with optional TTL.
 
@@ -104,7 +104,7 @@ class CacheInterface(ABC):
         """
         pass
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -137,12 +137,12 @@ class MemoryCache(CacheInterface):
         Args:
             max_size: Maximum number of entries before eviction
         """
-        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._max_size = max_size
         self._hits = 0
         self._misses = 0
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from cache with TTL check."""
         if key not in self._cache:
             self._misses += 1
@@ -161,7 +161,7 @@ class MemoryCache(CacheInterface):
         self._hits += 1
         return entry["value"]
 
-    async def set(self, key: str, value: Any, ttl: Optional[timedelta] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> bool:
         """Set value in cache with optional TTL."""
         # Eviction when max size reached
         if len(self._cache) >= self._max_size and key not in self._cache:
@@ -175,11 +175,7 @@ class MemoryCache(CacheInterface):
         if ttl:
             expires_at = time.time() + ttl.total_seconds()
 
-        self._cache[key] = {
-            "value": value,
-            "expires_at": expires_at,
-            "created_at": time.time()
-        }
+        self._cache[key] = {"value": value, "expires_at": expires_at, "created_at": time.time()}
 
         # Move to end (most recently used)
         self._cache.move_to_end(key)
@@ -210,7 +206,7 @@ class MemoryCache(CacheInterface):
 
         return True
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         total_requests = self._hits + self._misses
         hit_rate = (self._hits / total_requests * 100) if total_requests > 0 else 0
@@ -221,7 +217,7 @@ class MemoryCache(CacheInterface):
             "max_size": self._max_size,
             "hits": self._hits,
             "misses": self._misses,
-            "hit_rate_percent": round(hit_rate, 2)
+            "hit_rate_percent": round(hit_rate, 2),
         }
 
 
@@ -250,11 +246,9 @@ class RedisCache(CacheInterface):
         """
         try:
             import redis.asyncio as redis
+
             self._client = redis.from_url(
-                redis_url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5
+                redis_url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5
             )
             self._prefix = "medai:"
             self._available = True
@@ -266,7 +260,7 @@ class RedisCache(CacheInterface):
             logger.error(f"Failed to initialize Redis: {e}")
             self._available = False
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from Redis."""
         if not self._available:
             return None
@@ -283,7 +277,7 @@ class RedisCache(CacheInterface):
             logger.warning(f"Redis get failed for key {key}: {e}")
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[timedelta] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> bool:
         """Set value in Redis with optional TTL."""
         if not self._available:
             return False
@@ -325,9 +319,7 @@ class RedisCache(CacheInterface):
             cursor = 0
             while True:
                 cursor, keys = await self._client.scan(
-                    cursor=cursor,
-                    match=f"{self._prefix}*",
-                    count=100
+                    cursor=cursor, match=f"{self._prefix}*", count=100
                 )
                 if keys:
                     await self._client.delete(*keys)
@@ -349,7 +341,7 @@ class RedisCache(CacheInterface):
             logger.warning(f"Redis exists check failed for key {key}: {e}")
             return False
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get Redis cache statistics."""
         if not self._available:
             return {"type": "RedisCache", "available": False}
@@ -381,7 +373,7 @@ class FallbackCache(CacheInterface):
         self._redis = RedisCache(redis_url)
         self._memory = MemoryCache(max_size=max_memory_size)
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         # Try Redis first
         result = await self._redis.get(key)
         if result is not None:
@@ -389,7 +381,7 @@ class FallbackCache(CacheInterface):
         # Fall back to memory
         return await self._memory.get(key)
 
-    async def set(self, key: str, value: Any, ttl: Optional[timedelta] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: timedelta | None = None) -> bool:
         # Try to set in both
         redis_success = await self._redis.set(key, value, ttl)
         memory_success = await self._memory.set(key, value, ttl)
@@ -408,11 +400,11 @@ class FallbackCache(CacheInterface):
     async def exists(self, key: str) -> bool:
         return await self._redis.exists(key) or await self._memory.exists(key)
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         return {
             "type": "FallbackCache",
             "redis": await self._redis.get_stats(),
-            "memory": await self._memory.get_stats()
+            "memory": await self._memory.get_stats(),
         }
 
 
@@ -439,7 +431,7 @@ def create_cache() -> CacheInterface:
 
 
 # Global singleton - created lazily
-_cache_instance: Optional[CacheInterface] = None
+_cache_instance: CacheInterface | None = None
 
 
 def get_cache() -> CacheInterface:
@@ -457,6 +449,7 @@ cache_service = get_cache()
 # ============================================================================
 # Helper Functions for MeSH Caching
 # ============================================================================
+
 
 def mesh_cache_key(term: str) -> str:
     """
@@ -493,11 +486,7 @@ def translation_cache_key(text: str, source_lang: str = "he", target_lang: str =
     return f"trans:{source_lang}_{target_lang}:{hash_value}"
 
 
-async def get_cached_or_compute(
-    key: str,
-    compute_fn,
-    ttl: Optional[timedelta] = None
-) -> Any:
+async def get_cached_or_compute(key: str, compute_fn, ttl: timedelta | None = None) -> Any:
     """
     Get value from cache or compute and store it.
 

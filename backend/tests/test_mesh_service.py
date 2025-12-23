@@ -5,22 +5,22 @@ Tests MeSH term lookup, expansion, and caching integration.
 Includes error path testing for API failures, timeouts, and malformed responses.
 """
 
-import pytest
 from datetime import timedelta
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 from app.services.mesh_service import (
+    ExpandedTerms,
     MeSHService,
     MeSHTerm,
-    ExpandedTerms,
-    mesh_service,
 )
-
 
 # ============================================================================
 # MeSHTerm Tests
 # ============================================================================
+
 
 class TestMeSHTerm:
     """Tests for MeSHTerm dataclass"""
@@ -32,26 +32,20 @@ class TestMeSHTerm:
             descriptor_name="Diabetes Mellitus",
             entry_terms=["DM"],
             tree_numbers=["C18.452.394.750"],
-            scope_note=""
+            scope_note="",
         )
         query = term.to_mesh_query()
         assert query == '"Diabetes Mellitus"[Mesh]'
 
     def test_to_mesh_query_noexp(self):
         """Test MeSH query without explosion"""
-        term = MeSHTerm(
-            descriptor_ui="D003920",
-            descriptor_name="Diabetes Mellitus"
-        )
+        term = MeSHTerm(descriptor_ui="D003920", descriptor_name="Diabetes Mellitus")
         query = term.to_mesh_query("noexp")
         assert query == '"Diabetes Mellitus"[Mesh:noexp]'
 
     def test_to_mesh_query_majr(self):
         """Test MeSH query as major topic"""
-        term = MeSHTerm(
-            descriptor_ui="D003920",
-            descriptor_name="Diabetes Mellitus"
-        )
+        term = MeSHTerm(descriptor_ui="D003920", descriptor_name="Diabetes Mellitus")
         query = term.to_mesh_query("majr")
         assert query == '"Diabetes Mellitus"[Majr]'
 
@@ -59,6 +53,7 @@ class TestMeSHTerm:
 # ============================================================================
 # ExpandedTerms Tests
 # ============================================================================
+
 
 class TestExpandedTerms:
     """Tests for ExpandedTerms dataclass"""
@@ -68,20 +63,20 @@ class TestExpandedTerms:
         mesh = MeSHTerm(
             descriptor_ui="D003920",
             descriptor_name="Diabetes Mellitus",
-            entry_terms=["DM", "Sugar Disease"]
+            entry_terms=["DM", "Sugar Disease"],
         )
         expanded = ExpandedTerms(
             original_term="diabetes",
             mesh_terms=[mesh],
             free_text_terms=['"diabetes"'],
-            entry_terms=["DM"]
+            entry_terms=["DM"],
         )
 
         query = expanded.to_broad_query()
 
         assert '"Diabetes Mellitus"[Mesh]' in query
         assert '"diabetes"[tiab]' in query
-        assert 'DM[tiab]' in query
+        assert "DM[tiab]" in query
         assert query.startswith("(")
         assert query.endswith(")")
         assert " OR " in query
@@ -89,10 +84,7 @@ class TestExpandedTerms:
     def test_to_broad_query_without_mesh(self):
         """Test broad query generation when no MeSH match"""
         expanded = ExpandedTerms(
-            original_term="some rare term",
-            mesh_terms=[],
-            free_text_terms=[],
-            entry_terms=[]
+            original_term="some rare term", mesh_terms=[], free_text_terms=[], entry_terms=[]
         )
 
         query = expanded.to_broad_query()
@@ -102,19 +94,13 @@ class TestExpandedTerms:
 
     def test_to_focused_query(self):
         """Test focused query generation"""
-        mesh = MeSHTerm(
-            descriptor_ui="D003920",
-            descriptor_name="Diabetes Mellitus"
-        )
-        expanded = ExpandedTerms(
-            original_term="diabetes",
-            mesh_terms=[mesh]
-        )
+        mesh = MeSHTerm(descriptor_ui="D003920", descriptor_name="Diabetes Mellitus")
+        expanded = ExpandedTerms(original_term="diabetes", mesh_terms=[mesh])
 
         query = expanded.to_focused_query()
 
         assert '"Diabetes Mellitus"[Majr]' in query
-        assert 'diabetes[ti]' in query
+        assert "diabetes[ti]" in query
 
     def test_to_dict_serialization(self):
         """Test serialization to dict"""
@@ -123,13 +109,13 @@ class TestExpandedTerms:
             descriptor_name="Diabetes Mellitus",
             entry_terms=["DM"],
             tree_numbers=["C18"],
-            scope_note="A metabolic disease"
+            scope_note="A metabolic disease",
         )
         expanded = ExpandedTerms(
             original_term="diabetes",
             mesh_terms=[mesh],
             free_text_terms=['"diabetes"'],
-            entry_terms=["DM"]
+            entry_terms=["DM"],
         )
 
         data = expanded.to_dict()
@@ -149,11 +135,11 @@ class TestExpandedTerms:
                     "descriptor_name": "Diabetes Mellitus",
                     "entry_terms": ["DM"],
                     "tree_numbers": ["C18"],
-                    "scope_note": "A metabolic disease"
+                    "scope_note": "A metabolic disease",
                 }
             ],
             "free_text_terms": ['"diabetes"'],
-            "entry_terms": ["DM"]
+            "entry_terms": ["DM"],
         }
 
         expanded = ExpandedTerms.from_dict(data)
@@ -169,13 +155,13 @@ class TestExpandedTerms:
             descriptor_name="Diabetes Mellitus",
             entry_terms=["DM", "Sugar Disease"],
             tree_numbers=["C18.452.394.750"],
-            scope_note="A metabolic disease"
+            scope_note="A metabolic disease",
         )
         original = ExpandedTerms(
             original_term="diabetes mellitus",
             mesh_terms=[mesh],
             free_text_terms=['"diabetes mellitus"', "diabetes*"],
-            entry_terms=["DM", "Sugar Disease"]
+            entry_terms=["DM", "Sugar Disease"],
         )
 
         # Roundtrip
@@ -193,6 +179,7 @@ class TestExpandedTerms:
 # MeSHService Error Path Tests
 # ============================================================================
 
+
 class TestMeSHServiceErrorPaths:
     """Tests for MeSH service error handling"""
 
@@ -204,7 +191,7 @@ class TestMeSHServiceErrorPaths:
     @pytest.mark.asyncio
     async def test_search_mesh_timeout(self, service):
         """Test graceful handling of NCBI API timeout"""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client.get.side_effect = httpx.TimeoutException("Request timed out")
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -219,7 +206,7 @@ class TestMeSHServiceErrorPaths:
     @pytest.mark.asyncio
     async def test_search_mesh_network_error(self, service):
         """Test handling of network connection errors"""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client.get.side_effect = httpx.ConnectError("Connection refused")
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -233,13 +220,11 @@ class TestMeSHServiceErrorPaths:
     @pytest.mark.asyncio
     async def test_search_mesh_http_error(self, service):
         """Test handling of HTTP errors (e.g., 500, 503)"""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "Server Error",
-                request=MagicMock(),
-                response=MagicMock(status_code=500)
+                "Server Error", request=MagicMock(), response=MagicMock(status_code=500)
             )
             mock_client.get.return_value = mock_response
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -253,7 +238,7 @@ class TestMeSHServiceErrorPaths:
     @pytest.mark.asyncio
     async def test_search_mesh_invalid_json(self, service):
         """Test handling of invalid JSON response"""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.raise_for_status = MagicMock()
@@ -270,7 +255,7 @@ class TestMeSHServiceErrorPaths:
     @pytest.mark.asyncio
     async def test_fetch_mesh_details_timeout(self, service):
         """Test handling of timeout during detail fetch"""
-        with patch('httpx.AsyncClient') as mock_client_class:
+        with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client.get.side_effect = httpx.TimeoutException("Timeout")
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -301,6 +286,7 @@ class TestMeSHServiceErrorPaths:
 # MeSHService Cache Integration Tests
 # ============================================================================
 
+
 class TestMeSHServiceCaching:
     """Tests for MeSH service cache integration"""
 
@@ -318,7 +304,7 @@ class TestMeSHServiceCaching:
         service._cache_service = mock_cache
 
         # Mock the NCBI API call
-        with patch.object(service, 'search_mesh', return_value=[]) as mock_search:
+        with patch.object(service, "search_mesh", return_value=[]):
             await service.expand_term("diabetes")
 
             # Should have checked cache
@@ -329,7 +315,7 @@ class TestMeSHServiceCaching:
 
             # TTL should be 30 days
             call_args = mock_cache.set.call_args
-            ttl = call_args[1].get('ttl') or call_args[0][2]
+            ttl = call_args[1].get("ttl") or call_args[0][2]
             assert ttl == timedelta(days=30)
 
     @pytest.mark.asyncio
@@ -343,18 +329,18 @@ class TestMeSHServiceCaching:
                     "descriptor_name": "Diabetes Mellitus",
                     "entry_terms": ["DM"],
                     "tree_numbers": [],
-                    "scope_note": ""
+                    "scope_note": "",
                 }
             ],
             "free_text_terms": ['"diabetes"'],
-            "entry_terms": ["DM"]
+            "entry_terms": ["DM"],
         }
 
         mock_cache = AsyncMock()
         mock_cache.get.return_value = cached_data
         service._cache_service = mock_cache
 
-        with patch.object(service, 'search_mesh') as mock_search:
+        with patch.object(service, "search_mesh") as mock_search:
             result = await service.expand_term("diabetes")
 
             # Should NOT have called the API
@@ -374,7 +360,7 @@ class TestMeSHServiceCaching:
         service._cache_service = mock_cache
 
         # Should still work even if cache fails
-        with patch.object(service, 'search_mesh', return_value=[]):
+        with patch.object(service, "search_mesh", return_value=[]):
             # This should not raise an exception
             result = await service.expand_term("diabetes")
             assert result.original_term == "diabetes"
@@ -383,6 +369,7 @@ class TestMeSHServiceCaching:
 # ============================================================================
 # MeSHService Expansion Tests
 # ============================================================================
+
 
 class TestMeSHServiceExpansion:
     """Tests for MeSH term expansion logic"""
@@ -405,10 +392,10 @@ class TestMeSHServiceExpansion:
             "P": "adults with diabetes",
             "I": "metformin",
             "C": "placebo",
-            "O": "blood glucose"
+            "O": "blood glucose",
         }
 
-        with patch.object(service, 'expand_term', new_callable=AsyncMock) as mock_expand:
+        with patch.object(service, "expand_term", new_callable=AsyncMock) as mock_expand:
             mock_expand.return_value = ExpandedTerms(original_term="test")
 
             await service.expand_framework_data(framework_data, "PICO")
@@ -422,10 +409,10 @@ class TestMeSHServiceExpansion:
         framework_data = {
             "P": "adults",
             "research_question": "What is the effect?",
-            "framework_type": "PICO"
+            "framework_type": "PICO",
         }
 
-        with patch.object(service, 'expand_term', new_callable=AsyncMock) as mock_expand:
+        with patch.object(service, "expand_term", new_callable=AsyncMock) as mock_expand:
             mock_expand.return_value = ExpandedTerms(original_term="test")
 
             result = await service.expand_framework_data(framework_data, "PICO")
@@ -439,17 +426,12 @@ class TestMeSHServiceExpansion:
     @pytest.mark.asyncio
     async def test_expand_framework_data_skips_empty_values(self, service):
         """Test that empty values are skipped"""
-        framework_data = {
-            "P": "adults",
-            "I": "",
-            "C": None,
-            "O": "outcomes"
-        }
+        framework_data = {"P": "adults", "I": "", "C": None, "O": "outcomes"}
 
-        with patch.object(service, 'expand_term', new_callable=AsyncMock) as mock_expand:
+        with patch.object(service, "expand_term", new_callable=AsyncMock) as mock_expand:
             mock_expand.return_value = ExpandedTerms(original_term="test")
 
-            result = await service.expand_framework_data(framework_data, "PICO")
+            await service.expand_framework_data(framework_data, "PICO")
 
             # Should only expand non-empty values
             assert mock_expand.call_count == 2
@@ -472,6 +454,7 @@ class TestMeSHServiceExpansion:
 # ============================================================================
 # MeSH Text Parsing Tests
 # ============================================================================
+
 
 class TestMeSHTextParsing:
     """Tests for MeSH response text parsing"""

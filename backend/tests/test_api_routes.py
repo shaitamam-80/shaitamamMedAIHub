@@ -6,31 +6,34 @@ Tests for FastAPI endpoint structure and validation
 import pytest
 from fastapi.testclient import TestClient
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def mock_user():
     """Mock authenticated user"""
     from app.core.auth import UserPayload
+
     return UserPayload(id="test-user-123", email="test@example.com")
 
 
 @pytest.fixture
 def mock_auth(mock_user):
     """Create mock for authentication"""
+
     async def override_get_current_user():
         return mock_user
+
     return override_get_current_user
 
 
 @pytest.fixture
 def app_client(mock_auth):
     """Create test client with mocked auth"""
-    from main import app
     from app.core.auth import get_current_user
+    from main import app
 
     app.dependency_overrides[get_current_user] = mock_auth
     client = TestClient(app)
@@ -42,6 +45,7 @@ def app_client(mock_auth):
 def unauthenticated_client():
     """Create test client without auth"""
     from main import app
+
     app.dependency_overrides.clear()
     return TestClient(app)
 
@@ -49,6 +53,7 @@ def unauthenticated_client():
 # ============================================================================
 # Health Check Tests
 # ============================================================================
+
 
 class TestHealthEndpoints:
     """Tests for health check endpoints"""
@@ -73,6 +78,7 @@ class TestHealthEndpoints:
 # Authentication Tests
 # ============================================================================
 
+
 class TestAuthentication:
     """Tests for authentication requirements"""
 
@@ -91,6 +97,7 @@ class TestAuthentication:
 # ============================================================================
 # Request Validation Tests
 # ============================================================================
+
 
 class TestRequestValidation:
     """Tests for request validation"""
@@ -119,18 +126,15 @@ class TestRequestValidation:
 
     def test_chat_missing_project_id(self, app_client):
         """Test chat request without project_id"""
-        response = app_client.post("/api/v1/define/chat", json={
-            "message": "test"
-        })
+        response = app_client.post("/api/v1/define/chat", json={"message": "test"})
 
         assert response.status_code == 422
 
     def test_chat_missing_message(self, app_client):
         """Test chat request without message"""
         from uuid import uuid4
-        response = app_client.post("/api/v1/define/chat", json={
-            "project_id": str(uuid4())
-        })
+
+        response = app_client.post("/api/v1/define/chat", json={"project_id": str(uuid4())})
 
         assert response.status_code == 422
 
@@ -138,6 +142,7 @@ class TestRequestValidation:
 # ============================================================================
 # Framework Schema Tests
 # ============================================================================
+
 
 class TestFrameworkSchemas:
     """Tests for framework schema endpoint"""
@@ -171,6 +176,7 @@ class TestFrameworkSchemas:
 # Response Format Tests
 # ============================================================================
 
+
 class TestResponseFormats:
     """Tests for API response formats"""
 
@@ -196,6 +202,7 @@ class TestResponseFormats:
 # API Route Registration Tests
 # ============================================================================
 
+
 class TestAPIRouteRegistration:
     """Tests to verify API routes are registered"""
 
@@ -214,6 +221,7 @@ class TestAPIRouteRegistration:
     def test_query_routes_exist(self, app_client):
         """Test that query routes are registered"""
         from uuid import uuid4
+
         response = app_client.get(f"/api/v1/query/history/{uuid4()}")
         # Should not be 404 (might be 403 or 500 due to db issues)
         assert response.status_code != 404
@@ -221,6 +229,7 @@ class TestAPIRouteRegistration:
     def test_review_routes_exist(self, app_client):
         """Test that review routes are registered"""
         from uuid import uuid4
+
         response = app_client.get(f"/api/v1/review/abstracts/{uuid4()}")
         # Should not be 404
         assert response.status_code != 404

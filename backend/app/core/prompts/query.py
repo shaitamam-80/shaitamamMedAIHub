@@ -5,9 +5,9 @@ System prompts for PubMed query generation with validated hedges
 Implements comprehensive search strategy generation with 9 framework-specific logic cases.
 """
 
-from typing import Dict, Any, List
-from .shared import FRAMEWORK_SCHEMAS, get_framework_components
+from typing import Any
 
+from .shared import FRAMEWORK_SCHEMAS
 
 # ============================================
 # REPOSITORY OF VALIDATED METHODOLOGICAL HEDGES
@@ -20,74 +20,68 @@ VALIDATED_HEDGES = {
         "name": "Cochrane HSSS (RCTs)",
         "citation": "Lefebvre C, et al. Cochrane Handbook 2019",
         "query": '(randomized controlled trial[pt] OR controlled clinical trial[pt] OR randomized[tiab] OR randomised[tiab] OR placebo[tiab] OR "clinical trials as topic"[mesh:noexp] OR randomly[tiab] OR trial[ti]) NOT (animals[mh] NOT humans[mh])',
-        "use_case": "RCTs for PICO intervention questions"
+        "use_case": "RCTs for PICO intervention questions",
     },
     "SR_COCHRANE": {
         "name": "Cochrane Systematic Review Filter",
         "citation": "Lefebvre C, et al. Cochrane Handbook 2019",
         "query": '(systematic review[pt] OR meta-analysis[pt] OR systematic[sb] OR meta-analysis[tiab] OR "systematic review"[tiab] OR "meta analysis"[tiab])',
-        "use_case": "Systematic reviews and meta-analyses"
+        "use_case": "Systematic reviews and meta-analyses",
     },
-
     # SIGN Filters (Scottish Intercollegiate Guidelines Network)
     "OBSERVATIONAL_SIGN": {
         "name": "SIGN Filter (Observational)",
         "citation": "Scottish Intercollegiate Guidelines Network",
-        "query": '(cohort studies[mh] OR cohort study[tiab] OR longitudinal studies[mh] OR follow-up studies[mh] OR prospective studies[mh] OR retrospective studies[mh] OR case-control studies[mh] OR case control[tiab])',
-        "use_case": "Observational studies for PEO/PECO questions"
+        "query": "(cohort studies[mh] OR cohort study[tiab] OR longitudinal studies[mh] OR follow-up studies[mh] OR prospective studies[mh] OR retrospective studies[mh] OR case-control studies[mh] OR case control[tiab])",
+        "use_case": "Observational studies for PEO/PECO questions",
     },
-
     # Haynes Filters (McMaster/PubMed Clinical Queries)
     "PROGNOSIS_HAYNES": {
         "name": "Haynes Filter (Prognosis)",
         "citation": "Haynes RB, et al. BMC Medical Informatics 2005",
-        "query": '(prognosis[sh] OR survival analysis[mh] OR disease progression[mh] OR mortality[mh] OR incidence[mh] OR follow-up studies[mh] OR prognos*[tiab] OR course[tiab] OR predict*[tiab] OR survival[tiab])',
-        "use_case": "Prognosis studies for PFO questions"
+        "query": "(prognosis[sh] OR survival analysis[mh] OR disease progression[mh] OR mortality[mh] OR incidence[mh] OR follow-up studies[mh] OR prognos*[tiab] OR course[tiab] OR predict*[tiab] OR survival[tiab])",
+        "use_case": "Prognosis studies for PFO questions",
     },
     "DIAGNOSIS_HAYNES": {
         "name": "Haynes Filter (Diagnosis)",
         "citation": "Haynes RB, et al. BMC Medical Informatics 2004",
         "query": '(sensitivity and specificity[mh] OR predictive value of tests[mh] OR diagnosis[sh] OR diagnostic use[sh] OR specificity[tiab] OR sensitivity[tiab] OR accurac*[tiab] OR "receiver operating characteristic"[tiab] OR ROC[tiab])',
-        "use_case": "Diagnostic accuracy for PIRD questions"
+        "use_case": "Diagnostic accuracy for PIRD questions",
     },
     "ETIOLOGY_HAYNES": {
         "name": "Haynes Filter (Etiology)",
         "citation": "Haynes RB, et al. BMC Medical Informatics 2005",
         "query": '(etiology[sh] OR risk factors[mh] OR odds ratio[mh] OR relative risk[mh] OR causality[mh] OR risk[tiab] OR cause*[tiab] OR "odds ratio"[tiab] OR "relative risk"[tiab])',
-        "use_case": "Etiology/risk factor studies for PEO questions"
+        "use_case": "Etiology/risk factor studies for PEO questions",
     },
-
     # Wong Filter (Qualitative Research)
     "QUALITATIVE_WONG": {
         "name": "Wong Filter (Qualitative)",
         "citation": "Wong SSL, et al. J Med Libr Assoc 2004",
         "query": '(qualitative research[mh] OR interviews as topic[mh] OR focus groups[mh] OR narration[mh] OR qualitative[tiab] OR interview*[tiab] OR thematic[tiab] OR phenomenolog*[tiab] OR grounded theory[tiab] OR ethnograph*[tiab] OR "lived experience"[tiab])',
-        "use_case": "Qualitative studies for SPIDER/PICo questions"
+        "use_case": "Qualitative studies for SPIDER/PICo questions",
     },
-
     # Policy/Health Services Filter
     "POLICY_FILTER": {
         "name": "Policy & Health Services Filter",
         "citation": "InterTASC ISSG",
         "query": '(health policy[mh] OR health services research[mh] OR program evaluation[mh] OR implementation science[mh] OR delivery of health care[mh] OR "health service*"[tiab] OR policy[tiab] OR implementation[tiab])',
-        "use_case": "Policy and health services for ECLIPSE questions"
+        "use_case": "Policy and health services for ECLIPSE questions",
     },
-
     # Theory Filter
     "THEORY_FILTER": {
         "name": "Theory & Framework Filter",
         "citation": "BeHEMoTh Guidelines",
         "query": '(models, theoretical[mh] OR psychological theory[mh] OR nursing theory[mh] OR theor*[ti] OR framework*[ti] OR model[ti] OR "behavior change"[tiab] OR "behaviour change"[tiab])',
-        "use_case": "Theory-based studies for BeHEMoTh questions"
+        "use_case": "Theory-based studies for BeHEMoTh questions",
     },
-
     # Prevalence/Epidemiology Filter
     "PREVALENCE_FILTER": {
         "name": "Prevalence & Epidemiology Filter",
         "citation": "Cochrane Handbook",
         "query": '(prevalence[mh] OR cross-sectional studies[mh] OR epidemiology[sh] OR incidence[mh] OR prevalence[tiab] OR incidence[tiab] OR epidemiol*[tiab] OR "cross-sectional"[tiab])',
-        "use_case": "Prevalence studies for CoCoPop questions"
-    }
+        "use_case": "Prevalence studies for CoCoPop questions",
+    },
 }
 
 # ============================================
@@ -102,13 +96,13 @@ PROXIMITY_SEARCH_GUIDE = {
     "examples": [
         {"intent": "Terms within 2 words", "query": '"diabetes management"[tiab:~2]'},
         {"intent": "In title, within 3 words", "query": '"patient safety"[ti:~3]'},
-        {"intent": "Exact adjacency", "query": '"heart failure"[tiab:~0]'}
+        {"intent": "Exact adjacency", "query": '"heart failure"[tiab:~0]'},
     ],
     "guidance": [
         "Start with N=0-3 for precision, expand if needed",
         "Terms can appear in any order within distance N",
-        "Maximum practical distance is ~10"
-    ]
+        "Maximum practical distance is ~10",
+    ],
 }
 
 
@@ -124,14 +118,13 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (I_terms OR I_mesh) AND (C_terms OR C_mesh) AND (O_terms OR O_mesh)",
             "focused": "(P_mesh[majr] OR P_terms[ti]) AND (I_terms[tiab] OR I_mesh) AND (O_mesh[majr] OR O_terms[ti])",
-            "clinical_filtered": "Focused_query AND (RCT_COCHRANE)"
-        }
+            "clinical_filtered": "Focused_query AND (RCT_COCHRANE)",
+        },
     },
     "PICOT": {"logic": "Same as PICO", "hedge": "RCT_COCHRANE", "inherits": "PICO"},
     "PICOS": {"logic": "Same as PICO", "hedge": "RCT_COCHRANE", "inherits": "PICO"},
     "PICOC": {"logic": "Same as PICO", "hedge": "RCT_COCHRANE", "inherits": "PICO"},
     "PICOTS": {"logic": "Same as PICO", "hedge": "RCT_COCHRANE", "inherits": "PICO"},
-
     # Case 2: CoCoPop (Prevalence/Epidemiology)
     "CoCoPop": {
         "logic": "Condition AND Population - Context as optional filter",
@@ -139,10 +132,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(Condition_terms OR Condition_mesh) AND (Population_terms OR Population_mesh)",
             "focused": "(Condition_mesh[majr]) AND (Population_mesh) AND (prevalence[tiab] OR incidence[tiab] OR epidemiology[tiab])",
-            "clinical_filtered": "Focused_query AND (PREVALENCE_FILTER)"
-        }
+            "clinical_filtered": "Focused_query AND (PREVALENCE_FILTER)",
+        },
     },
-
     # Case 3: PEO/PECO (Exposure/Etiology)
     "PEO": {
         "logic": "Exposure-focused with outcome",
@@ -150,11 +142,10 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (E_terms OR E_mesh) AND (O_terms OR O_mesh)",
             "focused": "(P_mesh[majr]) AND (E_terms[tiab] OR E_mesh) AND (O_mesh)",
-            "clinical_filtered": "Focused_query AND (OBSERVATIONAL_SIGN) AND (ETIOLOGY_HAYNES)"
-        }
+            "clinical_filtered": "Focused_query AND (OBSERVATIONAL_SIGN) AND (ETIOLOGY_HAYNES)",
+        },
     },
     "PECO": {"logic": "Same as PEO with comparator", "hedge": "ETIOLOGY_HAYNES", "inherits": "PEO"},
-
     # Case 4: SPIDER/PICo (Qualitative)
     "SPIDER": {
         "logic": "Qualitative structure with design/research type",
@@ -162,8 +153,8 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(S_terms) AND (PI_terms) AND (D_terms OR E_terms)",
             "focused": "(S_mesh OR S_terms[tiab]) AND (PI_terms[tiab]) AND (qualitative[tiab] OR interview*[tiab])",
-            "clinical_filtered": "Focused_query AND (QUALITATIVE_WONG)"
-        }
+            "clinical_filtered": "Focused_query AND (QUALITATIVE_WONG)",
+        },
     },
     "PICo": {
         "logic": "Simplified qualitative structure",
@@ -171,10 +162,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (I_terms) AND (Co_terms)",
             "focused": "(P_mesh) AND (I_terms[tiab]) AND (qualitative[tiab] OR experience*[tiab])",
-            "clinical_filtered": "Focused_query AND (QUALITATIVE_WONG)"
-        }
+            "clinical_filtered": "Focused_query AND (QUALITATIVE_WONG)",
+        },
     },
-
     # Case 5: PFO (Prognosis)
     "PFO": {
         "logic": "Prognostic factors with outcome",
@@ -182,10 +172,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (F_terms OR F_mesh) AND (O_terms OR O_mesh)",
             "focused": "(P_mesh[majr]) AND (F_terms[tiab] OR F_mesh) AND (O_mesh[majr])",
-            "clinical_filtered": "Focused_query AND (PROGNOSIS_HAYNES)"
-        }
+            "clinical_filtered": "Focused_query AND (PROGNOSIS_HAYNES)",
+        },
     },
-
     # Case 6: PIRD (Diagnostic Accuracy)
     "PIRD": {
         "logic": "Index test vs Reference standard",
@@ -193,10 +182,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (I_terms OR I_mesh) AND (R_terms OR R_mesh)",
             "focused": "(P_mesh) AND (I_terms[tiab] OR I_mesh) AND (R_mesh) AND (sensitivity[tiab] OR specificity[tiab])",
-            "clinical_filtered": "Focused_query AND (DIAGNOSIS_HAYNES)"
-        }
+            "clinical_filtered": "Focused_query AND (DIAGNOSIS_HAYNES)",
+        },
     },
-
     # Case 7: PCC (Scoping Reviews)
     "PCC": {
         "logic": "Broad scoping - minimal filters for mapping",
@@ -204,10 +192,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms OR P_mesh) AND (C_terms) AND (C2_terms)",
             "focused": "(P_mesh OR P_terms[tiab]) AND (C_terms[tiab]) AND (C2_terms[tiab])",
-            "clinical_filtered": "Same as focused (no hedge for scoping)"
-        }
+            "clinical_filtered": "Same as focused (no hedge for scoping)",
+        },
     },
-
     # Case 8: ECLIPSE (Policy)
     "ECLIPSE": {
         "logic": "Policy and service terms",
@@ -215,11 +202,10 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(C_terms) AND (L_terms OR S_terms) AND (I_terms OR E_terms)",
             "focused": "(C_mesh OR C_terms[tiab]) AND (service*[tiab] OR policy[tiab]) AND (impact[tiab] OR outcome*[tiab])",
-            "clinical_filtered": "Focused_query AND (POLICY_FILTER)"
-        }
+            "clinical_filtered": "Focused_query AND (POLICY_FILTER)",
+        },
     },
     "SPICE": {"logic": "Similar to ECLIPSE", "hedge": "POLICY_FILTER", "inherits": "ECLIPSE"},
-
     # Case 9: BeHEMoTh (Theory)
     "BeHEMoTh": {
         "logic": "Theory identification and behavior",
@@ -227,10 +213,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(Be_terms) AND (H_terms) AND (Mo_terms OR theor*[tiab])",
             "focused": "(Be_terms[tiab]) AND (H_mesh OR H_terms[tiab]) AND (theor*[ti] OR model*[ti])",
-            "clinical_filtered": "Focused_query AND (THEORY_FILTER)"
-        }
+            "clinical_filtered": "Focused_query AND (THEORY_FILTER)",
+        },
     },
-
     # Case 10: CIMO (Realist)
     "CIMO": {
         "logic": "Context-mechanism-outcome pattern",
@@ -238,10 +223,9 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(C_terms) AND (I_terms) AND (M_terms OR mechanism*[tiab]) AND (O_terms)",
             "focused": "(C_terms[tiab]) AND (I_mesh OR I_terms[tiab]) AND (mechanism*[tiab]) AND (O_terms[tiab])",
-            "clinical_filtered": "Same as focused"
-        }
+            "clinical_filtered": "Same as focused",
+        },
     },
-
     # Advanced Frameworks
     "PerSPEcTiF": {
         "logic": "Health equity with multiple perspectives",
@@ -249,8 +233,8 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms) AND (S_terms OR E_terms) AND (dispar*[tiab] OR inequ*[tiab] OR equity[tiab])",
             "focused": "(P_terms[tiab]) AND (E_terms[tiab]) AND (health disparities[mh] OR healthcare disparities[mh])",
-            "clinical_filtered": "Same as focused"
-        }
+            "clinical_filtered": "Same as focused",
+        },
     },
     "PICOT-D": {
         "logic": "Digital health adaptation of PICOT",
@@ -258,10 +242,14 @@ FRAMEWORK_QUERY_LOGIC = {
         "formula": {
             "broad": "(P_terms) AND (I_terms OR digital*[tiab] OR app[tiab] OR telemedicine[tiab]) AND (O_terms)",
             "focused": "(P_mesh) AND (telemedicine[mh] OR mobile applications[mh] OR I_terms[tiab]) AND (O_mesh)",
-            "clinical_filtered": "Focused_query AND (RCT_COCHRANE)"
-        }
+            "clinical_filtered": "Focused_query AND (RCT_COCHRANE)",
+        },
     },
-    "PICOTS-ComTeC": {"logic": "Complex digital interventions", "hedge": "RCT_COCHRANE", "inherits": "PICOT-D"}
+    "PICOTS-ComTeC": {
+        "logic": "Complex digital interventions",
+        "hedge": "RCT_COCHRANE",
+        "inherits": "PICOT-D",
+    },
 }
 
 
@@ -285,10 +273,7 @@ def get_query_system_prompt(framework_type: str = "PICO") -> str:
     recommended_hedge = query_logic.get("hedge")
 
     # Build component list for reference
-    component_list = "\n".join([
-        f"- **{comp}**: {labels[comp]}"
-        for comp in components
-    ])
+    component_list = "\n".join([f"- **{comp}**: {labels[comp]}" for comp in components])
 
     # Build hedge examples - ONLY include relevant hedges for this framework
     # This reduces token count from ~3000 to ~300
@@ -299,11 +284,13 @@ def get_query_system_prompt(framework_type: str = "PICO") -> str:
     relevant_hedges.add("RCT_COCHRANE")
     relevant_hedges.add("OBSERVATIONAL_SIGN")
 
-    hedge_list = "\n".join([
-        f"**{key}**: {hedge['name']}\n`{hedge['query']}`\n*Source: {hedge['citation']}*"
-        for key, hedge in VALIDATED_HEDGES.items()
-        if key in relevant_hedges
-    ])
+    hedge_list = "\n".join(
+        [
+            f"**{key}**: {hedge['name']}\n`{hedge['query']}`\n*Source: {hedge['citation']}*"
+            for key, hedge in VALIDATED_HEDGES.items()
+            if key in relevant_hedges
+        ]
+    )
 
     # Check if this is a comparison framework (has C component)
     has_comparison = "C" in components and labels.get("C", "").lower().find("compar") != -1
@@ -338,9 +325,9 @@ Given a **{framework_type}** framework with populated components, you will gener
 **Components:**
 {component_list}
 
-**Query Logic:** {query_logic.get('logic', 'Standard Boolean')}
-**Recommended Hedge:** {recommended_hedge if recommended_hedge else 'None (scoping search)'}
-**Has Comparison Component:** {'Yes - Use split structure for Strategy A' if has_comparison else 'No - Use standard AND structure'}
+**Query Logic:** {query_logic.get("logic", "Standard Boolean")}
+**Recommended Hedge:** {recommended_hedge if recommended_hedge else "None (scoping search)"}
+**Has Comparison Component:** {"Yes - Use split structure for Strategy A" if has_comparison else "No - Use standard AND structure"}
 
 ---
 
@@ -443,7 +430,7 @@ Generate three distinct strategies with **specific names and use cases**:
 
 **Logic Structure:**
 - Start with Strategy B (focused query)
-- Add validated RCT hedge: **{recommended_hedge if recommended_hedge else 'OBSERVATIONAL_SIGN'}**
+- Add validated RCT hedge: **{recommended_hedge if recommended_hedge else "OBSERVATIONAL_SIGN"}**
 - Exclude animal-only studies: `NOT (animals[mh] NOT humans[mh])`
 - Expected yield: Low-Medium (50-300 results)
 
@@ -519,7 +506,7 @@ Now generate the complete JSON response!
 """
 
 
-def get_simple_query_prompt(framework_data: Dict[str, Any], framework_type: str) -> str:
+def get_simple_query_prompt(framework_data: dict[str, Any], framework_type: str) -> str:
     """
     Simplified prompt for quick query generation (backward compatibility).
 
@@ -531,11 +518,13 @@ def get_simple_query_prompt(framework_data: Dict[str, Any], framework_type: str)
         Simple prompt string
     """
 
-    framework_text = "\n".join([
-        f"**{key}:** {value}"
-        for key, value in framework_data.items()
-        if value  # Only include non-empty values
-    ])
+    framework_text = "\n".join(
+        [
+            f"**{key}:** {value}"
+            for key, value in framework_data.items()
+            if value  # Only include non-empty values
+        ]
+    )
 
     return f"""Generate a PubMed search query for this {framework_type} framework:
 
@@ -552,7 +541,7 @@ Example format:
 """
 
 
-def get_hedge_for_framework(framework_type: str) -> Dict[str, Any]:
+def get_hedge_for_framework(framework_type: str) -> dict[str, Any]:
     """
     Returns the recommended hedge for a given framework.
 
@@ -571,12 +560,12 @@ def get_hedge_for_framework(framework_type: str) -> Dict[str, Any]:
     return None
 
 
-def get_all_hedges() -> Dict[str, Dict[str, Any]]:
+def get_all_hedges() -> dict[str, dict[str, Any]]:
     """Returns all validated hedges."""
     return VALIDATED_HEDGES
 
 
-def get_framework_query_logic(framework_type: str) -> Dict[str, Any]:
+def get_framework_query_logic(framework_type: str) -> dict[str, Any]:
     """Returns the query logic for a specific framework."""
     return FRAMEWORK_QUERY_LOGIC.get(framework_type, FRAMEWORK_QUERY_LOGIC["PICO"])
 

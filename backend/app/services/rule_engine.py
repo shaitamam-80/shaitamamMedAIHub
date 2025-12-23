@@ -3,12 +3,11 @@ MedAI Hub - Rule Engine (Layer A)
 Fast, deterministic filtering of articles based on metadata (Date, Language, PubType).
 """
 
-from typing import List, Dict, Tuple, Optional
-from datetime import datetime
-from app.api.models.screening import CriteriaConfig
-from app.services.medline_parser import MedlineAbstract
-from app.core.gems.criteria_library import get_criteria_by_code
 import logging
+
+from app.api.models.screening import CriteriaConfig
+from app.core.gems.criteria_library import get_criteria_by_code
+from app.services.medline_parser import MedlineAbstract
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ class RuleEngine:
     def __init__(self, config: CriteriaConfig):
         self.config = config
 
-    def evaluate(self, abstract: MedlineAbstract) -> Tuple[str, Optional[str]]:
+    def evaluate(self, abstract: MedlineAbstract) -> tuple[str, str | None]:
         """
         Evaluate an abstract against the criteria.
         Returns: (status, reason)
@@ -71,10 +70,7 @@ class RuleEngine:
 
         if self.config.date_range_start and year < self.config.date_range_start:
             return False
-        if self.config.date_range_end and year > self.config.date_range_end:
-            return False
-
-        return True
+        return not (self.config.date_range_end and year > self.config.date_range_end)
 
     def _check_language(self, abstract: MedlineAbstract) -> bool:
         """Check if language is allowed."""
@@ -93,14 +89,9 @@ class RuleEngine:
 
         # If ANY of the article languages is in allowed list, pass
         # e.g. Article is "eng; fre" and allowed is "eng" -> Pass
-        for lang in langs:
-            # Handle standard codes if needed (eng, fre, ger, spa...)
-            if lang in allowed:
-                return True
+        return any(lang in allowed for lang in langs)
 
-        return False
-
-    def _check_pub_type_exclusions(self, abstract: MedlineAbstract) -> Optional[str]:
+    def _check_pub_type_exclusions(self, abstract: MedlineAbstract) -> str | None:
         """Check against excluded Publication Types."""
         if not abstract.publication_types:
             return None

@@ -3,8 +3,6 @@ MedAI Hub - Screening Prompts
 AI prompts for GEMS-based abstract screening (Layer B).
 """
 
-from typing import Dict, Any, List
-
 SCREENING_SYSTEM_PROMPT = """You are an expert systematic reviewer screening medical literature using the GEMS v3.1 methodology.
 Your task is to evaluate if an article meets the inclusion criteria for a {review_type} review.
 
@@ -73,7 +71,7 @@ REVIEW_TYPE_GUIDELINES = {
 def get_screening_prompt(
     abstract_text: str,
     title: str,
-    framework_data: Dict[str, str],
+    framework_data: dict[str, str],
     framework_type: str,
     criteria_text: str,
     review_type: str = "systematic",
@@ -98,9 +96,7 @@ def get_screening_prompt(
     )
 
     # Get review guidelines
-    review_guidelines = REVIEW_TYPE_GUIDELINES.get(
-        review_type, SYSTEMATIC_REVIEW_GUIDELINES
-    )
+    review_guidelines = REVIEW_TYPE_GUIDELINES.get(review_type, SYSTEMATIC_REVIEW_GUIDELINES)
 
     # Build system prompt
     system_prompt = SCREENING_SYSTEM_PROMPT.format(
@@ -124,7 +120,7 @@ Evaluate this article against the criteria and return your decision as JSON."""
     return system_prompt + "\n\n" + user_prompt
 
 
-def get_criteria_text_for_prompt(codes: List[str]) -> str:
+def get_criteria_text_for_prompt(codes: list[str]) -> str:
     """
     Convert criteria codes to natural language for the AI prompt.
 
@@ -141,9 +137,7 @@ def get_criteria_text_for_prompt(codes: List[str]) -> str:
         criteria = get_criteria_by_code(code)
         if criteria:
             prefix = "EXCLUDE:" if criteria.get("exclude") else "INCLUDE:"
-            lines.append(
-                f"- {prefix} {criteria['label']} - {criteria['description']}"
-            )
+            lines.append(f"- {prefix} {criteria['label']} - {criteria['description']}")
 
     if not lines:
         return "No specific criteria configured (default: include all relevant studies)"

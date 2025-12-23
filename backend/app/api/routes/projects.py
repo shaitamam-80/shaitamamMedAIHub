@@ -4,13 +4,13 @@ Handles project CRUD operations
 """
 
 import logging
-from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status, Depends
-from app.api.models.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.api.models.schemas import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.core.auth import UserPayload, get_current_user
 from app.services.database import db_service
-from app.core.auth import get_current_user, UserPayload
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
-    project: ProjectCreate,
-    current_user: UserPayload = Depends(get_current_user)
+    project: ProjectCreate, current_user: UserPayload = Depends(get_current_user)
 ):
     """Create a new research project"""
     try:
@@ -43,11 +42,8 @@ async def create_project(
         )
 
 
-@router.get("/", response_model=List[ProjectResponse])
-async def list_projects(
-    limit: int = 100,
-    current_user: UserPayload = Depends(get_current_user)
-):
+@router.get("/", response_model=list[ProjectResponse])
+async def list_projects(limit: int = 100, current_user: UserPayload = Depends(get_current_user)):
     """List user's projects"""
     try:
         projects = await db_service.list_projects(user_id=current_user.id, limit=limit)
@@ -61,24 +57,17 @@ async def list_projects(
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-async def get_project(
-    project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
-):
+async def get_project(project_id: UUID, current_user: UserPayload = Depends(get_current_user)):
     """Get a specific project by ID"""
     try:
         project = await db_service.get_project(project_id)
 
         if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if project.get("user_id") and project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         return project
     except HTTPException:
@@ -95,22 +84,18 @@ async def get_project(
 async def update_project(
     project_id: UUID,
     project_update: ProjectUpdate,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """Update a project"""
     try:
         # Check if project exists
         existing_project = await db_service.get_project(project_id)
         if not existing_project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Update only provided fields
         update_data = project_update.model_dump(exclude_unset=True)
@@ -135,10 +120,7 @@ async def update_project(
 
 
 @router.delete("/{project_id}")
-async def delete_project(
-    project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
-):
+async def delete_project(project_id: UUID, current_user: UserPayload = Depends(get_current_user)):
     """
     Delete a project and all associated data.
 
@@ -153,15 +135,11 @@ async def delete_project(
         # Check if project exists
         existing_project = await db_service.get_project(project_id)
         if not existing_project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
         # Verify ownership
         if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Delete project (CASCADE will handle related data)
         success = await db_service.delete_project(project_id)
@@ -172,7 +150,11 @@ async def delete_project(
                 detail="Failed to delete project",
             )
 
-        return {"status": "success", "id": str(project_id), "message": "Project deleted successfully"}
+        return {
+            "status": "success",
+            "id": str(project_id),
+            "message": "Project deleted successfully",
+        }
     except HTTPException:
         raise
     except Exception as e:

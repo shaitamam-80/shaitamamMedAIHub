@@ -3,9 +3,10 @@ MedAI Hub - AI Service Tests
 Tests for Gemini AI integration with mocked LangChain
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestAIServiceExtractJson:
@@ -98,13 +99,15 @@ class TestAIServiceChatForDefine:
     async def test_chat_for_define_success(self):
         """Test successful chat response with framework data"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "chat_response": "I understand you want to study diabetes.",
-            "framework_data": {
-                "population": "Adults with type 2 diabetes",
-                "intervention": "Metformin"
+        mock_response.content = json.dumps(
+            {
+                "chat_response": "I understand you want to study diabetes.",
+                "framework_data": {
+                    "population": "Adults with type 2 diabetes",
+                    "intervention": "Metformin",
+                },
             }
-        })
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -112,13 +115,14 @@ class TestAIServiceChatForDefine:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.chat_for_define(
                 message="I want to study diabetes treatment",
                 conversation_history=[],
                 framework_type="PICO",
-                language="en"
+                language="en",
             )
 
             assert "chat_response" in result
@@ -129,10 +133,12 @@ class TestAIServiceChatForDefine:
     async def test_chat_for_define_with_history(self):
         """Test chat with conversation history"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "chat_response": "Based on our conversation, the population is adults.",
-            "framework_data": {"population": "Adults"}
-        })
+        mock_response.content = json.dumps(
+            {
+                "chat_response": "Based on our conversation, the population is adults.",
+                "framework_data": {"population": "Adults"},
+            }
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -140,17 +146,16 @@ class TestAIServiceChatForDefine:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             history = [
                 {"role": "user", "content": "I want to study diabetes"},
-                {"role": "assistant", "content": "Tell me more about the population"}
+                {"role": "assistant", "content": "Tell me more about the population"},
             ]
 
             result = await ai.chat_for_define(
-                message="Adults over 65",
-                conversation_history=history,
-                framework_type="PICO"
+                message="Adults over 65", conversation_history=history, framework_type="PICO"
             )
 
             assert result is not None
@@ -167,12 +172,11 @@ class TestAIServiceChatForDefine:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.chat_for_define(
-                message="Test",
-                conversation_history=[],
-                framework_type="PICO"
+                message="Test", conversation_history=[], framework_type="PICO"
             )
 
             # Should return fallback structure
@@ -183,10 +187,9 @@ class TestAIServiceChatForDefine:
     async def test_chat_for_define_hebrew(self):
         """Test chat in Hebrew language"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "chat_response": "שלום! אני מבין שאתה רוצה לחקור סוכרת.",
-            "framework_data": {}
-        })
+        mock_response.content = json.dumps(
+            {"chat_response": "שלום! אני מבין שאתה רוצה לחקור סוכרת.", "framework_data": {}}
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -194,13 +197,14 @@ class TestAIServiceChatForDefine:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.chat_for_define(
                 message="אני רוצה לחקור סוכרת",
                 conversation_history=[],
                 framework_type="PICO",
-                language="he"
+                language="he",
             )
 
             assert "שלום" in result["chat_response"]
@@ -213,12 +217,14 @@ class TestAIServiceExtractFrameworkData:
     async def test_extract_framework_data_pico(self):
         """Test extracting PICO framework data"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "population": "Adults with diabetes",
-            "intervention": "Metformin",
-            "comparison": "Placebo",
-            "outcome": "HbA1c levels"
-        })
+        mock_response.content = json.dumps(
+            {
+                "population": "Adults with diabetes",
+                "intervention": "Metformin",
+                "comparison": "Placebo",
+                "outcome": "HbA1c levels",
+            }
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -226,6 +232,7 @@ class TestAIServiceExtractFrameworkData:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             conversation = [
@@ -249,6 +256,7 @@ class TestAIServiceExtractFrameworkData:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.extract_framework_data([], "PICO")
@@ -263,25 +271,25 @@ class TestAIServiceGenerateQuery:
     async def test_generate_query_success(self):
         """Test successful query generation"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps({
-            "message": "Query strategy generated successfully",
-            "concepts": [
-                {
-                    "concept_number": 1,
-                    "component": "Population",
-                    "free_text_terms": ["diabetes", "diabetic patients"],
-                    "mesh_terms": ["Diabetes Mellitus"]
-                }
-            ],
-            "queries": {
-                "broad": "(diabetes) OR (diabetic)",
-                "focused": "(Diabetes Mellitus[MeSH])",
-                "clinical_filtered": "(diabetes) AND (clinical trial)"
-            },
-            "toolbox": [
-                {"label": "Systematic Review Filter", "query": "AND systematic[sb]"}
-            ]
-        })
+        mock_response.content = json.dumps(
+            {
+                "message": "Query strategy generated successfully",
+                "concepts": [
+                    {
+                        "concept_number": 1,
+                        "component": "Population",
+                        "free_text_terms": ["diabetes", "diabetic patients"],
+                        "mesh_terms": ["Diabetes Mellitus"],
+                    }
+                ],
+                "queries": {
+                    "broad": "(diabetes) OR (diabetic)",
+                    "focused": "(Diabetes Mellitus[MeSH])",
+                    "clinical_filtered": "(diabetes) AND (clinical trial)",
+                },
+                "toolbox": [{"label": "Systematic Review Filter", "query": "AND systematic[sb]"}],
+            }
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -289,12 +297,10 @@ class TestAIServiceGenerateQuery:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
-            framework_data = {
-                "population": "Diabetic patients",
-                "intervention": "Metformin"
-            }
+            framework_data = {"population": "Diabetic patients", "intervention": "Metformin"}
 
             result = await ai.generate_pubmed_query(framework_data, "PICO")
 
@@ -316,6 +322,7 @@ class TestAIServiceGenerateQuery:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.generate_pubmed_query({}, "PICO")
@@ -333,18 +340,16 @@ class TestAIServiceAnalyzeBatch:
     async def test_analyze_batch_success(self):
         """Test successful batch analysis"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps([
-            {
-                "pmid": "12345678",
-                "decision": "include",
-                "reasoning": "Matches population criteria"
-            },
-            {
-                "pmid": "87654321",
-                "decision": "exclude",
-                "reasoning": "Wrong intervention"
-            }
-        ])
+        mock_response.content = json.dumps(
+            [
+                {
+                    "pmid": "12345678",
+                    "decision": "include",
+                    "reasoning": "Matches population criteria",
+                },
+                {"pmid": "87654321", "decision": "exclude", "reasoning": "Wrong intervention"},
+            ]
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -352,11 +357,12 @@ class TestAIServiceAnalyzeBatch:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             abstracts = [
                 {"pmid": "12345678", "title": "Diabetes study", "abstract": "..."},
-                {"pmid": "87654321", "title": "Heart study", "abstract": "..."}
+                {"pmid": "87654321", "title": "Heart study", "abstract": "..."},
             ]
             criteria = {"population": "Diabetic patients"}
 
@@ -378,6 +384,7 @@ class TestAIServiceAnalyzeBatch:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.analyze_abstract_batch([], {})
@@ -388,7 +395,9 @@ class TestAIServiceAnalyzeBatch:
     async def test_analyze_batch_truncates_long_abstracts(self):
         """Test that long abstracts are truncated in prompt"""
         mock_response = MagicMock()
-        mock_response.content = json.dumps([{"pmid": "1", "decision": "include", "reasoning": "ok"}])
+        mock_response.content = json.dumps(
+            [{"pmid": "1", "decision": "include", "reasoning": "ok"}]
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -396,6 +405,7 @@ class TestAIServiceAnalyzeBatch:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             # Very long abstract
@@ -416,24 +426,39 @@ class TestAIServiceIntegration:
         """Test workflow from chat to query generation"""
         # Mock chat response
         chat_response = MagicMock()
-        chat_response.content = json.dumps({
-            "chat_response": "Great! I've captured your research question.",
-            "framework_data": {
-                "population": "Adults with diabetes",
-                "intervention": "Exercise",
-                "comparison": "No exercise",
-                "outcome": "Weight loss"
+        chat_response.content = json.dumps(
+            {
+                "chat_response": "Great! I've captured your research question.",
+                "framework_data": {
+                    "population": "Adults with diabetes",
+                    "intervention": "Exercise",
+                    "comparison": "No exercise",
+                    "outcome": "Weight loss",
+                },
             }
-        })
+        )
 
         # Mock query response
         query_response = MagicMock()
-        query_response.content = json.dumps({
-            "message": "Query generated",
-            "concepts": [{"concept_number": 1, "component": "Population", "free_text_terms": ["diabetes"], "mesh_terms": []}],
-            "queries": {"broad": "(diabetes)", "focused": "(diabetes[MeSH])", "clinical_filtered": "(diabetes) AND RCT"},
-            "toolbox": []
-        })
+        query_response.content = json.dumps(
+            {
+                "message": "Query generated",
+                "concepts": [
+                    {
+                        "concept_number": 1,
+                        "component": "Population",
+                        "free_text_terms": ["diabetes"],
+                        "mesh_terms": [],
+                    }
+                ],
+                "queries": {
+                    "broad": "(diabetes)",
+                    "focused": "(diabetes[MeSH])",
+                    "clinical_filtered": "(diabetes) AND RCT",
+                },
+                "toolbox": [],
+            }
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -442,22 +467,20 @@ class TestAIServiceIntegration:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             # Step 1: Chat
             chat_result = await ai.chat_for_define(
                 message="I want to study exercise for diabetes",
                 conversation_history=[],
-                framework_type="PICO"
+                framework_type="PICO",
             )
 
             assert "framework_data" in chat_result
 
             # Step 2: Generate query from extracted data
-            query_result = await ai.generate_pubmed_query(
-                chat_result["framework_data"],
-                "PICO"
-            )
+            query_result = await ai.generate_pubmed_query(chat_result["framework_data"], "PICO")
 
             assert "queries" in query_result
             assert query_result["queries"]["broad"] != ""
@@ -467,26 +490,27 @@ class TestAIServiceIntegration:
 # Error Path Tests - Timeouts, API Failures, Hebrew Detection
 # ============================================================================
 
+
 class TestAIServiceErrorPaths:
     """Tests for error handling and fallback mechanisms"""
 
     @pytest.mark.asyncio
     async def test_query_generation_timeout_returns_fallback(self):
         """Test that timeout returns valid fallback response with queries"""
-        import asyncio
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
-            mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError("Request timed out"))
+            mock_llm.ainvoke = AsyncMock(side_effect=TimeoutError("Request timed out"))
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             framework_data = {
                 "P": "Adults with diabetes",
                 "I": "Metformin",
-                "O": "Blood glucose levels"
+                "O": "Blood glucose levels",
             }
 
             result = await ai.generate_pubmed_query(framework_data, "PICO")
@@ -501,7 +525,10 @@ class TestAIServiceErrorPaths:
 
             # Should have warning about timeout
             warning_codes = [w.get("code", "") for w in result.get("warnings", [])]
-            assert any("TIMEOUT" in code for code in warning_codes) or "timeout" in result["message"].lower()
+            assert (
+                any("TIMEOUT" in code for code in warning_codes)
+                or "timeout" in result["message"].lower()
+            )
 
     @pytest.mark.asyncio
     async def test_query_generation_quota_exceeded_returns_fallback(self):
@@ -514,13 +541,10 @@ class TestAIServiceErrorPaths:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
-            framework_data = {
-                "P": "Adults",
-                "I": "Exercise",
-                "O": "Health outcomes"
-            }
+            framework_data = {"P": "Adults", "I": "Exercise", "O": "Health outcomes"}
 
             result = await ai.generate_pubmed_query(framework_data, "PICO")
 
@@ -537,16 +561,18 @@ class TestAIServiceErrorPaths:
         """Test that Hebrew characters in AI response trigger English fallback"""
         mock_response = MagicMock()
         # AI returns Hebrew in the query (should not happen but need to handle)
-        mock_response.content = json.dumps({
-            "message": "Generated query",
-            "concepts": [],
-            "queries": {
-                "broad": "סוכרת[tiab]",  # Hebrew!
-                "focused": "diabetes",
-                "clinical_filtered": "diabetes"
-            },
-            "toolbox": []
-        })
+        mock_response.content = json.dumps(
+            {
+                "message": "Generated query",
+                "concepts": [],
+                "queries": {
+                    "broad": "סוכרת[tiab]",  # Hebrew!
+                    "focused": "diabetes",
+                    "clinical_filtered": "diabetes",
+                },
+                "toolbox": [],
+            }
+        )
 
         with patch("app.services.ai_service.ChatGoogleGenerativeAI") as MockLLM:
             mock_llm = MagicMock()
@@ -554,6 +580,7 @@ class TestAIServiceErrorPaths:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             framework_data = {"P": "Adults", "I": "Treatment", "O": "Outcome"}
@@ -566,6 +593,7 @@ class TestAIServiceErrorPaths:
     async def test_contains_hebrew_detection(self):
         """Test Hebrew character detection utility"""
         from app.services.ai_service import AIService
+
         ai = AIService.__new__(AIService)
 
         # Should detect Hebrew
@@ -583,13 +611,14 @@ class TestAIServiceErrorPaths:
     async def test_generate_fallback_query_creates_valid_pubmed_query(self):
         """Test that fallback query generator produces valid queries"""
         from app.services.ai_service import AIService
+
         ai = AIService.__new__(AIService)
 
         framework_data = {
             "P": "Adults with type 2 diabetes",
             "I": "Metformin therapy",
             "C": "Lifestyle intervention",
-            "O": "HbA1c reduction"
+            "O": "HbA1c reduction",
         }
 
         query = ai._generate_fallback_query(framework_data, "PICO")
@@ -610,6 +639,7 @@ class TestAIServiceErrorPaths:
     async def test_build_fallback_response_has_required_fields(self):
         """Test that fallback response builder includes all required fields"""
         from app.services.ai_service import AIService
+
         ai = AIService.__new__(AIService)
 
         fallback_query = '("diabetes"[tiab]) AND ("metformin"[tiab])'
@@ -619,7 +649,7 @@ class TestAIServiceErrorPaths:
             fallback_query=fallback_query,
             framework_type="PICO",
             framework_data=framework_data,
-            reason="test_failure"
+            reason="test_failure",
         )
 
         # V2 format fields
@@ -648,20 +678,21 @@ class TestAIServiceErrorPaths:
     async def test_fallback_response_concepts_populated_from_framework_data(self):
         """Test that fallback concepts are generated from framework data"""
         from app.services.ai_service import AIService
+
         ai = AIService.__new__(AIService)
 
         framework_data = {
             "P": "Elderly patients",
             "I": "Exercise program",
             "C": "Standard care",
-            "O": "Quality of life"
+            "O": "Quality of life",
         }
 
         result = ai.build_fallback_response(
             fallback_query="test query",
             framework_type="PICO",
             framework_data=framework_data,
-            reason="test"
+            reason="test",
         )
 
         # Concepts should be populated from framework_data
@@ -682,6 +713,7 @@ class TestAIServiceErrorPaths:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             framework_data = {"P": "Test", "I": "Test", "O": "Test"}
@@ -704,6 +736,7 @@ class TestAIServiceErrorPaths:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
             result = await ai.generate_pubmed_query({"P": "Test"}, "PICO")
@@ -720,16 +753,18 @@ class TestAIServiceHebrewTranslation:
     async def test_translate_framework_data_detects_hebrew(self):
         """Test that Hebrew fields are identified for translation"""
         from app.services.ai_service import AIService
+
         ai = AIService.__new__(AIService)
 
         framework_data = {
             "P": "מבוגרים עם סוכרת",  # Hebrew
             "I": "Metformin",  # English
-            "O": "תוצאות בריאותיות"  # Hebrew
+            "O": "תוצאות בריאותיות",  # Hebrew
         }
 
         hebrew_fields = {
-            key: value for key, value in framework_data.items()
+            key: value
+            for key, value in framework_data.items()
             if isinstance(value, str) and ai._contains_hebrew(value)
         }
 
@@ -749,12 +784,10 @@ class TestAIServiceHebrewTranslation:
             MockLLM.return_value = mock_llm
 
             from app.services.ai_service import AIService
+
             ai = AIService()
 
-            framework_data = {
-                "P": "Adults with diabetes",
-                "I": "Metformin treatment"
-            }
+            framework_data = {"P": "Adults with diabetes", "I": "Metformin treatment"}
 
             result = await ai.translate_framework_to_english(framework_data)
 

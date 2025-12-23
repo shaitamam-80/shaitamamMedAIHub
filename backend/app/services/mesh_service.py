@@ -9,12 +9,13 @@ This service provides:
 - Fallback to NCBI API if local lookup fails
 """
 
-import httpx
-import logging
 import asyncio
-from typing import Dict, List, Optional, Any
+import logging
 from dataclasses import dataclass, field
-from datetime import timedelta
+from typing import Any
+
+import httpx
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def normalize_term_for_dedup(term: str) -> str:
     return " ".join(sorted(words))
 
 
-def filter_permutation_duplicates(terms: List[str], existing_normalized: set = None) -> List[str]:
+def filter_permutation_duplicates(terms: list[str], existing_normalized: set = None) -> list[str]:
     """
     Filter out terms that are word-order permutations of each other.
 
@@ -64,10 +65,11 @@ def filter_permutation_duplicates(terms: List[str], existing_normalized: set = N
 @dataclass
 class MeSHTerm:
     """Represents a MeSH descriptor with its metadata"""
+
     descriptor_ui: str  # Unique ID (e.g., D003920)
     descriptor_name: str  # Main term (e.g., "Diabetes Mellitus")
-    entry_terms: List[str] = field(default_factory=list)  # Synonyms
-    tree_numbers: List[str] = field(default_factory=list)  # Hierarchy
+    entry_terms: list[str] = field(default_factory=list)  # Synonyms
+    tree_numbers: list[str] = field(default_factory=list)  # Hierarchy
     scope_note: str = ""  # Definition
 
     def to_mesh_query(self, explosion: str = "default") -> str:
@@ -91,10 +93,11 @@ class MeSHTerm:
 @dataclass
 class ExpandedTerms:
     """Result of term expansion - all search variants"""
+
     original_term: str
-    mesh_terms: List[MeSHTerm] = field(default_factory=list)
-    free_text_terms: List[str] = field(default_factory=list)
-    entry_terms: List[str] = field(default_factory=list)  # From MeSH synonyms
+    mesh_terms: list[MeSHTerm] = field(default_factory=list)
+    free_text_terms: list[str] = field(default_factory=list)
+    entry_terms: list[str] = field(default_factory=list)  # From MeSH synonyms
 
     def to_broad_query(self) -> str:
         """
@@ -118,12 +121,12 @@ class ExpandedTerms:
             clean_term = term.strip()
 
             # If term has internal field tags (like [tiab:~3]), add as is
-            if '[' in clean_term and ']' in clean_term:
+            if "[" in clean_term and "]" in clean_term:
                 parts.append(clean_term)
                 continue
 
             # Check duplication against MeSH
-            term_lower = clean_term.replace('"', '').lower()
+            term_lower = clean_term.replace('"', "").lower()
             if term_lower in seen_terms:
                 continue
 
@@ -131,7 +134,7 @@ class ExpandedTerms:
             if " " in clean_term and not clean_term.startswith('"'):
                 parts.append(f'"{clean_term}"[tiab]')
             else:
-                parts.append(f'{clean_term}[tiab]')
+                parts.append(f"{clean_term}[tiab]")
 
             seen_terms.add(term_lower)
 
@@ -141,8 +144,8 @@ class ExpandedTerms:
         for mesh in self.mesh_terms:
             existing_normalized.add(normalize_term_for_dedup(mesh.descriptor_name))
         for term in self.free_text_terms:
-            clean = term.strip().replace('"', '')
-            if '[' not in clean:
+            clean = term.strip().replace('"', "")
+            if "[" not in clean:
                 existing_normalized.add(normalize_term_for_dedup(clean))
 
         # Filter out word-order permutations
@@ -161,7 +164,7 @@ class ExpandedTerms:
                 if " " in clean_term:
                     parts.append(f'"{clean_term}"[tiab]')
                 else:
-                    parts.append(f'{clean_term}[tiab]')
+                    parts.append(f"{clean_term}[tiab]")
                 seen_terms.add(term_lower)
                 count += 1
 
@@ -201,14 +204,14 @@ class ExpandedTerms:
         if " " in self.original_term:
             parts.append(f'"{self.original_term}"[tiab]')
         else:
-            parts.append(f'{self.original_term}[tiab]')
+            parts.append(f"{self.original_term}[tiab]")
 
         if not parts:
             return ""
 
         return "(" + " OR ".join(parts) + ")"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert to dictionary for cache serialization.
 
@@ -223,16 +226,16 @@ class ExpandedTerms:
                     "descriptor_name": m.descriptor_name,
                     "entry_terms": m.entry_terms,
                     "tree_numbers": m.tree_numbers,
-                    "scope_note": m.scope_note
+                    "scope_note": m.scope_note,
                 }
                 for m in self.mesh_terms
             ],
             "free_text_terms": self.free_text_terms,
-            "entry_terms": self.entry_terms
+            "entry_terms": self.entry_terms,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ExpandedTerms":
+    def from_dict(cls, data: dict[str, Any]) -> "ExpandedTerms":
         """
         Restore ExpandedTerms from cached dict.
 
@@ -248,7 +251,7 @@ class ExpandedTerms:
                 descriptor_name=m.get("descriptor_name", ""),
                 entry_terms=m.get("entry_terms", []),
                 tree_numbers=m.get("tree_numbers", []),
-                scope_note=m.get("scope_note", "")
+                scope_note=m.get("scope_note", ""),
             )
             for m in data.get("mesh_terms", [])
         ]
@@ -257,7 +260,7 @@ class ExpandedTerms:
             original_term=data.get("original_term", ""),
             mesh_terms=mesh_terms,
             free_text_terms=data.get("free_text_terms", []),
-            entry_terms=data.get("entry_terms", [])
+            entry_terms=data.get("entry_terms", []),
         )
 
 
@@ -285,13 +288,13 @@ class MeSHService:
         """Lazy initialization of Supabase client"""
         if self._supabase is None:
             from supabase import create_client
+
             self._supabase = create_client(
-                settings.SUPABASE_URL,
-                settings.SUPABASE_SERVICE_ROLE_KEY
+                settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY
             )
         return self._supabase
 
-    async def search_local(self, term: str, max_results: int = 5) -> List[MeSHTerm]:
+    async def search_local(self, term: str, max_results: int = 5) -> list[MeSHTerm]:
         """
         Search MeSH terms in local Supabase database.
 
@@ -315,9 +318,13 @@ class MeSHService:
             results = []
 
             # Strategy 1: Exact match on descriptor_name (case-insensitive)
-            response = supabase.table('mesh_terms').select('*').ilike(
-                'descriptor_name', clean_term
-            ).limit(max_results).execute()
+            response = (
+                supabase.table("mesh_terms")
+                .select("*")
+                .ilike("descriptor_name", clean_term)
+                .limit(max_results)
+                .execute()
+            )
 
             if response.data:
                 for row in response.data:
@@ -329,8 +336,7 @@ class MeSHService:
             # PostgreSQL: Check if any entry term matches (case-insensitive)
             # Using raw SQL via RPC for array search
             response = supabase.rpc(
-                'search_mesh_entry_terms',
-                {'search_term': clean_term, 'max_results': max_results}
+                "search_mesh_entry_terms", {"search_term": clean_term, "max_results": max_results}
             ).execute()
 
             if response.data:
@@ -340,9 +346,13 @@ class MeSHService:
                 return results
 
             # Strategy 3: Partial match on descriptor_name
-            response = supabase.table('mesh_terms').select('*').ilike(
-                'descriptor_name', f'%{clean_term}%'
-            ).limit(max_results).execute()
+            response = (
+                supabase.table("mesh_terms")
+                .select("*")
+                .ilike("descriptor_name", f"%{clean_term}%")
+                .limit(max_results)
+                .execute()
+            )
 
             if response.data:
                 for row in response.data:
@@ -357,17 +367,17 @@ class MeSHService:
             logger.warning(f"Local MeSH search failed for '{term}': {e}")
             return []
 
-    def _row_to_mesh_term(self, row: Dict[str, Any]) -> MeSHTerm:
+    def _row_to_mesh_term(self, row: dict[str, Any]) -> MeSHTerm:
         """Convert database row to MeSHTerm object"""
         return MeSHTerm(
-            descriptor_ui=row.get('descriptor_ui', ''),
-            descriptor_name=row.get('descriptor_name', ''),
-            entry_terms=row.get('entry_terms', []) or [],
-            tree_numbers=row.get('tree_numbers', []) or [],
-            scope_note=row.get('scope_note', '') or ''
+            descriptor_ui=row.get("descriptor_ui", ""),
+            descriptor_name=row.get("descriptor_name", ""),
+            entry_terms=row.get("entry_terms", []) or [],
+            tree_numbers=row.get("tree_numbers", []) or [],
+            scope_note=row.get("scope_note", "") or "",
         )
 
-    async def search_mesh_api(self, term: str, max_results: int = 5) -> List[MeSHTerm]:
+    async def search_mesh_api(self, term: str, max_results: int = 5) -> list[MeSHTerm]:
         """
         Fallback: Search MeSH using NCBI E-utilities API.
 
@@ -381,12 +391,7 @@ class MeSHService:
         try:
             # First, search for matching UIDs
             esearch_url = f"{self.base_url}/esearch.fcgi"
-            params = {
-                "db": "mesh",
-                "term": term,
-                "retmax": max_results,
-                "retmode": "json"
-            }
+            params = {"db": "mesh", "term": term, "retmax": max_results, "retmode": "json"}
             if self.api_key:
                 params["api_key"] = self.api_key
             params["email"] = self.email
@@ -404,11 +409,7 @@ class MeSHService:
 
             # Fetch details for found UIDs
             esummary_url = f"{self.base_url}/esummary.fcgi"
-            params = {
-                "db": "mesh",
-                "id": ",".join(mesh_uids),
-                "retmode": "json"
-            }
+            params = {"db": "mesh", "id": ",".join(mesh_uids), "retmode": "json"}
             if self.api_key:
                 params["api_key"] = self.api_key
             params["email"] = self.email
@@ -430,13 +431,15 @@ class MeSHService:
                 name = ds_mesh_term[0] if ds_mesh_term else record.get("title", "")
 
                 if name:
-                    results.append(MeSHTerm(
-                        descriptor_ui=f"D{uid}" if not str(uid).startswith("D") else str(uid),
-                        descriptor_name=name,
-                        entry_terms=[],
-                        tree_numbers=[],
-                        scope_note=record.get("ds_scopenote", "")
-                    ))
+                    results.append(
+                        MeSHTerm(
+                            descriptor_ui=f"D{uid}" if not str(uid).startswith("D") else str(uid),
+                            descriptor_name=name,
+                            entry_terms=[],
+                            tree_numbers=[],
+                            scope_note=record.get("ds_scopenote", ""),
+                        )
+                    )
 
             logger.info(f"NCBI API found {len(results)} matches for '{term}'")
             return results
@@ -463,7 +466,7 @@ class MeSHService:
         Returns:
             ExpandedTerms object with all query variants
         """
-        from app.core.search_config import DRUG_CLASS_EXPANSIONS, GENERIC_TERMS_NO_MESH
+        from app.core.search_config import GENERIC_TERMS_NO_MESH
 
         result = ExpandedTerms(original_term=term)
 
@@ -531,7 +534,7 @@ class MeSHService:
 
         return result
 
-    def _expand_drug_class(self, term: str) -> List[str]:
+    def _expand_drug_class(self, term: str) -> list[str]:
         """
         Check if term is a drug class and return specific drug names.
 
@@ -628,7 +631,7 @@ class MeSHService:
     # Longer terms are likely natural language sentences that won't match anything
     MAX_PHRASE_WORDS = 5
 
-    def _generate_free_text(self, term: str) -> List[str]:
+    def _generate_free_text(self, term: str) -> list[str]:
         """
         Generate free-text search variations for a term.
 
@@ -700,10 +703,8 @@ class MeSHService:
         return variations
 
     async def expand_framework_data(
-        self,
-        framework_data: Dict[str, str],
-        framework_type: str
-    ) -> Dict[str, ExpandedTerms]:
+        self, framework_data: dict[str, str], framework_type: str
+    ) -> dict[str, ExpandedTerms]:
         """
         Expand all terms in framework data concurrently.
 
@@ -718,8 +719,9 @@ class MeSHService:
 
         # Filter out empty values and special keys
         items_to_expand = {
-            key: value for key, value in framework_data.items()
-            if value and key.lower() not in ['research_question', 'framework_type']
+            key: value
+            for key, value in framework_data.items()
+            if value and key.lower() not in ["research_question", "framework_type"]
         }
 
         if not items_to_expand:
@@ -728,20 +730,17 @@ class MeSHService:
         logger.info(f"Expanding {len(items_to_expand)} framework components")
 
         # Expand all terms concurrently
-        tasks = [
-            self.expand_term(value)
-            for value in items_to_expand.values()
-        ]
+        tasks = [self.expand_term(value) for value in items_to_expand.values()]
 
         expanded_list = await asyncio.gather(*tasks)
 
         # Map back to keys
-        for key, expanded in zip(items_to_expand.keys(), expanded_list):
+        for key, expanded in zip(items_to_expand.keys(), expanded_list, strict=False):
             results[key] = expanded
 
         return results
 
-    async def get_mesh_by_ui(self, descriptor_ui: str) -> Optional[MeSHTerm]:
+    async def get_mesh_by_ui(self, descriptor_ui: str) -> MeSHTerm | None:
         """
         Get a specific MeSH term by its descriptor UI.
 
@@ -753,9 +752,13 @@ class MeSHService:
         """
         try:
             supabase = self._get_supabase()
-            response = supabase.table('mesh_terms').select('*').eq(
-                'descriptor_ui', descriptor_ui
-            ).limit(1).execute()
+            response = (
+                supabase.table("mesh_terms")
+                .select("*")
+                .eq("descriptor_ui", descriptor_ui)
+                .limit(1)
+                .execute()
+            )
 
             if response.data:
                 return self._row_to_mesh_term(response.data[0])
@@ -765,18 +768,13 @@ class MeSHService:
             logger.warning(f"Failed to get MeSH term {descriptor_ui}: {e}")
             return None
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get statistics about the local MeSH database"""
         try:
             supabase = self._get_supabase()
-            response = supabase.table('mesh_terms').select(
-                'descriptor_ui', count='exact'
-            ).execute()
+            response = supabase.table("mesh_terms").select("descriptor_ui", count="exact").execute()
 
-            return {
-                "total_terms": response.count or 0,
-                "source": "local_supabase"
-            }
+            return {"total_terms": response.count or 0, "source": "local_supabase"}
         except Exception as e:
             logger.warning(f"Failed to get MeSH stats: {e}")
             return {"total_terms": 0, "source": "unknown", "error": str(e)}

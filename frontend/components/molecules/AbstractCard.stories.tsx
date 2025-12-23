@@ -55,8 +55,8 @@ const baseAbstract: AbstractResponse = {
 };
 
 // Wrapper component for interactive stories
-const InteractiveWrapper = ({ abstract, ...props }: { abstract: AbstractResponse; showActions?: boolean }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const InteractiveWrapper = ({ abstract, initialExpanded = false, ...props }: { abstract: AbstractResponse; showActions?: boolean; initialExpanded?: boolean }) => {
+  const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [currentAbstract, setCurrentAbstract] = useState(abstract);
 
   const handleDecision = (id: string, decision: "include" | "exclude" | "maybe") => {
@@ -107,17 +107,7 @@ export const AnalyzingState: Story = {
 
 // Expanded state
 export const Expanded: Story = {
-  render: () => {
-    const [isExpanded, setIsExpanded] = useState(true);
-    return (
-      <AbstractCard
-        abstract={baseAbstract}
-        isExpanded={isExpanded}
-        onToggle={() => setIsExpanded(!isExpanded)}
-        onDecision={(id, decision) => console.log(`${id}: ${decision}`)}
-      />
-    );
-  },
+  render: () => <InteractiveWrapper abstract={baseAbstract} initialExpanded />,
 };
 
 // Without actions (read-only mode)
