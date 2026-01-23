@@ -15,15 +15,12 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
-  FileText,
-  Filter,
   FolderOpen,
   Home,
   Info,
   LogOut,
   MessageSquare,
   Sparkles,
-  Search,
   User,
   Zap,
 } from "lucide-react";
@@ -31,7 +28,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
-// Navigation items with step numbers for workflow clarity
+// Navigation items
 const navigation = [
   {
     name: "Home",
@@ -49,33 +46,8 @@ const navigation = [
     name: "Define",
     href: "/define",
     icon: MessageSquare,
-    description: "Step 1: Research Question",
-    step: 1,
+    description: "Research Question Builder",
     color: "indigo",
-  },
-  {
-    name: "Query",
-    href: "/query",
-    icon: Search,
-    description: "Step 2: Search Builder",
-    step: 2,
-    color: "teal",
-  },
-  {
-    name: "Screen",
-    href: "/screening",
-    icon: Filter,
-    description: "Step 3: Smart Screener",
-    step: 3,
-    color: "emerald",
-  },
-  {
-    name: "Review",
-    href: "/review",
-    icon: FileText,
-    description: "Step 4: Full-Text Review",
-    step: 4,
-    color: "amber",
   },
   {
     name: "About",
@@ -264,11 +236,11 @@ export function AppSidebar() {
                     />
                   )}
 
-                  {/* Icon with step indicator */}
+                  {/* Icon */}
                   <div
                     className={cn(
                       "relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-200",
-                      item.step
+                      item.color
                         ? getStepColor(item.color, isActive)
                         : isActive
                           ? "bg-primary/10 text-primary"
@@ -276,11 +248,6 @@ export function AppSidebar() {
                     )}
                   >
                     <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                    {item.step && !isCollapsed && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-card border border-border text-2xs font-bold shadow-sm">
-                        {item.step}
-                      </span>
-                    )}
                   </div>
 
                   <AnimatePresence>

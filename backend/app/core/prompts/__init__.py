@@ -1,6 +1,6 @@
 """
 Prompts Package
-Modular system prompts for Define and Query tools
+Modular system prompts for Define tool
 
 Version: 2025.01
 Implements the "Systematic Review Question Architect" methodology
@@ -12,20 +12,6 @@ from .define import (
     get_extraction_prompt,
     get_response_template,
     get_finer_assessment_prompt
-)
-
-# Query tool exports
-from .query import (
-    get_query_system_prompt,
-    get_simple_query_prompt,
-    get_hedge_for_framework,
-    get_all_hedges,
-    get_framework_query_logic,
-    get_proximity_query,
-    get_proximity_guide,
-    VALIDATED_HEDGES,
-    FRAMEWORK_QUERY_LOGIC,
-    PROXIMITY_SEARCH_GUIDE
 )
 
 # Shared utilities exports
@@ -56,18 +42,6 @@ __all__ = [
     "get_extraction_prompt",
     "get_response_template",
     "get_finer_assessment_prompt",
-
-    # Query tool
-    "get_query_system_prompt",
-    "get_simple_query_prompt",
-    "get_hedge_for_framework",
-    "get_all_hedges",
-    "get_framework_query_logic",
-    "get_proximity_query",
-    "get_proximity_guide",
-    "VALIDATED_HEDGES",
-    "FRAMEWORK_QUERY_LOGIC",
-    "PROXIMITY_SEARCH_GUIDE",
 
     # Shared utilities
     "FRAMEWORK_SCHEMAS",

@@ -47,36 +47,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: Optional[str] = None  # Optional: Direct PostgreSQL connection
 
-    # File Upload Settings
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB default
-    ALLOWED_EXTENSIONS: set[str] = {".txt", ".medline", ".csv"}
-    UPLOAD_DIR: str = "uploads"
-
     # AI Settings
     MAX_TOKENS: int = 8192
     TEMPERATURE: float = 0.7
-    BATCH_SIZE: int = 10  # Number of abstracts to process in one AI call
-
-    # NCBI PubMed API Settings
-    # With API key: 10 requests/second, without: 3 requests/second
-    # Get API key from: https://www.ncbi.nlm.nih.gov/account/settings/
-    NCBI_API_KEY: Optional[str] = None
-    NCBI_EMAIL: str = "shaitamam@gmail.com"  # Required by NCBI for identification
-
-    # Cache Settings
-    # If REDIS_URL is set, Redis cache is used; otherwise, in-memory cache
-    REDIS_URL: Optional[str] = None  # e.g., redis://localhost:6379 or Railway Redis URL
-    CACHE_TTL_DAYS: int = 30  # MeSH term cache TTL (MeSH updates annually)
-    CACHE_MAX_SIZE: int = 10000  # Max entries for in-memory cache
 
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignore extra env vars not defined in Settings
 
 
 # Global settings instance
 settings = Settings()
-
-
-# Ensure upload directory exists
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

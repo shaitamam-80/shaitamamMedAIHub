@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, query, review, screening
+from app.api.routes import projects, define
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -51,14 +51,6 @@ tags_metadata = [
     {
         "name": "define",
         "description": "Research question definition with AI chat. Formulate research questions using frameworks like PICO, CoCoPop, PEO, SPIDER, etc.",
-    },
-    {
-        "name": "query",
-        "description": "PubMed query generation. Generate optimized Boolean search queries for systematic literature reviews.",
-    },
-    {
-        "name": "review",
-        "description": "Abstract screening and review. Upload MEDLINE files and use AI to screen abstracts for relevance.",
     },
     {
         "name": "health",
@@ -119,9 +111,6 @@ app.add_middleware(
 # Include routers
 app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define.router, prefix=settings.API_V1_PREFIX)
-app.include_router(query.router, prefix=settings.API_V1_PREFIX)
-app.include_router(review.router, prefix=settings.API_V1_PREFIX)
-app.include_router(screening.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/", tags=["health"])
