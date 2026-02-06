@@ -635,6 +635,43 @@ class FrameworkSchemaResponse(BaseModel):
 
 
 # ============================================================================
+# Stage Workflow Models (Phase 2)
+# ============================================================================
+
+class StageStatusUpdate(BaseModel):
+    """Request to update a stage's status."""
+    status: str = Field(
+        ...,
+        pattern="^(pending|in_progress|completed|skipped)$",
+        description="New stage status",
+        examples=["completed"]
+    )
+
+
+class ConversationMessagesResponse(BaseModel):
+    """Response containing messages for a stage conversation."""
+    conversation_id: Optional[str] = None
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ArtifactResponse(BaseModel):
+    """Single artifact response."""
+    id: str
+    project_id: str
+    stage_id: Optional[str] = None
+    filename: str
+    display_name: Optional[str] = None
+    file_type: str
+    content: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
 # Re-export typed framework models for convenience
 # Usage: from app.api.models.schemas import PICOData, framework_to_dict
 # ============================================================================
@@ -676,4 +713,8 @@ __all__ = [
     "GenerateQuestionsResponse",
     "GeneratedQuestion",
     "QuestionsFinerAssessment",
+    # Stage Workflow models (Phase 2)
+    "StageStatusUpdate",
+    "ConversationMessagesResponse",
+    "ArtifactResponse",
 ]

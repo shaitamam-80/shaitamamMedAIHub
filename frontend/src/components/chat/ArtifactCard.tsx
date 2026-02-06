@@ -14,8 +14,33 @@ interface ArtifactCardProps {
 
 export default function ArtifactCard({ artifact }: ArtifactCardProps) {
   const handleDownload = () => {
-    // Mock download - in production, trigger actual file download
-    console.log('Downloading artifact:', artifact.name);
+    try {
+      // MIME type mapping for common artifact types
+      const mimeMap: Record<string, string> = {
+        md: 'text/markdown',
+        csv: 'text/csv',
+        html: 'text/html',
+        txt: 'text/plain',
+        json: 'application/json',
+        r: 'text/plain',
+        R: 'text/plain',
+      };
+
+      const ext = artifact.name.split('.').pop() || 'txt';
+      const mimeType = mimeMap[ext] || 'text/plain';
+
+      const blob = new Blob([artifact.content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = artifact.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
   };
 
   return (
@@ -32,7 +57,7 @@ export default function ArtifactCard({ artifact }: ArtifactCardProps) {
       <button
         onClick={handleDownload}
         className="p-2 hover:bg-[#1e293b] rounded-lg transition-colors"
-        title="Download"
+        title="הורדה"
       >
         <Download className="w-4 h-4 text-[#94a3b8]" />
       </button>
