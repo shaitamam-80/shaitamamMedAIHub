@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { STAGES } from '@/lib/utils/stage-config';
 import { cn } from '@/lib/utils/cn';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, Loader2 } from 'lucide-react';
+import { getProjectStages, type ProjectStage } from '@/lib/api/backend-client';
 
 interface ProjectSidebarProps {
   projectId: string;
@@ -12,13 +14,34 @@ interface ProjectSidebarProps {
 
 export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
   const pathname = usePathname();
+  const [stageStatuses, setStageStatuses] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getProjectStages(projectId)
+      .then((stages) => {
+        const statusMap: Record<string, string> = {};
+        stages.forEach((s) => {
+          statusMap[s.stage_name] = s.status;
+        });
+        setStageStatuses(statusMap);
+      })
+      .catch((err) => {
+        console.error('Failed to load stages:', err);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId]);
 
   const isStageActive = (stageSlug: string) => {
     return pathname.includes(`/stages/${stageSlug}`);
   };
 
-  const isStageCompleted = (stageOrder: number) => {
-    return stageOrder <= 3;
+  const isStageCompleted = (stageSlug: string) => {
+    return stageStatuses[stageSlug] === 'completed';
+  };
+
+  const isStageInProgress = (stageSlug: string) => {
+    return stageStatuses[stageSlug] === 'in_progress';
   };
 
   return (
@@ -36,11 +59,19 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
           <p className="text-xs text-[#64748b]">10 שלבים לסקירה שיטתית מושלמת</p>
         </div>
 
+        {/* Loading indicator */}
+        {loading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+          </div>
+        )}
+
         {/* Stages List */}
         <div className="space-y-2">
           {Object.values(STAGES).map((stage) => {
             const isActive = isStageActive(stage.slug);
-            const isCompleted = isStageCompleted(stage.order);
+            const isCompleted = isStageCompleted(stage.slug);
+            const isInProgress = isStageInProgress(stage.slug);
 
             return (
               <Link
@@ -51,7 +82,8 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                   isActive &&
                     'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500',
                   !isActive && isCompleted && 'bg-green-500/5 border-green-500/20',
-                  !isActive && !isCompleted && 'border-[#1e293b] hover:border-blue-500/50'
+                  !isActive && isInProgress && 'border-amber-500/30 bg-amber-500/5',
+                  !isActive && !isCompleted && !isInProgress && 'border-[#1e293b] hover:border-blue-500/50'
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -61,7 +93,8 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                       'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm',
                       isActive && 'bg-blue-500 text-white',
                       !isActive && isCompleted && 'bg-green-500 text-white',
-                      !isActive && !isCompleted && 'bg-[#1e293b] text-[#64748b]'
+                      !isActive && isInProgress && 'bg-amber-500 text-white',
+                      !isActive && !isCompleted && !isInProgress && 'bg-[#1e293b] text-[#64748b]'
                     )}
                   >
                     {isCompleted ? (
@@ -80,7 +113,8 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                         'font-medium text-sm mb-1',
                         isActive && 'text-blue-500',
                         !isActive && isCompleted && 'text-green-500',
-                        !isActive && !isCompleted && 'text-[#f1f5f9]'
+                        !isActive && isInProgress && 'text-amber-500',
+                        !isActive && !isCompleted && !isInProgress && 'text-[#f1f5f9]'
                       )}
                     >
                       {stage.name.he}

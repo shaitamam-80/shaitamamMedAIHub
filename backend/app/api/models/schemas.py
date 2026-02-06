@@ -57,58 +57,63 @@ class FrameworkData(BaseModel):
         }
 
 # ============================================================================
-# Project Models
+# Project Models (aligned with Supabase projects table)
 # ============================================================================
 
-class ProjectBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
-    framework_type: Optional[str] = Field(
-        None,
-        max_length=50,
-        description="Research framework type: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER",
-    )
-    # Relaxed validation to handle legacy data or lists
-    framework_data: Optional[Any] = None
-
-
-class ProjectCreate(ProjectBase):
-    name: str = Field(..., min_length=1, max_length=255, examples=["Systematic Review on Exercise for Depression"])
+class ProjectCreate(BaseModel):
+    """Create a new project. Fields match Supabase projects table columns."""
+    title: str = Field(..., min_length=1, max_length=255, examples=["Exercise Interventions for Depression in Elderly"])
     description: Optional[str] = Field(None, examples=["A systematic review investigating exercise interventions for elderly patients with depression"])
-    framework_type: Optional[str] = Field(
-        None,
-        max_length=50,
-        description="Research framework type: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER",
+    review_type: str = Field(
+        ...,
+        description="Review type: systematic_intervention, systematic_prevalence, systematic_prognosis, systematic_diagnostic, systematic_qualitative, scoping",
+        examples=["systematic_intervention"]
+    )
+    framework: str = Field(
+        default="PICO",
+        description="Research framework: PICO, PICOT, PICOS, CoCoPop, PFO, PEO, PECO, PIRD, PICo, SPIDER, PCC, SPICE, ECLIPSE, CMO, PerSPEcTiF, BeHEMoTh",
         examples=["PICO"]
     )
 
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "Exercise Interventions for Depression",
+                "title": "Exercise Interventions for Depression in Elderly",
                 "description": "Investigating the effectiveness of exercise programs in treating depression in elderly populations",
-                "framework_type": "PICO"
+                "review_type": "systematic_intervention",
+                "framework": "PICO"
             }
         }
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    """Update project fields. Only provided fields will be updated."""
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    framework_type: Optional[str] = None
-    framework_data: Optional[Any] = None
+    current_stage: Optional[str] = None
+    progress_percentage: Optional[int] = Field(None, ge=0, le=100)
+    status: Optional[str] = None
 
 
-class ProjectResponse(ProjectBase):
-    id: str  # String to handle Supabase UUID format
-    owner_id: Optional[str] = None  # String to handle Supabase UUID format
+class ProjectResponse(BaseModel):
+    """Project response matching Supabase projects table."""
+    id: str
+    owner_id: Optional[str] = None
+    title: str
+    slug: str
+    description: Optional[str] = None
+    review_type: str
+    framework: str
+    current_stage: str = Field(default="idea", description="Current workflow stage")
+    progress_percentage: int = Field(default=0, description="Overall progress 0-100")
+    status: str = Field(default="active", description="Project status")
+    prospero_id: Optional[str] = None
+    total_records_found: int = 0
+    total_screened: int = 0
+    total_included: int = 0
+    total_excluded: int = 0
     created_at: datetime
     updated_at: datetime
-    current_stage: str = Field(
-        default="idea",
-        description="Current workflow stage"
-    )
-    status: str = Field(default="active", description="Project status")
 
     class Config:
         from_attributes = True
@@ -645,7 +650,6 @@ __all__ = [
     "framework_to_dict",
     "detect_framework_type",
     # Project models
-    "ProjectBase",
     "ProjectCreate",
     "ProjectUpdate",
     "ProjectResponse",

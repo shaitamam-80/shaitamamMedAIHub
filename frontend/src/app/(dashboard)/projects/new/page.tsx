@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Check, Search, FileText, Target, Layers, BookOpen, Brain } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Search, FileText, Target, Layers, BookOpen, Brain, Loader2 } from 'lucide-react';
 import { REVIEW_TYPES, ReviewType } from '@/lib/utils/stage-config';
+import { createProject } from '@/lib/api/backend-client';
 
 const reviewTypeIcons: Record<ReviewType, any> = {
   systematic_intervention: Search,
@@ -14,9 +15,21 @@ const reviewTypeIcons: Record<ReviewType, any> = {
   scoping: BookOpen,
 };
 
+// Map review types to their default research framework
+const REVIEW_TYPE_FRAMEWORKS: Record<string, string> = {
+  'systematic_intervention': 'PICO',
+  'systematic_prevalence': 'CoCoPop',
+  'systematic_prognosis': 'PFO',
+  'systematic_diagnostic': 'PIRD',
+  'systematic_qualitative': 'SPIDER',
+  'scoping': 'PCC',
+};
+
 export default function NewProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     topic: '',
     reviewType: '',
@@ -31,11 +44,24 @@ export default function NewProjectPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    // Mock project creation
-    console.log('Creating project:', formData);
-    // In production, call API to create project
-    router.push('/projects/1'); // Mock project ID
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const framework = REVIEW_TYPE_FRAMEWORKS[formData.reviewType] || 'PICO';
+      const project = await createProject({
+        title: formData.topic,
+        review_type: formData.reviewType,
+        framework: framework,
+      });
+      // Redirect to the newly created project
+      router.push(`/projects/${project.id}`);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      setSubmitError('שגיאה ביצירת הפרויקט. נסה שוב.');
+      setIsSubmitting(false);
+    }
   };
 
   const canProceed = () => {
@@ -133,6 +159,11 @@ export default function NewProjectPage() {
                         {reviewTypeData.he}
                       </h3>
                       {isSelected && (
+                        <div className="mt-2 text-xs text-blue-400">
+                          Framework: {REVIEW_TYPE_FRAMEWORKS[reviewTypeKey] || 'PICO'}
+                        </div>
+                      )}
+                      {isSelected && (
                         <Check className="w-5 h-5 text-blue-500 absolute top-4 left-4" />
                       )}
                     </button>
@@ -165,6 +196,9 @@ export default function NewProjectPage() {
                       {formData.reviewType ? REVIEW_TYPES[formData.reviewType as ReviewType]?.he : ''}
                     </span>
                   </div>
+                  <div className="mt-2 text-sm text-[#64748b]">
+                    Framework: {REVIEW_TYPE_FRAMEWORKS[formData.reviewType] || 'PICO'}
+                  </div>
                 </div>
 
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6">
@@ -172,6 +206,12 @@ export default function NewProjectPage() {
                     ✓ הפרויקט יכלול 10 שלבים מותאמים לסוג הסקירה שבחרת
                   </p>
                 </div>
+
+                {submitError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-400 text-sm">{submitError}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -200,10 +240,20 @@ export default function NewProjectPage() {
           ) : (
             <button
               onClick={handleSubmit}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 transition-all flex items-center gap-2"
             >
-              <Check className="w-5 h-5" />
-              <span>צור פרויקט</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>יוצר פרויקט...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5" />
+                  <span>צור פרויקט</span>
+                </>
+              )}
             </button>
           )}
         </div>
