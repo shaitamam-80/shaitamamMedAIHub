@@ -1,65 +1,61 @@
 """
-Prompts Package
-Modular system prompts for Define tool
+MedAI Hub - Prompts Package
+===========================
 
-Version: 2025.01
-Implements the "Systematic Review Question Architect" methodology
+System prompts for LangGraph orchestration and stage-specific AI operations.
 """
 
-# Define tool exports
-from .define import (
-    get_define_system_prompt,
-    get_extraction_prompt,
-    get_response_template,
-    get_finer_assessment_prompt
+from .orchestrator import (
+    ORCHESTRATOR_SYSTEM_PROMPT,
+    get_stage_prompt,
+    get_stage_instructions,
+    STAGE_PROMPTS,
 )
 
-# Shared utilities exports
-from .shared import (
-    FRAMEWORK_SCHEMAS,
-    FRAMEWORK_VERSION,
-    FRAMEWORK_LAST_UPDATED,
-    FRAMEWORK_CHEAT_SHEET,
-    CROSS_TYPE_GUIDANCE,
-    USER_RESISTANCE_RESPONSES,
-    HEBREW_GUIDELINES,
-    INSUFFICIENT_INFO_RESPONSES,
-    FINER_ASSESSMENT_SCHEMA,
-    get_framework_components,
-    get_framework_labels,
-    get_framework_use_case,
-    get_framework_trigger_words,
-    format_framework_data,
-    suggest_framework_from_text,
-    validate_custom_framework,
+from .research_question import (
+    RESEARCH_QUESTION_SYSTEM_PROMPT,
+    RESPONSE_TEMPLATE as RQ_RESPONSE_TEMPLATE,
+    FRAMEWORK_DEFINITIONS,
+    FINER_CRITERIA,
+    get_framework_definition,
     get_all_framework_names,
-    get_framework_count
+    get_finer_criterion,
+)
+
+from .protocol import (
+    PROTOCOL_BUILDER_SYSTEM_PROMPT,
+    PROTOCOL_TEMPLATE,
+    PROTOCOL_SECTIONS,
+    ROB_TOOLS,
+    SCOPING_REVIEW_GUIDANCE,
+    get_rob_tool,
+    get_protocol_section,
+    get_all_protocol_sections,
+    is_section_required,
 )
 
 __all__ = [
-    # Define tool
-    "get_define_system_prompt",
-    "get_extraction_prompt",
-    "get_response_template",
-    "get_finer_assessment_prompt",
-
-    # Shared utilities
-    "FRAMEWORK_SCHEMAS",
-    "FRAMEWORK_VERSION",
-    "FRAMEWORK_LAST_UPDATED",
-    "FRAMEWORK_CHEAT_SHEET",
-    "CROSS_TYPE_GUIDANCE",
-    "USER_RESISTANCE_RESPONSES",
-    "HEBREW_GUIDELINES",
-    "INSUFFICIENT_INFO_RESPONSES",
-    "FINER_ASSESSMENT_SCHEMA",
-    "get_framework_components",
-    "get_framework_labels",
-    "get_framework_use_case",
-    "get_framework_trigger_words",
-    "format_framework_data",
-    "suggest_framework_from_text",
-    "validate_custom_framework",
+    # Orchestrator
+    "ORCHESTRATOR_SYSTEM_PROMPT",
+    "get_stage_prompt",
+    "get_stage_instructions",
+    "STAGE_PROMPTS",
+    # Research Question
+    "RESEARCH_QUESTION_SYSTEM_PROMPT",
+    "RQ_RESPONSE_TEMPLATE",
+    "FRAMEWORK_DEFINITIONS",
+    "FINER_CRITERIA",
+    "get_framework_definition",
     "get_all_framework_names",
-    "get_framework_count",
+    "get_finer_criterion",
+    # Protocol
+    "PROTOCOL_BUILDER_SYSTEM_PROMPT",
+    "PROTOCOL_TEMPLATE",
+    "PROTOCOL_SECTIONS",
+    "ROB_TOOLS",
+    "SCOPING_REVIEW_GUIDANCE",
+    "get_rob_tool",
+    "get_protocol_section",
+    "get_all_protocol_sections",
+    "is_section_required",
 ]

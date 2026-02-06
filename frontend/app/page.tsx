@@ -13,52 +13,18 @@ import {
   Brain,
   CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
-  Database,
-  FileText,
+  FolderOpen,
   Loader2,
   MessageSquare,
-  Search,
   ShieldCheck,
   Sparkles,
-  Zap,
+  Target,
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-
-// Step configuration
-const STEP_CONFIG = {
-  DEFINE: {
-    step: 1,
-    label: "Define Question",
-    icon: MessageSquare,
-    color: "primary",
-    href: "/define",
-  },
-  QUERY: {
-    step: 2,
-    label: "Build Query",
-    icon: Search,
-    color: "secondary",
-    href: "/query",
-  },
-  REVIEW: {
-    step: 3,
-    label: "Screen Abstracts",
-    icon: ClipboardCheck,
-    color: "emerald",
-    href: "/review",
-  },
-  COMPLETED: {
-    step: 4,
-    label: "Completed",
-    icon: Sparkles,
-    color: "amber",
-    href: "/projects",
-  },
-};
 
 // Animation variants
 const containerVariants = {
@@ -232,46 +198,6 @@ export default function HomePage() {
     }
   };
 
-  const getProgress = (currentStep: string) => {
-    switch (currentStep) {
-      case "DEFINE": return 25;
-      case "QUERY": return 50;
-      case "REVIEW": return 75;
-      case "COMPLETED": return 100;
-      default: return 25;
-    }
-  };
-
-  const getStepStyles = (color: string) => {
-    const styles = {
-      primary: {
-        bg: "bg-primary/10",
-        bgHover: "group-hover:bg-primary/20",
-        icon: "text-primary",
-        progress: "bg-primary",
-      },
-      secondary: {
-        bg: "bg-secondary/10",
-        bgHover: "group-hover:bg-secondary/20",
-        icon: "text-secondary",
-        progress: "bg-secondary",
-      },
-      emerald: {
-        bg: "bg-emerald-500/10",
-        bgHover: "group-hover:bg-emerald-500/20",
-        icon: "text-emerald-600",
-        progress: "bg-emerald-500",
-      },
-      amber: {
-        bg: "bg-amber-500/10",
-        bgHover: "group-hover:bg-amber-500/20",
-        icon: "text-amber-600",
-        progress: "bg-amber-500",
-      },
-    };
-    return styles[color as keyof typeof styles] || styles.primary;
-  };
-
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-slate-50">
       {/* Background Effects */}
@@ -292,7 +218,7 @@ export default function HomePage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              Systematic Reviews, Accelerated.
+              AI-Powered Research Question Formulation
             </div>
           </motion.div>
 
@@ -300,17 +226,17 @@ export default function HomePage() {
             variants={itemVariants}
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight mb-6 leading-tight"
           >
-            Evidence Synthesis for{" "}
+            Transform Ideas into{" "}
             <br className="hidden sm:block" />
-            <span className="text-gradient-hero">Modern Medicine</span>
+            <span className="text-gradient-hero">Structured Research</span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
             className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            Formulate precise research questions, generate validated PubMed
-            queries, and screen abstracts with AI-powered precision.
+            Formulate precise research questions using proven frameworks like
+            PICO, SPIDER, and PEO with AI-powered assistance.
           </motion.p>
 
           <motion.div
@@ -341,7 +267,7 @@ export default function HomePage() {
               asChild
               className="border-slate-300 text-slate-700 hover:bg-white hover:border-slate-400 bg-white shadow-sm rounded-xl"
             >
-              <Link href="/about">View Methodology</Link>
+              <Link href="/projects">View Projects</Link>
             </Button>
           </motion.div>
         </div>
@@ -469,10 +395,10 @@ export default function HomePage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  Continue Your Research
+                  Your Projects
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Pick up where you left off
+                  Continue working on your research
                 </p>
               </div>
               <Link
@@ -499,69 +425,37 @@ export default function HomePage() {
               </div>
             ) : recentProjects.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                {recentProjects.map((project, index) => {
-                  const stepKey = (project.current_step ||
-                    "DEFINE") as keyof typeof STEP_CONFIG;
-                  const stepConfig = STEP_CONFIG[stepKey] || STEP_CONFIG.DEFINE;
-                  const StepIcon = stepConfig.icon;
-                  const progress = getProgress(stepKey);
-                  const styles = getStepStyles(stepConfig.color);
-
-                  return (
-                    <motion.div
-                      key={project.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.4,
-                        delay: index * 0.1,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    >
-                      <Link href={`${stepConfig.href}?project=${project.id}`}>
-                        <Card className="group border-slate-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                          <CardContent className="p-5 flex items-center gap-4">
-                            <div
-                              className={cn(
-                                "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
-                                styles.bg,
-                                styles.bgHover
-                              )}
-                            >
-                              <StepIcon
-                                className={cn("w-5 h-5", styles.icon)}
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-slate-900 truncate">
-                                {project.name}
-                              </h3>
-                              <p className="text-sm text-slate-500">
-                                Step {stepConfig.step}: {stepConfig.label}
-                              </p>
-                              <div className="h-1.5 mt-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                <motion.div
-                                  className={cn(
-                                    "h-full rounded-full",
-                                    styles.progress
-                                  )}
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${progress}%` }}
-                                  transition={{
-                                    duration: 0.6,
-                                    delay: index * 0.1 + 0.2,
-                                    ease: [0.16, 1, 0.3, 1],
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all duration-200" />
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    </motion.div>
-                  );
-                })}
+                {recentProjects.map((project, index) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.4,
+                      delay: index * 0.1,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                  >
+                    <Link href={`/define?project=${project.id}`}>
+                      <Card className="group border-slate-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+                        <CardContent className="p-5 flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 group-hover:bg-primary/20 transition-all duration-300">
+                            <MessageSquare className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-slate-900 truncate">
+                              {project.name}
+                            </h3>
+                            <p className="text-sm text-slate-500">
+                              {project.framework_type || "PICO"} Framework
+                            </p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all duration-200" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                ))}
               </div>
             ) : (
               <Card className="border-dashed border-slate-300">
@@ -570,7 +464,7 @@ export default function HomePage() {
                     <Sparkles className="w-6 h-6 text-slate-400" />
                   </div>
                   <p className="text-slate-500 mb-4">
-                    No recent projects. Start your first research!
+                    No projects yet. Start your first research!
                   </p>
                   <Button onClick={handleQuickStart} disabled={isCreatingDemo}>
                     {isCreatingDemo ? "Creating..." : "Quick Start Demo"}
@@ -593,97 +487,78 @@ export default function HomePage() {
             transition={{ duration: 0.5 }}
           >
             <Badge variant="secondary" className="mb-4">
-              Research Pipeline
+              Features
             </Badge>
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">
-              Three Steps to Evidence Synthesis
+              Everything You Need for Research Questions
             </h2>
             <p className="text-slate-600 max-w-lg mx-auto">
-              A seamless workflow from question formulation to systematic
-              screening
+              AI-powered tools to help you formulate precise, structured research questions
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1: Define */}
+            {/* Feature 1: AI Chat */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <Link href="/define" className="group block">
-                <div className="feature-card group">
-                  <div className="feature-card-icon">
-                    <Brain className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">
-                    Define
-                  </h3>
-                  <p className="text-slate-600 leading-relaxed mb-6">
-                    Turn vague ideas into structured research questions using
-                    frameworks like PICO, SPIDER, and PEO.
-                  </p>
-                  <span className="inline-flex items-center text-blue-600 font-semibold group-hover:underline">
-                    Open Define Tool
-                    <ArrowRight className="ml-1 w-4 h-4" />
-                  </span>
+              <div className="feature-card group">
+                <div className="feature-card-icon">
+                  <Brain className="w-6 h-6 text-blue-600" />
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">
+                  AI Chat Assistant
+                </h3>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  Chat naturally about your research idea. AI extracts and
+                  structures your question into the appropriate framework.
+                </p>
+              </div>
             </motion.div>
 
-            {/* Feature 2: Query */}
+            {/* Feature 2: Frameworks */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link href="/query" className="group block">
-                <div className="feature-card group hover:border-teal-200 hover:shadow-teal-900/5">
-                  <div className="feature-card-icon">
-                    <Search className="w-6 h-6 text-teal-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">
-                    Query
-                  </h3>
-                  <p className="text-slate-600 leading-relaxed mb-6">
-                    Generate complex Boolean search strings for PubMed with MeSH
-                    term expansion and validation.
-                  </p>
-                  <span className="inline-flex items-center text-teal-600 font-semibold group-hover:underline">
-                    Open Query Tool
-                    <ArrowRight className="ml-1 w-4 h-4" />
-                  </span>
+              <div className="feature-card group hover:border-teal-200 hover:shadow-teal-900/5">
+                <div className="feature-card-icon">
+                  <Target className="w-6 h-6 text-teal-600" />
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">
+                  Research Frameworks
+                </h3>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  Support for PICO, SPIDER, PEO, SPICE, ECLIPSE, CoCoPop,
+                  and more research question frameworks.
+                </p>
+              </div>
             </motion.div>
 
-            {/* Feature 3: Review */}
+            {/* Feature 3: FINER Assessment */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <Link href="/review" className="group block">
-                <div className="feature-card group hover:border-indigo-200 hover:shadow-indigo-900/5">
-                  <div className="feature-card-icon">
-                    <FileText className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">
-                    Review
-                  </h3>
-                  <p className="text-slate-600 leading-relaxed mb-6">
-                    Screen thousands of abstracts efficiently. AI prioritizes
-                    relevant studies based on your criteria.
-                  </p>
-                  <span className="inline-flex items-center text-indigo-600 font-semibold group-hover:underline">
-                    Open Review Tool
-                    <ArrowRight className="ml-1 w-4 h-4" />
-                  </span>
+              <div className="feature-card group hover:border-indigo-200 hover:shadow-indigo-900/5">
+                <div className="feature-card-icon">
+                  <Lightbulb className="w-6 h-6 text-indigo-600" />
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">
+                  FINER Assessment
+                </h3>
+                <p className="text-slate-600 leading-relaxed mb-6">
+                  AI evaluates your research question for Feasibility, Interest,
+                  Novelty, Ethics, and Relevance.
+                </p>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -695,11 +570,11 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center gap-8 text-sm font-medium text-slate-500">
             <span className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              HIPAA Compliant
+              Secure & Private
             </span>
             <span className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-600" />
-              PubMed Integrated
+              <FolderOpen className="w-4 h-4 text-blue-600" />
+              Project Management
             </span>
             <span className="flex items-center gap-2">
               <Brain className="w-4 h-4 text-purple-600" />

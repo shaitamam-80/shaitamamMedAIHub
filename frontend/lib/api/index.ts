@@ -9,8 +9,7 @@ export * from "./types";
 // Export individual API modules
 export * from "./projects";
 export * from "./define";
-export * from "./query";
-export * from "./review";
+export * from "./define-v3";
 
 // Export the base client
 export { client } from "./client";
@@ -18,22 +17,18 @@ export { client } from "./client";
 // Export a combined apiClient object for backward compatibility
 import { projectsApi } from "./projects";
 import { defineApi } from "./define";
-import { queryApi } from "./query";
-import { reviewApi } from "./review";
+import defineV3Api from "./define-v3";
 import { client } from "./client";
 
 export const apiClient = {
   // Projects
   ...projectsApi,
 
-  // Define Tool
+  // Define Tool (v2.0 - chat-based)
   ...defineApi,
 
-  // Query Tool
-  ...queryApi,
-
-  // Review Tool
-  ...reviewApi,
+  // Define Tool v3.0 (wizard-based)
+  defineV3: defineV3Api,
 
   // Health Check
   healthCheck: async (): Promise<{ status: string; service: string }> => {

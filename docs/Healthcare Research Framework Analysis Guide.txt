@@ -1,0 +1,631 @@
+﻿The Architecture of Inquiry: A Comprehensive Methodological Guide to Research Question Formulation in the Health Sciences
+
+
+
+
+Section 1: The Architecture of Inquiry: Why Structured Question Formulation is a Cornerstone of Medical Research
+
+
+The genesis of all scientific progress lies in the act of questioning. In the medical, pharmaceutical, and healthcare sciences, the quality of an inquiry directly determines the value of its resolution. A vaguely posed question will invariably lead to an ambiguous answer, wasting resources, time, and potentially misdirecting clinical practice. Conversely, a question that is precisely articulated, logically structured, and clinically relevant serves as the architectural blueprint for a rigorous and impactful investigation. The transition from a state of clinical uncertainty to a focused, answerable research question is the single most critical step in the evidence-based practice paradigm. It is a disciplined process that demands more than mere curiosity; it requires a systematic framework to ensure that the resulting inquiry is not only complete in its components but also viable and valuable in its purpose. This section establishes the foundational principles of structured question formulation, illustrating why it is an indispensable prerequisite for high-quality health research.
+
+
+1.1 From Uncertainty to Inquiry: Background vs. Foreground Questions
+
+
+Clinical uncertainty manifests in two distinct forms, each requiring a different approach to resolution. The first, background questions, seek general, foundational knowledge about a condition, test, or treatment. These are broad inquiries, often beginning with "what," "when," or "how," that aim to understand the "forest" of a clinical topic.1 For example, a clinician new to a specific area might ask, "What are the causes of acute bronchitis?" or "How does an MRI work?" Such questions provide essential context and are typically answered by consulting established knowledge sources like textbooks, narrative reviews, or clinical summaries. They are fundamental to building a practitioner's knowledge base but are not designed to resolve a specific clinical dilemma for an individual patient.1
+In contrast, foreground questions seek specific, actionable knowledge to inform clinical decision-making in a particular scenario. These questions are focused in scope, examining the "trees" within the clinical forest, and are essential for the practice of evidence-based medicine.1 A foreground question moves beyond general knowledge to compare specific choices and outcomes, such as, "In adult patients with acute bronchitis, do antibiotics, compared to no treatment, reduce sputum production or cough duration?".1 Answering these questions requires a targeted search of the primary research literature, such as clinical trials and systematic reviews. It is for the construction of these precise, multi-component foreground questions that structured formulation frameworks were developed. They provide the necessary grammar and syntax to translate a specific clinical problem into a format that can be systematically investigated.1
+
+
+1.2 The Causal Role of a Well-Formulated Question
+
+
+The formulation of the research question is not a preliminary formality but a causal event that dictates the trajectory and integrity of the entire research endeavor. A well-structured question is the direct cause of a series of critical effects that collectively ensure the rigor and validity of the study or review.
+First and foremost, the question shapes all subsequent stages of the research process.3 The components articulated within the question—the specific population, the intervention under study, the chosen comparison, and the outcomes of interest—serve as the direct inputs for developing the study's inclusion and exclusion criteria.4 Without a clear question, the criteria for selecting relevant evidence become arbitrary, leading to the potential inclusion of heterogeneous or irrelevant studies that undermine the validity of the final synthesis.
+Second, a precisely formulated question is indispensable for creating an effective and efficient literature search strategy. The key concepts identified within the question's framework are translated directly into search terms and keywords used to query biomedical databases.6 A focused question prevents overly broad searches that yield thousands of irrelevant results, while a comprehensive question ensures that all critical concepts are included, minimizing the risk of missing key evidence.
+Third, the act of formulating and pre-specifying the question before a deep immersion in the literature is a crucial safeguard against bias. If a review question is set after the researchers are already familiar with the available data, there is a significant risk that they may, consciously or unconsciously, frame the question to favor a particular result or to align with the findings of a known set of studies.3 By finalizing the question
+a priori, researchers commit to a specific scope, ensuring that the evidence is gathered to answer the question, rather than the question being shaped to fit the evidence.
+Finally, the structure of the question provides a logical framework for the subsequent steps of data extraction and synthesis. The components of the question define the columns in a data extraction form and the categories under which results will be grouped and analyzed, ensuring a coherent and systematic presentation of the findings.3
+
+
+1.3 The Two Pillars of a Robust Research Question: Formulation and Evaluation
+
+
+Developing a high-quality research question is a dual-process endeavor, resting upon two distinct but complementary pillars: formulation and evaluation. Misunderstanding this two-stage process is a common source of methodological error.
+Pillar 1: Formulation Frameworks. These are mnemonic tools designed to structure a question and ensure its anatomical completeness. Frameworks like PICO (Patient/Population, Intervention, Comparison, Outcome) and its many variants provide a scaffold, prompting the researcher to consider and articulate all the essential components of a focused inquiry.8 Their primary function is to ensure the question is well-defined, complete, and syntactically sound, transforming a general idea into a testable proposition.
+Pillar 2: Evaluative Criteria. Once a question is formulated, it must be appraised for its scientific and practical merit. Evaluative criteria, most notably the FINER framework (Feasible, Interesting, Novel, Ethical, Relevant), provide a qualitative checklist to assess the value and viability of the structured question.4 These criteria move beyond the question's structure to interrogate its substance: Is this question worth asking? Can it be answered? Will the answer matter?
+The relationship between these two pillars is not linear but iterative and symbiotic. A researcher does not simply formulate a question with PICO and then check it off with FINER. Instead, the process involves a dynamic interplay. A researcher begins with a clinical uncertainty and uses a formulation framework like PICO to give it structure. This initial draft may be anatomically complete but substantively flawed. For instance, the defined population might be so broad that a study becomes unfeasible, or the chosen outcome might lack clinical relevance.
+At this point, the evaluative criteria of FINER are applied. The feasibility check may reveal that the sample size is unattainable, forcing a revision of the 'P' (Population) component in the PICO framework to be more specific. The relevance check might indicate that a surrogate endpoint is not as meaningful as a patient-reported outcome, prompting a change in the 'O' (Outcome) component. The novelty check requires a literature review that might uncover an existing answer, necessitating a complete reformulation of the question to address a true gap in knowledge.10 This iterative cycle of formulation, evaluation, and refinement continues until the question is both structurally sound and substantively robust. Therefore, the landscape of question development should not be viewed as a mere collection of tools, but as an integrated system where formulation frameworks provide the architectural plans and evaluative criteria ensure the foundation is solid and the resulting structure is worth building.
+
+
+Section 2: The PICO Framework: Deconstructing the Universal Standard
+
+
+Within the pantheon of research question frameworks, the PICO model stands as the most recognized and widely applied standard, particularly in the realm of clinical medicine and evidence-based practice.6 Its rise to prominence is inextricably linked to the evidence-based medicine (EBM) movement, which sought to ground clinical decisions in the best available research evidence. PICO provided a simple, memorable, and effective tool for translating complex clinical scenarios into searchable, answerable questions, thereby bridging the gap between clinical uncertainty and evidence retrieval. This section provides an exhaustive analysis of the PICO framework, from its historical origins to its component parts, common variations, and critical limitations.
+
+
+2.1 Genesis and Purpose: The Rise of an Evidence-Based Mnemonic
+
+
+The PICO framework was first introduced in 1995 by Richardson and colleagues as a structured method for formulating clinical questions.6 Its primary purpose was to deconstruct a clinical problem into its core components, which could then be used as keywords for a more efficient and precise search of the burgeoning electronic medical literature.6 The framework was born out of the necessity to make EBM a practical reality for busy clinicians at the point of care.
+The utility of the PICO model is generally considered threefold.11 First, it compels the user to focus on the single most important clinical issue for a patient or population, preventing the question from becoming overly broad or multifaceted. Second, by identifying the key concepts of a problem, it directly facilitates the subsequent step of a computerized literature search. Third, it provides a clear and standardized way to articulate the problem, the proposed intervention, and the desired outcomes, which is essential for communication among healthcare professionals and researchers.11 While originally designed for clinicians, its logical structure was quickly adopted for structuring research questions in primary studies and, most notably, in systematic reviews of interventions, where it remains a cornerstone of methodology as outlined in resources like the Cochrane Handbook.11
+
+
+2.2 In-Depth Component Analysis
+
+
+The power of the PICO framework lies in the clarity and function of its four core components. A thorough understanding of each element is crucial for its correct application.
+* P – Patient, Population, or Problem: This component defines the group of individuals or the clinical problem of interest. It is the "who" of the research question. A well-defined 'P' component goes beyond a simple disease label to include the most important characteristics relevant to the question, such as age group (e.g., pediatric, elderly), sex, specific comorbidities, or disease severity.1 For example, instead of "patients with heart failure," a more focused 'P' might be "elderly patients (over 65) with chronic systolic heart failure and a history of hospitalization." This specificity is critical for ensuring the applicability of the research findings to a particular clinical scenario.
+* I – Intervention or Exposure: This element specifies the main action being considered, such as a treatment, a diagnostic test, a preventive measure, or an exposure to a potential risk factor. It is the "what" that is being done to or experienced by the population.1 The intervention should be described with sufficient detail to be replicable. For a drug therapy, this might include dose and duration; for a surgical procedure, it would be the specific technique; for a public health program, it would be the key components of the program.
+* C – Comparison or Control: This component identifies the alternative to the intervention and is essential for questions of relative effectiveness. It is the "what else" that the intervention is being compared against. The comparison can take several forms: a placebo or sham treatment, the current standard of care (often termed "treatment as usual"), a different active intervention, or no intervention at all.1 While highly valuable for comparative effectiveness research, the 'C' component is not always necessary. For questions where the goal is simply to understand the effect of an intervention without a direct comparator, this element can be omitted.6
+* O – Outcome: This component defines the result or consequence that is being measured to assess the effect of the intervention. It is the "so what" of the question. Ideally, outcomes should be patient-oriented, meaning they are outcomes that matter directly to patients, such as mortality, morbidity (e.g., stroke, heart attack), symptom relief, or quality of life.1 This is in contrast to surrogate outcomes (e.g., lab values, blood pressure readings), which may not always translate to tangible patient benefits. The 'O' component should also consider potential harms or adverse events, not just benefits.8
+
+
+2.3 The PICO Ecosystem: A Guide to Common Variants
+
+
+PICO is not a rigid, monolithic structure but rather a foundational model that has been adapted and expanded to suit different research needs. This flexibility has given rise to a "PICO ecosystem" of variants, each adding a layer of specificity.
+* PICOT: This is perhaps the most common variant, adding T for Timeframe. This element can specify the duration of the intervention, the follow-up period over which outcomes are measured, or the time it takes for an outcome to occur.2 It is particularly crucial in studies of chronic diseases or interventions where the effect may not be immediate.
+* PICOS: This variant adds S for Study Design. It is primarily used in the context of systematic reviews to pre-specify the types of studies that will be considered for inclusion, for example, limiting the search to only randomized controlled trials (RCTs) to find the highest level of evidence for an intervention's effectiveness.12
+* PICOC: This model incorporates an additional C for Context. This is particularly useful for questions where the setting or environment is a critical factor influencing the intervention's effectiveness. It is often applied in research on health services, economic evaluations, public health programs, or social interventions that are highly dependent on the context in which they are implemented.6
+* PICOTT: This is a more comprehensive variant that adds two Ts: one for Type of Question (e.g., therapy, diagnosis, prognosis) and one for Type of Study. This level of detail can be useful in highly structured evidence synthesis projects.6
+* Subtractive Variants (PIO, PIC): In some cases, a full PICO structure is not necessary. A PIO question (Population, Intervention, Outcome) is used when there is no relevant comparator.15 A
+PIC question (Population, Intervention, Comparison) might be used in the early stages of research when the most relevant outcomes are not yet clearly defined.15
+
+
+2.4 Critical Appraisal of PICO: Strengths and Limitations
+
+
+Despite its utility, a critical understanding of PICO requires a balanced assessment of its strengths and inherent limitations.
+   * Strengths: PICO's primary strength is its effectiveness in structuring questions about the effectiveness of interventions or therapies, making it the ideal framework for many clinical trials and systematic reviews of treatments.6 Its mnemonic structure is easy to remember and apply, and it captures the essential elements needed for a focused question that can be translated into a database search strategy.6 Its widespread adoption has created a common language for researchers and clinicians, facilitating communication and critical appraisal of research.11
+   * Limitations: The main limitation of PICO is that its structure is heavily biased towards quantitative, experimental research.6 It is less suitable, and often inappropriate, for other types of research questions. For qualitative research, which seeks to understand experiences, perceptions, and meanings, the concepts of "Intervention" and "Comparison" are often irrelevant. PICO does not adequately account for the complexities of context, sociocultural factors, or the subjective nature of lived experiences, which are central to qualitative inquiry.6 This fundamental mismatch is the primary reason for the development of the many alternative frameworks discussed in the next section.
+The very ubiquity of the PICO framework presents a significant methodological risk: the temptation of "methodological forcing." Because PICO is often taught as the default or even the sole method for question formulation, researchers, particularly those in early stages of their careers, may try to force questions into its structure even when the fit is poor.5 For example, a researcher wanting to understand the prevalence of a disease (a descriptive question) or the accuracy of a diagnostic test might contort their inquiry to fit the P-I-C-O format, resulting in an awkward and illogical question. This is not merely an issue of semantics; forcing a question into an inappropriate framework can fundamentally confound the entire research process. It can lead to the development of flawed inclusion criteria, an inefficient or inaccurate search strategy, and ultimately, a review that fails to properly address the underlying research problem.5 The greatest danger of PICO, therefore, is not its inherent limitations but its uncritical application. This underscores the critical importance of methodological literacy and the need for researchers to be familiar with the broader ecosystem of formulation frameworks to select the tool that truly matches the nature of their inquiry.
+
+
+Section 3: An Inventory of Research Question Frameworks: A Typology for Modern Health Research
+
+
+The landscape of health research is far too diverse to be served by a single question formulation framework. As the field has evolved beyond a singular focus on the effectiveness of interventions, a rich and varied toolkit of frameworks has been developed to address a wide range of research paradigms and goals. The PICO framework, while dominant, is merely one tool among many. A sophisticated researcher must be able to navigate this ecosystem to select the instrument best suited for the task at hand. This section provides a comprehensive inventory and typology of these frameworks, categorized by their primary research application. The following master table serves as a quick-reference guide to the breadth of available tools, followed by a detailed analysis of the most prominent frameworks within each category.
+
+
+Table 3.1: A Master Inventory of Research Question Frameworks
+
+
+
+
+Acronym
+	Full Name
+	Primary Research Domain
+	Key Reference(s)
+	PICO
+	Population, Intervention, Comparison, Outcome
+	Quantitative (Effectiveness/Therapy)
+	Richardson et al. 1995 6
+	PEO
+	Population, Exposure, Outcome
+	Quantitative/Qualitative (Etiology/Risk)
+	Joanna Briggs Institute 5
+	PECO
+	Population, Exposure, Comparison, Outcome
+	Quantitative (Epidemiology/Etiology)
+	6
+	PFO
+	Population, Prognostic Factors, Outcome
+	Quantitative (Prognosis)
+	5
+	PIRD
+	Population, Index Test, Reference Test, Diagnosis of Interest
+	Quantitative (Diagnostic Test Accuracy)
+	5
+	CoCoPop
+	Condition, Context, Population
+	Quantitative (Prevalence/Incidence)
+	5
+	PICo
+	Population, phenomenon of Interest, Context
+	Qualitative (Lived Experience)
+	Joanna Briggs Institute 5
+	SPIDER
+	Sample, Phenomenon of Interest, Design, Evaluation, Research type
+	Qualitative & Mixed-Methods
+	Cooke, Smith & Booth 2012 23
+	SPICE
+	Setting, Perspective, Intervention/Interest, Comparison, Evaluation
+	Qualitative & Health Services
+	Booth 2004 25
+	PCC
+	Population, Concept, Context
+	Scoping Reviews
+	Joanna Briggs Institute 18
+	ECLIPSE
+	Expectation, Client group, Location, Impact, Professionals, Service
+	Health Policy & Management
+	Wildridge & Bell 2002 28
+	BeHEMoTh
+	Behaviour, Health context, Exclusions, Models or Theories
+	Theory-Informed Reviews
+	Booth & Carroll 2015 30
+	CIMO
+	Context, Intervention, Mechanisms, Outcomes
+	Management & Implementation Science
+	Denyer et al. 2008 32
+	PerSPEcTiF
+	Perspective, Setting, Phenomenon of Interest, Environment, Comparison, Time/Findings
+	Complex Interventions & Health Equity
+	Booth et al. 2019 33
+	PICOT-D
+	Population, Intervention, Comparison, Outcome, Time, Digital-data
+	Digital Health Interventions
+	34
+	________________
+
+
+3.1 Frameworks for Quantitative and Epidemiological Research
+
+
+This category includes frameworks designed for studies that seek to measure associations, risks, and frequencies. They represent direct alternatives or adaptations of PICO for non-interventional quantitative research.
+
+
+3.1.1 Etiology, Risk & Observational Studies (PEO, PECO)
+
+
+   * PEO (Population, Exposure, Outcome): This framework is designed for research questions that explore the link between a particular exposure and a subsequent outcome, often in the context of observational studies or analyses of real-world data where an intervention is not actively assigned by the researcher.1 The Joanna Briggs Institute (JBI) advocates for its use in systematic reviews of etiology and risk.5 The 'Exposure' component can refer to a risk factor (e.g., smoking), a condition (e.g., living near a power line), or an unintentional event, making it more flexible than PICO's 'Intervention' for this type of research.38 While often used for quantitative questions, its components are broad enough to be applied to some qualitative inquiries as well.36
+   * PECO (Population, Exposure, Comparison, Outcome): A direct variant of PICO, PECO explicitly replaces the 'I' for Intervention with an 'E' for Exposure.6 This simple change makes it the ideal framework for epidemiological and environmental health studies that aim to compare the outcomes of a group exposed to a certain factor with a group that was not.19 For example, a PECO question might be: "In schoolchildren (P), does living near high voltage pylons (E) compared to living in areas without pylons (C) increase the risk of leukemia (O)?"
+
+
+3.1.2 Prognostic Studies (PFO)
+
+
+   * PFO (Population, Prognostic Factors, Outcome): When the research goal is to understand the probable course of a disease or to identify factors that predict a future outcome, the PFO framework is the appropriate tool.5 Instead of an intervention, this framework focuses on one or more
+Prognostic Factors (e.g., biomarkers, clinical signs, lifestyle factors) that may be associated with a particular Outcome (e.g., disease progression, survival, recurrence) in a defined Population.5 An example question would be: "In adults with newly diagnosed low back pain (P), what is the association between individual recovery expectations (F) and long-term disability (O)?".20
+
+
+3.1.3 Diagnostic Test Accuracy Studies (PIRD)
+
+
+      * PIRD (Population, Index Test, Reference Test, Diagnosis of Interest): This framework is specifically designed for systematic reviews that evaluate the accuracy of a diagnostic test.5 The components are: the
+Population in which the test is being used; the Index Test, which is the new or alternative test being evaluated; the Reference Test, which is the current "gold standard" for diagnosis; and the Diagnosis of Interest, which is the target condition.21 The goal is to determine how well the index test performs (e.g., in terms of sensitivity and specificity) compared to the reference standard. A less common but more memorable variant,
+PIRATE, also exists for this purpose.42
+
+
+3.1.4 Prevalence & Incidence Studies (CoCoPop)
+
+
+         * CoCoPop (Condition, Context, Population): For questions that aim to determine the frequency (prevalence or incidence) of a specific health issue, the CoCoPop framework is recommended.5 It is used when the goal is descriptive rather than comparative or interventional. The key components are: the
+Condition (the disease, problem, or symptom being measured); the Context (the specific setting, such as a geographical location or type of healthcare facility); and the Population (the defined group being studied, e.g., by age, gender, or ethnicity).6
+
+
+3.2 Frameworks for Qualitative and Mixed-Methods Research
+
+
+This group of frameworks was developed explicitly to address the shortcomings of PICO for qualitative research, which focuses on understanding meaning, experience, and perspective.
+
+
+3.2.1 Exploring Lived Experiences (PICo, SPIDER)
+
+
+            * PICo (Population, phenomenon of Interest, Context): As a direct adaptation of PICO for qualitative inquiry, PICo maintains the 'P' for Population but replaces the other elements to better fit the qualitative paradigm.15 'Intervention' and 'Comparison' are replaced by a single, broader component: the
+phenomenon of Interest, which can be an experience, an event, a process, or an activity.22 The 'Outcome' is replaced by
+Context, recognizing that qualitative findings are deeply embedded in the setting and circumstances in which they occur.5 This framework is strongly associated with the JBI methodology for qualitative systematic reviews.5
+            * SPIDER (Sample, Phenomenon of Interest, Design, Evaluation, Research type): Developed in 2012 by Cooke, Smith, and Booth, the SPIDER tool was proposed as a more comprehensive and sensitive alternative to PICO for qualitative and mixed-methods research.23 It makes several key changes: 'Population' is replaced with
+Sample, reflecting the often smaller, purposive samples used in qualitative research. Phenomenon of Interest is similar to that in PICo. Design is added to specify the qualitative approach (e.g., phenomenology, ethnography). Evaluation replaces 'Outcome' to capture more subjective results like attitudes, views, or experiences. Finally, Research type is added to specify whether the search should include qualitative, quantitative, or mixed-methods studies.1 Studies suggest that SPIDER may yield more precise but less sensitive search results compared to PICO.45
+
+
+3.2.2 Evaluating Services and Perspectives (SPICE)
+
+
+               * SPICE (Setting, Perspective, Intervention/Interest, Comparison, Evaluation): Developed by Booth in 2004, SPICE is particularly well-suited for qualitative questions related to the evaluation of health services, programs, and social interventions.25 Its unique strength lies in explicitly separating the
+Setting (where the study takes place) and the Perspective (for whom the study is relevant, e.g., patients, caregivers, health professionals) from the population concept.6 The
+Intervention or phenomenon of Interest is the service being examined, a Comparison is optional, and the Evaluation refers to the outcome measures, which can be qualitative in nature (e.g., attitudes, experiences).6
+
+
+3.3 Frameworks for Evidence Synthesis, Policy, and Scoping Reviews
+
+
+This final category includes frameworks designed for broader types of evidence synthesis that go beyond specific quantitative or qualitative questions to map literature, inform policy, or understand complex mechanisms.
+
+
+3.3.1 Scoping and Mapping Reviews (PCC)
+
+
+                  * PCC (Population, Concept, Context): Recommended by JBI as the standard for scoping reviews, the PCC framework is designed for broad questions where the aim is to map the extent, range, and nature of research activity in a particular field.27 The
+Population and Context elements are similar to other frameworks. The key component is Concept, which is intentionally broad to capture the core ideas of interest. It can encompass interventions, phenomena, outcomes, and other key variables, allowing the review to have a wide scope without being constrained by the narrow definitions of 'Intervention' or 'Outcome' found in PICO.1
+
+
+3.3.2 Health Policy & Management Research (ECLIPSE)
+
+
+                     * ECLIPSE (Expectation, Client group, Location, Impact, Professionals, Service): Developed by Wildridge and Bell in 2002, ECLIPSE is a specialized tool for formulating questions in health policy, service delivery, and management.28 It moves away from a clinical focus to capture elements critical to organizational and policy-level inquiry. The components include:
+Expectation (what the service aims to improve or achieve), Client group (the recipients of the service), Location (the setting), Impact (the desired outcomes or changes), Professionals (the staff involved in delivering the service), and the Service itself.8
+
+
+3.3.3 Theory-Informed Reviews (BeHEMoTh)
+
+
+                        * BeHEMoTh (Behaviour, Health context, Exclusions, Models or Theories): This is a highly specialized framework for systematic reviews that aim to identify and synthesize literature related to specific behavioral models or theories.31 It is used when the primary goal is not to evaluate an intervention's effect, but to understand the theoretical underpinnings of a health issue. The components are: the
+Behaviour of interest, the Health context in which it occurs, any Exclusions, and the Models or Theories being investigated.21
+
+
+3.3.4 Management & Implementation Science (CIMO)
+
+
+                           * CIMO (Context, Intervention, Mechanisms, Outcomes): The CIMO framework is particularly useful for research in management, policy evaluation, and implementation science, where the goal is to understand how and why an intervention works.52 Its distinguishing feature is the
+Mechanisms component, which prompts the researcher to investigate the underlying processes or responses that explain the relationship between the Intervention and the Outcomes within a specific Context.21 This focus on causal mechanisms makes it a valuable tool for building practical, theory-based knowledge.
+
+
+Section 4: The Researcher's Compass: Selecting and Evaluating the Optimal Framework
+
+
+Possessing an inventory of frameworks is necessary but not sufficient for conducting high-quality research. The critical skill lies in selecting the most appropriate tool for a given research problem and then rigorously evaluating the resulting question to ensure its scientific merit and practical viability. This section provides a practical guide for researchers, moving from the abstract knowledge of frameworks to the applied science of question design. It presents a decision-making process for framework selection, a detailed analysis of the essential evaluative criteria, and a comparative tool to aid in these critical choices.
+
+
+4.1 A Decision Guide for Framework Selection
+
+
+Choosing the right framework is a process of aligning the tool with the fundamental nature of the research inquiry. A researcher can navigate this selection process by following a logical, step-by-step approach:
+                              1. Define the Primary Research Paradigm: The first and most crucial step is to determine the overarching goal of the research. Is the study primarily quantitative, aiming to measure effects, test associations, or determine frequencies? Or is it qualitative, seeking to understand experiences, perceptions, meanings, and context?.22 In some cases, the goal may be a
+mixed-methods approach, or it may be a form of evidence synthesis like a scoping or policy review. This initial decision dramatically narrows the field of potential frameworks.
+                              2. Identify the Specific Research Goal within the Paradigm: Once the paradigm is established, the next step is to define the specific objective. This can be conceptualized as a decision tree:
+                                 * If the paradigm is QUANTITATIVE:
+                                 * Is the goal to assess the effectiveness of a therapy or intervention?
+                                 * → Use PICO or its variants (PICOT, PICOS).
+                                 * Is the goal to investigate etiology, risk factors, or associations in observational data?
+                                 * → Use PEO (if a comparison is not explicit) or PECO (if a comparison group is central).
+                                 * Is the goal to determine the accuracy of a diagnostic test?
+                                 * → Use PIRD.
+                                 * Is the goal to identify factors that predict a future outcome (prognosis)?
+                                 * → Use PFO.
+                                 * Is the goal to measure the prevalence or incidence of a condition?
+                                 * → Use CoCoPop.
+                                 * If the paradigm is QUALITATIVE:
+                                 * Is the goal to explore the lived experiences, perceptions, or feelings of a group?
+                                 * → Use PICo or SPIDER. SPIDER is often preferred for its greater detail regarding study design and research type.
+                                 * Is the goal to evaluate a health service, program, or social intervention from different stakeholder viewpoints?
+                                 * → Use SPICE, which excels at separating setting and perspective.
+                                 * If the goal is EVIDENCE SYNTHESIS or POLICY ANALYSIS:
+                                 * Is the goal to map the existing literature on a broad topic to identify key concepts and gaps (a scoping review)?
+                                 * → Use PCC, which is designed for breadth.
+                                 * Is the goal to answer a question related to health policy, service management, or organizational change?
+                                 * → Use ECLIPSE, which is tailored to these contexts.
+                                 * Is the goal to synthesize evidence on underlying behavioral models or theories?
+                                 * → Use BeHEMoTh.
+This structured process prevents the common error of defaulting to PICO and instead guides the researcher to a framework whose components are purpose-built for their specific type of inquiry.
+
+
+4.2 The FINER Criteria in Detail: Validating the Research Question
+
+
+Once a question has been structured using an appropriate formulation framework, it must be subjected to a rigorous appraisal of its quality and feasibility. The FINER criteria, first articulated by Hulley and colleagues in their seminal text Designing Clinical Research 53, provide the gold standard for this evaluation. It is a mnemonic representing five essential attributes of a good research question.8
+                                 * F – Feasible: This criterion addresses the practical realities of conducting the research. A question is only valuable if it can be answered. Key considerations include:
+                                 * Adequate Subjects: Is the target population large enough to recruit a sufficient sample size? Is the condition too rare or the inclusion criteria too narrow?.14
+                                 * Technical Expertise: Does the research team possess the necessary skills and knowledge to carry out the study design, perform the intervention, and analyze the data?.53
+                                 * Affordability and Resources: Is there adequate funding, time, and personnel to complete the project?.8
+                                 * Scope: Is the question manageable, or is it too broad to be answered within the available constraints?.14
+                                 * I – Interesting: While seemingly subjective, this criterion is critical for the sustainability of a research project. The question must be interesting, first and foremost, to the investigator to provide the motivation needed to overcome the inevitable challenges of research.53 It should also be compelling to peers, funding agencies, and the broader scientific community to garner support and ensure the eventual findings are valued.8
+                                 * N – Novel: Research should aim to advance knowledge, not simply reiterate what is already known. A novel question can confirm, refute, or extend previous findings. Establishing novelty requires a comprehensive and systematic review of the existing literature to identify a genuine gap in knowledge.8 The question does not have to be completely unprecedented, but it should add a new and meaningful piece to the scientific puzzle.
+                                 * E – Ethical: The proposed research must be ethically sound and capable of receiving approval from an institutional review board (IRB) or research ethics committee. This involves ensuring that the potential benefits of the research outweigh the risks to participants, that informed consent is properly obtained, and that the privacy and well-being of subjects are protected.8 Any study that poses an unacceptable level of risk or fails to meet ethical standards is, by definition, not a good research question.
+                                 * R – Relevant: Finally, the question must pass the "so what?" test. The answer to the question should be relevant and potentially impactful. Its relevance can be to scientific knowledge (advancing a theory), clinical practice (informing decisions), or health policy (guiding regulations or service delivery).8 A question that is feasible, interesting, novel, and ethical but ultimately irrelevant will not contribute meaningfully to the field.
+
+
+4.3 A Practical Workflow: Integrating Formulation and Evaluation
+
+
+The most effective approach to developing a high-quality research question involves a systematic and iterative workflow that integrates both formulation and evaluation.
+                                 1. Step 1 (Conceptualize): Begin with the broad area of uncertainty or the clinical problem. Conduct preliminary background reading to understand the general landscape.
+                                 2. Step 2 (Formulate): Use the Decision Guide (from section 4.1) to select the most appropriate formulation framework (e.g., PICO, SPIDER, PCC). Draft an initial version of the research question by defining each of the framework's components as precisely as possible.
+                                 3. Step 3 (Evaluate): Critically appraise the drafted question using the FINER criteria as a checklist. Go through each letter—Feasible, Interesting, Novel, Ethical, and Relevant—and honestly assess the question against each standard. This step often involves conducting a more focused literature search to confirm novelty and relevance.
+                                 4. Step 4 (Refine): Based on the weaknesses identified during the FINER evaluation, return to the formulation framework and revise its components. If the question is not feasible, perhaps the 'Population' needs to be narrowed. If it is not novel, the 'Intervention' or 'Comparison' may need to be adjusted to address a different aspect of the problem. This loop of formulation and evaluation should be repeated until the question satisfies all FINER criteria, resulting in a final question that is both well-structured and scientifically sound.
+
+
+Table 4.1: Comparative Analysis of Core Research Question Frameworks
+
+
+
+
+Framework (Acronym)
+	Primary Research Paradigm
+	Core Purpose
+	Key Components
+	Strengths
+	Limitations / When to Avoid
+	PICO
+	Quantitative
+	To assess the effectiveness of an intervention or therapy.
+	Population, Intervention, Comparison, Outcome
+	The universal standard for clinical trials and effectiveness reviews; excellent for focusing questions and building search strategies for quantitative evidence.6
+	Poorly suited for qualitative, diagnostic, prognostic, or prevalence questions. Its rigid structure does not capture context or lived experience well.6
+	PEO
+	Quantitative / Qualitative
+	To investigate the link between an exposure and an outcome in observational studies.
+	Population, Exposure, Outcome
+	Ideal for etiological, risk factor, and public health research where an intervention is not assigned; flexible for both quantitative and qualitative inquiry.5
+	Lacks an explicit comparison component, which may be a limitation for certain epidemiological study designs (though comparison is often implicit in analysis).37
+	SPIDER
+	Qualitative & Mixed-Methods
+	To synthesize qualitative evidence on experiences, views, and phenomena.
+	Sample, Phenomenon of Interest, Design, Evaluation, Research type
+	Specifically designed for qualitative research; components are better aligned with qualitative concepts (e.g., 'Sample' not 'Population', 'Evaluation' not 'Outcome').19
+	May be overly complex for simple qualitative questions. Search strategies based on SPIDER can be more specific but less sensitive, risking missed studies.45
+	SPICE
+	Qualitative & Health Services
+	To evaluate services, projects, or interventions from different stakeholder perspectives.
+	Setting, Perspective, Intervention, Comparison, Evaluation
+	Excellent for health services research and policy questions; explicitly separates 'Setting' and 'Perspective', adding crucial context.25
+	The distinction between 'Intervention' and 'Evaluation' can sometimes be unclear. Less focused on the technical aspects of study design than SPIDER.
+	PCC
+	Scoping Reviews
+	To map the extent, range, and nature of evidence on a broad topic.
+	Population, Concept, Context
+	The standard for scoping reviews; its broad 'Concept' component allows for a wide-ranging inquiry necessary for mapping a field of literature.18
+	Not suitable for answering specific, focused questions about effectiveness or experience. Its breadth is a weakness when a precise answer is needed.
+	ECLIPSE
+	Health Policy & Management
+	To structure questions about policy, service implementation, and management.
+	Expectation, Client group, Location, Impact, Professionals, SErvice
+	Tailor-made for policy and management research, capturing key organizational elements (e.g., professionals, expectations) that PICO ignores.19
+	Overly detailed and inappropriate for clinical or patient-level questions. Its components are not designed for searching clinical trial databases.
+	
+
+Section 5: Frameworks in Practice: Annotated Examples Across Health Disciplines
+
+
+Theoretical knowledge of research question frameworks becomes truly valuable when it is translated into practice. Understanding the abstract components of PICO or SPIDER is one step; skillfully applying them to a real-world clinical or research problem is another. This section provides detailed, annotated examples that demonstrate the practical application of key frameworks across a range of health disciplines. Each example follows a common scenario from its initial state of uncertainty to a fully formulated, answerable research question, with commentary on the rationale behind each component's definition.
+
+
+5.1 Clinical Effectiveness (PICOT)
+
+
+Scenario: A nurse practitioner in a cardiology clinic is concerned about high 30-day hospital readmission rates among patients with chronic heart failure. They have heard that nurse-led home-based exercise programs might be more effective than the standard practice of simply providing discharge instructions. They want to find evidence to support a change in practice.
+Framework Application: The goal is to compare the effectiveness of two interventions (a program vs. standard instructions) on a measurable clinical outcome (readmission). This is a classic question of clinical effectiveness, making PICOT the ideal framework.
+                                 * P – Population: Adult patients with chronic heart failure.
+                                 * Annotation: This is a good start, but can be refined. To make the question more specific and the results more applicable, we can add detail: "Adult patients (ages 50-75) being discharged from the hospital following an admission for decompensated chronic heart failure." This narrows the population to a specific, high-risk group.
+                                 * I – Intervention: A nurse-implemented home-based exercise program.
+                                 * Annotation: To make this intervention clear and replicable, we should add specifics: "A structured, nurse-implemented home-based exercise program consisting of twice-weekly supervised walking and strength training sessions."
+                                 * C – Comparison: Standard discharge instructions.
+                                 * Annotation: This is the current practice, or "treatment as usual." It serves as a clear and relevant baseline against which the new intervention can be measured.57
+                                 * O – Outcome: Hospital readmission rates.
+                                 * Annotation: This is a specific, measurable, and clinically important outcome. It is a patient-oriented outcome that also has significant implications for healthcare systems.
+                                 * T – Timeframe: Within 30 days of discharge.
+                                 * Annotation: This timeframe is chosen because 30-day readmission is a standard quality metric in healthcare and represents a critical period of vulnerability for this patient population.57
+Final PICOT Question: "In adult patients (ages 50-75) discharged from the hospital after an admission for decompensated chronic heart failure (P), does a structured, nurse-implemented home-based exercise program (I), compared to standard discharge instructions alone (C), affect hospital readmission rates (O) within 30 days of discharge (T)?"
+
+
+5.2 Qualitative Inquiry (SPIDER)
+
+
+Scenario: A health psychologist is interested in understanding the emotional and psychological journey of women who undergo in vitro fertilization (IVF) treatment. They are not looking to measure the effectiveness of IVF but rather to explore the lived experience of the process.
+Framework Application: This question is purely qualitative, focusing on experiences and perceptions. PICO is inappropriate. SPIDER is an excellent choice because its components are specifically designed for qualitative synthesis.22
+                                 * S – Sample: Women undergoing IVF treatment.
+                                 * Annotation: This defines the group of interest. Qualitative research often uses the term 'sample' rather than 'population' to reflect the smaller, purposive sampling methods typically employed.22
+                                 * PI – Phenomenon of Interest: The experience of IVF treatment.
+                                 * Annotation: This is the central focus of the inquiry. It is not an "intervention" in the PICO sense but a process or experience that the research seeks to understand.22
+                                 * D – Design: Interviews, focus groups, or surveys.
+                                 * Annotation: This component specifies the methods used to gather qualitative data. Including this helps to focus the literature search on studies using appropriate qualitative methodologies.22
+                                 * E – Evaluation: Experiences, views, attitudes, or feelings.
+                                 * Annotation: This replaces PICO's 'Outcome'. In qualitative research, the goal is not to measure a predefined outcome but to evaluate or understand subjective constructs like emotions, beliefs, and perceptions.22
+                                 * R – Research Type: Qualitative or mixed-methods studies.
+                                 * Annotation: This explicitly states the type of research evidence that will be included, further refining the search and ensuring the retrieved studies align with the qualitative nature of the question.22
+Final SPIDER Question: "What are the experiences (E) of women (S) undergoing IVF treatment (PI), as explored through qualitative (R) studies using methods such as interviews or focus groups (D)?"
+
+
+5.3 Scoping Review (PCC)
+
+
+Scenario: A team of pediatric health researchers wants to get a broad overview of the existing literature on how adolescents in the United States manage their asthma. They don't know the full range of interventions or strategies that exist and want to map the field to identify gaps in the research.
+Framework Application: The goal is broad exploration and mapping of a topic, not answering a specific effectiveness question. This is the primary indication for a scoping review, for which the PCC framework is the recommended standard.18
+                                 * P – Population: Adolescents aged 13-18.
+                                 * Annotation: This clearly defines the age group of interest, which is a distinct developmental stage with unique self-management challenges.18
+                                 * C – Concept: Asthma self-management.
+                                 * Annotation: This is the core 'Concept' of the review. It is intentionally broad, designed to capture any and all literature related to how adolescents manage their asthma. This could include studies on medication adherence, use of digital health tools, educational programs, peer support, and more. Using a narrow term like "Intervention" would prematurely limit the scope of the review.18
+                                 * C – Context: United States.
+                                 * Annotation: This specifies the geographic and healthcare system context. Self-management strategies and challenges can be highly dependent on the healthcare system, insurance coverage, and cultural factors specific to a country.18
+Final PCC Question: "What is the extent and nature of the literature on asthma self-management (Concept) among adolescents aged 13-18 (Population) in the United States (Context)?"
+
+
+5.4 Health Policy and Service Evaluation (ECLIPSE)
+
+
+Scenario: A hospital's patient advocacy group has proposed that the institution provide free wireless internet access to all patients and their families. The hospital administration needs to evaluate this proposal and understand its potential implications before making a decision.
+Framework Application: This is a classic health service and policy question. It involves multiple stakeholders (patients, families, IT staff, administration), logistical considerations, and organizational impact. The clinical focus of PICO is irrelevant here. ECLIPSE is the purpose-built framework for this type of inquiry.28
+                                 * E – Expectation: To increase patient and family access to wireless internet.
+                                 * Annotation: This defines the desired outcome or goal of the proposed policy change. It answers the question, "What are we hoping to achieve?".60
+                                 * C – Client group: Patients and their families.
+                                 * Annotation: This identifies the primary beneficiaries of the service.60
+                                 * L – Location: The hospital.
+                                 * Annotation: This specifies the setting where the policy would be implemented.60
+                                 * I – Impact: Improved patient satisfaction, easier access to health information, and potentially better communication with outside support networks.
+                                 * Annotation: This component explores the intended effects or changes resulting from the service. It is broader than a clinical 'Outcome' and can include measures of satisfaction, access, or efficiency.60
+                                 * P – Professionals: IT department, hospital administration, and potentially clinical staff who might use the service for patient education.
+                                 * Annotation: This crucial component identifies all the professional groups involved in implementing or being affected by the policy.60
+                                 * SE – Service: The provision of free wireless internet.
+                                 * Annotation: This clearly defines the specific service or policy under consideration.60
+Final ECLIPSE Question: "For patients and families (Client group) in a hospital setting (Location), what is the potential impact (Impact) of providing free wireless internet (Service), and what are the implications for IT staff and hospital administration (Professionals) in achieving the goal of increased internet access (Expectation)?"
+
+
+5.5 Observational/Etiological Research (PEO)
+
+
+Scenario: A public health researcher is investigating claims from community groups that living near a major international airport is negatively affecting residents' mental health due to constant noise pollution. They want to see if there is an association in the existing data.
+Framework Application: The researcher is not implementing an intervention but is studying the effect of a pre-existing environmental factor (an exposure). This is a question of etiology or risk, making the PEO framework the most appropriate choice.18
+                                 * P – Population: Adults (over 18 years old) who live within 25 miles of an airport in the United States.
+                                 * Annotation: This defines the specific group being studied, including an age range and a clear geographic criterion that defines proximity to the exposure source.18
+                                 * E – Exposure: Noise pollution from airports.
+                                 * Annotation: This is the key environmental factor being investigated. It is an 'Exposure' rather than an 'Intervention' because it is not assigned or controlled by the researcher.18
+                                 * O – Outcome: Self-assessed mental health.
+                                 * Annotation: This is the health outcome of interest. It could be measured using a validated survey tool for depression or anxiety, or a general mental health scale.18
+Final PEO Question: "In adults over 18 years old who live within 25 miles of an airport in the United States (P), is there an association between exposure to airport noise pollution (E) and worsened self-assessed mental health (O)?"
+
+
+Section 6: The Frontiers of Inquiry: Emerging Frameworks and Future Directions
+
+
+The field of research methodology is not static. As healthcare evolves, driven by technological innovation and a growing recognition of the complexity of health systems, the tools used to formulate research questions must also adapt. Traditional frameworks, while still valuable, are being challenged and augmented by new models designed to address the unique demands of digital health, complex interventions, health equity, and the transformative potential of artificial intelligence. This section explores these frontiers, examining the emerging frameworks and paradigm shifts that are shaping the future of health inquiry.
+
+
+6.1 Digital Health Interventions (DHIs): Adapting to a Technological Landscape
+
+
+The proliferation of digital health interventions (DHIs)—from mobile health apps and wearable sensors to telehealth platforms and clinical decision support software—has introduced new layers of complexity to research. A DHI is not simply a drug or a manual therapy; it is often a complex system with multiple interacting components, including the technology itself, the user interface, the data it generates, and the human support required for its delivery.62 Evaluating such interventions requires a more granular approach than traditional frameworks can offer. This has led to the evolution of PICO to better capture these technological nuances.63
+                                 * PICOT-D (Population, Intervention, Comparison, Outcome, Time, Digital-data): One of the earlier adaptations, the PICOT-D framework, was proposed to explicitly account for the role of digital data in evaluating an intervention.34 It adds a
+'D' component that prompts the researcher to specify the digital data sources, measures, and metrics that will form the basis of the evaluation. This is particularly relevant for quality improvement projects or DNP (Doctor of Nursing Practice) scholarly projects that often leverage electronic health record (EHR) data or other organizational data sources to assess the impact of an intervention.34
+                                 * PICOTS-ComTeC (Population, Intervention, Comparator, Outcome, Timing, Setting, Communication, Technology, Context): A more recent and comprehensive framework, PICOTS-ComTeC, was developed to provide a much more detailed structure for defining and comparing complex, patient-facing DHIs.64 Recognizing that ambiguity in describing DHIs hinders evidence synthesis and replication, this model extends the standard PICOTS framework by adding three critical domains:
+                                    * Communication: This component addresses the nature of the information exchange. Is it one-way (e.g., reminders) or two-way (e.g., messaging with a clinician)? Is it synchronous or asynchronous?
+                                    * Technology: This component specifies the nature of the technology platform itself. Is it a smartphone app, a web-based portal, a wearable sensor? What are its key features and functionalities?
+                                    * Context: While present in other frameworks, here it is used to capture the broader implementation environment, including factors like health system integration and the sociocultural setting.
+This enhanced granularity allows for a more precise formulation of research questions that can distinguish between subtly different DHIs, facilitating more meaningful comparisons and syntheses of evidence in this rapidly growing field.64
+
+
+6.2 Complex Interventions and Health Equity: The PerSPEcTiF Framework
+
+
+Many of the most pressing challenges in public health and health equity involve complex interventions—interventions with multiple interacting components that are highly sensitive to the context in which they are implemented. Standard frameworks like PICO were found to be inadequate for formulating the nuanced qualitative questions needed to understand the feasibility, acceptability, and sociocultural dynamics of such interventions.
+In a 2019 rapid review, Booth and colleagues identified 38 existing question frameworks and assessed them against four criteria deemed essential for exploring complexity: (1) recognition of context; (2) acknowledgement of multiple stakeholder perspectives; (3) accommodation of time and place; and (4) sensitivity to qualitative data. None of the 38 frameworks satisfied all four criteria.21
+To address this gap, they proposed a new, innovative framework: PerSPEcTiF.33 This framework is specifically designed to accommodate the complexity inherent in public health and health equity research. Its components are:
+                                       * Perspective: From whose viewpoint is the phenomenon being studied (e.g., patients, providers, policymakers, community members)? This acknowledges that different stakeholders will have different experiences and values.
+                                       * Setting: Where is the study taking place (e.g., a low-income urban community, a rural primary care clinic)? This is more than just a location; it includes the social and organizational environment.
+                                       * Phenomenon of Interest / Intervention: What is the central topic of the inquiry?
+                                       * Environment: What are the wider contextual factors (e.g., political, economic, social) that may influence the phenomenon?
+                                       * Comparison (optional): Is there a relevant comparator?
+                                       * Time/Findings: Over what timeframe is the study conducted, and what type of qualitative findings are being sought (e.g., themes, narratives, theories)?
+The PerSPEcTiF framework represents a significant methodological advance, providing researchers with a tool to formulate questions that embrace, rather than simplify, the complexity of real-world health challenges.
+
+
+6.3 The Rise of Artificial Intelligence: From Formulation to Generation
+
+
+The most profound shift on the horizon of research question development involves the role of artificial intelligence (AI), particularly Large Language Models (LLMs). Historically, the process has been entirely human-driven: a researcher identifies a gap in knowledge and uses a framework to structure a question. AI is now poised to transform this process, moving from being a tool that helps answer questions to one that can help generate them.66
+This evolution represents a fundamental paradigm shift from human-led formulation to AI-assisted generation. The process begins to look different. Instead of a researcher starting with a specific uncertainty, they might task an LLM with a broader directive: "Analyze the entire published literature, clinical trial registries, and public health datasets on Alzheimer's disease. Identify the top five most critical, novel, and impactful research questions that need to be answered to advance the field." The AI, capable of synthesizing information at a scale and speed impossible for humans, could identify non-obvious connections, emerging trends, and overlooked gaps in the evidence, producing a prioritized list of research questions.67
+This shifts the role of the human researcher from being the primary formulator to becoming a curator, refiner, and validator of AI-generated priorities. The core intellectual challenge is no longer just about structuring a known uncertainty but about using AI as a powerful assistant to discover unknown uncertainties—the "unknown unknowns" in a field of study.
+However, this transformative potential is accompanied by significant challenges that must be addressed before AI-assisted question generation can be widely adopted:
+                                       * The "Black Box" Problem: A major hurdle is the lack of transparency and explainability in how many LLMs arrive at their conclusions. If an AI proposes a set of research priorities, it is crucial to understand the data sources it used, the algorithms it applied, and the weighting criteria it employed for ranking. Without this clarity, the process remains an opaque "black box," making it difficult for the scientific community to trust and validate the outputs.67
+                                       * Stakeholder Alienation: Human-led research priority-setting exercises, while time-consuming, serve a vital social function. They bring together diverse stakeholders—patients, clinicians, researchers, policymakers—fostering a sense of engagement, ownership, and buy-in. Priorities that simply emerge from an AI tool without this human involvement may be met with skepticism or resistance, hindering the eventual translation of the research into practice.67
+                                       * Algorithmic Bias: LLMs are trained on existing data, and the scientific literature is known to contain biases. Research on certain populations, conditions, and interventions is often overrepresented, while others are neglected. An AI trained on this biased corpus of knowledge may perpetuate or even amplify these existing biases, generating questions that focus on well-trodden paths while continuing to overlook the needs of under-researched and marginalized communities.
+The future will likely involve a hybrid model, where AI serves as a powerful tool to augment human intellect, rapidly mapping vast evidence landscapes to suggest potential research avenues, which are then critically evaluated, refined, and prioritized by diverse groups of human stakeholders.
+
+
+Section 7: Special Considerations in Research Question Formulation
+
+
+While the frameworks discussed provide robust structures for a wide array of research questions, their application is not always straightforward. Certain research areas and populations present unique challenges that require careful adaptation and a more nuanced approach to question formulation. This final section addresses special considerations for research involving pediatric and vulnerable populations, rare diseases, global health, and the integrative field of One Health, providing guidance on how to tailor frameworks to these complex contexts.
+
+
+7.1 Pediatric and Vulnerable Populations
+
+
+Conducting research with children and other vulnerable groups necessitates special attention to developmental, ethical, and measurement considerations, all of which impact the formulation of the research question.
+                                       * Adapting the 'P' (Population): When studying pediatric populations, defining the 'P' component requires greater specificity than with adults. A broad term like "children" is often insufficient. The population should be defined by specific developmental stages (e.g., neonates, infants, school-aged children, adolescents), as interventions and outcomes can vary dramatically across these groups.14 For example, a question about a behavioral intervention for ADHD would need to specify an age range, as strategies effective for a 7-year-old may be inappropriate for a 15-year-old.
+                                       * Nuances in 'I' (Intervention) and 'O' (Outcome): The 'I' (Intervention) must be developmentally appropriate. This includes considerations of drug dosing, the complexity of educational materials, and the mode of delivery. The 'O' (Outcome) presents a significant challenge, as many standard outcome measures are validated only for adults. Researchers must seek out validated pediatric assessment tools. In many cases, especially with very young children or individuals with cognitive impairments, it may be necessary to rely on proxy-reported outcomes from parents, caregivers, or teachers, which should be specified in the question.
+                                       * Paramount Ethical Considerations: The 'E' (Ethical) of the FINER criteria assumes heightened importance. The research question must be framed in a way that minimizes risk and burden on participants. The potential benefits to the child or to the population of children must clearly outweigh any potential harms.14 The formulation process must anticipate the scrutiny of an ethics committee focused on protecting vulnerable subjects.
+
+
+7.2 Rare Diseases
+
+
+Research into rare diseases is characterized by inherent challenges that directly influence how questions are formulated and what study designs are feasible.
+                                       * Challenges with 'P' (Population) and 'C' (Comparison): By definition, the 'P' (Population) for a rare disease is small, geographically dispersed, and often heterogeneous. This makes recruiting for large-scale randomized controlled trials (RCTs) extremely difficult, if not impossible.68 Furthermore, for many rare diseases, there is no established standard of care, meaning a 'C' (Comparison) group is often not available or ethical to include.
+                                       * Adapting Frameworks and Study Designs: Due to these constraints, researchers must often use alternative frameworks and designs. A PIO (Population, Intervention, Outcome) framework, which omits the comparison component, is frequently more appropriate than a full PICO.15 Research questions are often designed to be answered by single-arm trials, case series, or registry-based studies. The formulation of the question must align with the realities of what can be studied. For instance, regulatory bodies like the U.S. Food and Drug Administration (FDA) have developed specific guidance for rare diseases, recognizing that "substantial evidence" of effectiveness may, in some cases, be established with a single pivotal trial combined with other confirmatory evidence.69 The research question must be formulated to generate the type of evidence that will meet these specific regulatory standards.
+
+
+7.3 Global and Public Health
+
+
+Research in global and public health settings often deals with complex, systems-level problems where context, equity, and implementation are as important as clinical effectiveness.
+                                       * Emphasis on Context and Perspective: A simple PICO question that works for a clinical trial in a high-income country may be entirely inadequate for a public health program in a resource-constrained setting. The success of an intervention (e.g., a vaccination campaign, a maternal health program) is deeply intertwined with the local context, including cultural norms, health system infrastructure, and socioeconomic factors. Therefore, frameworks that explicitly incorporate these elements, such as SPICE (with its focus on Setting and Perspective) and ECLIPSE (for policy and service-level questions), are often more suitable.8
+                                       * The Importance of 'Feasibility' and 'Relevance': The 'F' (Feasible) and 'R' (Relevant) of the FINER criteria are particularly critical in global health research. Questions must be designed to be answerable within the constraints of the local health system, which may have limited resources for data collection and analysis.70 Moreover, the 'R' for Relevance demands that the question addresses a priority health problem for the community and that the potential findings are actionable and can be implemented sustainably within that context. A question that leads to an intervention that is unaffordable or culturally unacceptable, no matter how effective in a trial setting, is not a relevant question in global health.
+
+
+7.4 One Health
+
+
+The One Health approach recognizes the interconnectedness of human, animal, and environmental health. It addresses complex problems like zoonotic diseases, antimicrobial resistance, and food safety that span these domains. This integrative nature challenges the use of simple, linear question formulation frameworks.
+The process of formulating a One Health research question requires a shift in thinking from filling in the components of a mnemonic to engaging in a process of conceptual integration. The literature on One Health research emphasizes a holistic, systems-thinking approach rather than proposing a simple acronym.71 The "framework" for a One Health question is not the mnemonic itself, but the collaborative and conceptual process that precedes the final question.
+This process typically involves:
+                                       1. Building a Multi-Disciplinary Team: The first step is to assemble a team with expertise across human medicine, veterinary medicine, environmental science, ecology, social sciences, and other relevant fields. This collaboration is crucial for identifying all relevant dimensions of the problem.71
+                                       2. Conceptual Mapping: Before a specific question is formulated, the team often uses tools like logic models or Directed Acyclic Graphs (DAGs) to visualize the complex pathways and interactions between the human, animal, and environmental domains. This mapping exercise helps to identify key leverage points for intervention, potential confounders, and the full range of potential outcomes across all three domains.71
+                                       3. Formulating a Testable Hypothesis: Only after this conceptual mapping is a specific, testable research question or hypothesis formulated. This question will likely be more complex than a standard PICO question, often involving multiple populations (e.g., humans and livestock) and outcomes (e.g., human disease incidence, animal health, and environmental contamination levels).
+Recent developments, such as the proposed "Relational One Health" framework, seek to deepen this approach by incorporating critical theory and challenging the often-implicit anthropocentric (human-centered) bias in One Health research. This new framework pushes researchers to consider the political, social, and economic contexts that shape health across all species and ecosystems, providing a more equitable and truly holistic foundation for inquiry.74 For these deeply integrative fields, the process of collaborative, systems-level thinking is the framework, and the final question is its product.
+
+
+Conclusion
+
+
+The formulation of a research question is the foundational act of scientific inquiry in the health sciences, a process that is both an art and a science. This report has systematically deconstructed this process, moving from foundational principles to a comprehensive inventory of tools and a forward-looking analysis of emerging challenges and opportunities. Several key conclusions emerge from this analysis.
+First, the critical distinction between broad background questions and focused foreground questions establishes the undeniable need for structured formulation frameworks. These frameworks are not academic formalities but essential instruments that impose rigor, guide methodology, and ultimately determine the validity and utility of research findings. A well-formulated question is the primary determinant of a study's success, causally shaping its inclusion criteria, search strategy, and analytical plan.
+Second, the landscape of question formulation extends far beyond the ubiquitous PICO framework. While PICO remains the gold standard for questions of clinical effectiveness, its dominance has often led to its misapplication in contexts for which it was not designed. A mature understanding of research methodology requires literacy in a diverse toolkit of frameworks—from PECO for epidemiological studies and SPIDER for qualitative inquiry, to PCC for scoping reviews and ECLIPSE for health policy. The selection of a framework must be a deliberate act, aligning the tool's purpose with the fundamental nature of the research paradigm.
+Third, the development of a robust research question is an iterative, two-stage process that symbiotically combines formulation and evaluation. Formulation frameworks like PICO or SPICE provide the necessary anatomical structure, ensuring all key components are present. However, a structurally complete question is not inherently a valuable one. Evaluative criteria, epitomized by the FINER framework, are required to appraise the question's substance—its feasibility, interest, novelty, ethics, and relevance. The interplay between these two pillars, a cycle of drafting, appraising, and refining, is central to designing research that is both methodologically sound and scientifically meaningful.
+Finally, the architecture of inquiry is evolving. The rise of digital health interventions, the increasing focus on complex systems in public health and health equity, and the transformative potential of artificial intelligence are pushing the boundaries of traditional question formulation. Emerging frameworks like PICOTS-ComTeC and PerSPEcTiF offer more nuanced tools for these new challenges. Most profoundly, AI is poised to shift the paradigm from entirely human-led formulation to AI-assisted generation, where the researcher's role may evolve from originator to curator of high-priority questions identified from vast datasets. While this presents immense opportunities, it also introduces critical challenges related to transparency, bias, and stakeholder engagement that the research community must proactively address.
+In conclusion, the ability to formulate a precise, answerable, and relevant research question remains the paramount skill for any researcher, clinician, or policymaker in the health sciences. Mastering this skill requires not only knowledge of individual frameworks but an appreciation for the entire ecosystem of tools and the strategic wisdom to select and apply them with precision and purpose. As the complexity of healthcare challenges grows, so too must the sophistication of our inquiries.
+Works cited
+                                       1. Developing your research question – Quality in Healthcare: Assessing What We Do, accessed September 24, 2025, https://uq.pressbooks.pub/quality-in-healthcare/chapter/developing-research-question/
+                                       2. Question Frameworks – Evidence-Based Practice - University of Minnesota Libraries, accessed September 24, 2025, https://pressbooks.umn.edu/evidencebasedpractice/chapter/questionframeworks/
+                                       3. How to formulate the review question using PICO. 5 steps to get you started. - Covidence, accessed September 24, 2025, https://www.covidence.org/blog/how-to-formulate-the-review-question/
+                                       4. How Do You Structure a Systematic Review Question? - DistillerSR, accessed September 24, 2025, https://www.distillersr.com/resources/systematic-literature-reviews/how-do-you-structure-a-systematic-review-question
+                                       5. What kind of systematic review should I conduct? A proposed typology and guidance for systematic reviewers in the medical and health sciences - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC5761190/
+                                       6. How to use the PICO Framework to Aid Critical Appraisal - CASP, accessed September 24, 2025, https://casp-uk.net/pico-framework/
+                                       7. Searching Medical Literature: Optimizing the PICO Approach for Surgeons, accessed September 24, 2025, https://www.rcseng.ac.uk/library-and-publications/library/blog/pico-for-surgeons/
+                                       8. Back to the basics: guidance for formulating good research questions - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC11129835/
+                                       9. Developing the research question – Research and Writing Skills for Academic and Graduate Researchers - RMIT Open Press, accessed September 24, 2025, https://rmit.pressbooks.pub/researchwritingmodules/chapter/developing-the-research-question/
+                                       10. Formulating a good research question: Pearls and pitfalls - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC6691636/
+                                       11. The impact of patient, intervention, comparison, outcome (PICO) as a search strategy tool on literature search quality: a systematic review - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC6148624/
+                                       12. (PDF) Formulating Research Questions for Evidence-Based Studies - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/376900908_Formulating_Research_Questions_for_Evidence-Based_Studies
+                                       13. Formulating the Evidence Based Practice Question: A Review of the Frameworks - Publishing at the Library, accessed September 24, 2025, https://journals.library.ualberta.ca/eblip/index.php/EBLIP/article/download/9741/8144/27360
+                                       14. Formulating a researchable question: A critical step for facilitating good clinical research - PMC - PubMed Central, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC3140151/
+                                       15. PICO framework - The University of Sydney Library, accessed September 24, 2025, https://www.library.sydney.edu.au/support/searching/pico
+                                       16. PICO Framework: A Guide to Evidence-based Research - Pubrica, accessed September 24, 2025, https://pubrica.com/insights/study-guide/guide-to-evidence-based-research-on-pico-framework/
+                                       17. What is your research question? An introduction to the PICOT format for clinicians - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC3430448/
+                                       18. Craft better research questions by using question development frameworks, accessed September 24, 2025, https://library.cumc.columbia.edu/insight/craft-better-research-questions-using-question
+                                       19. Best alternatives for PICO literature: Navigating research frameworks with precision - BytePlus, accessed September 24, 2025, https://www.byteplus.com/en/topic/500068
+                                       20. Research Question Development Frameworks (From JBI) | Five Minute Friday - YouTube, accessed September 24, 2025, https://www.youtube.com/watch?v=YT0UiymH0BM
+                                       21. Rapid review of existing question formulation frameworks - BMJ Global Health, accessed September 24, 2025, https://gh.bmj.com/content/bmjgh/4/Suppl_1/e001107/DC1/embed/inline-supplementary-material-1.pdf
+                                       22. Formulate a specific question - Systematic & scoping reviews ..., accessed September 24, 2025, https://researchtoolkit.library.curtin.edu.au/searching/systematic-and-scoping-reviews/formulate-a-specific-question/
+                                       23. Search Strategy The SPIDER (Sample, Phenomenon of Interest, Design, Evaluation, Research type) tool was adopted to define key e, accessed September 24, 2025, https://www.crd.york.ac.uk/PROSPEROFILES/127507_STRATEGY_20190723.pdf
+                                       24. The SPIDER Tool for Qualitative Evidence Synthesis | Resource Details, accessed September 24, 2025, https://www.nccmt.ca/resources/search/191
+                                       25. Formulating Questions for Evidence-Based Practice (SPICE Framework) | Resource Details | National Collaborating Centre for Methods and Tools, accessed September 24, 2025, https://www.nccmt.ca/resources/search/326
+                                       26. Formulating the Evidence Based Practice Question: A Review of the Frameworks - SciSpace, accessed September 24, 2025, https://scispace.com/pdf/formulating-the-evidence-based-practice-question-a-review-of-25cip2i2s0.pdf
+                                       27. JBI Scoping Review Network, accessed September 24, 2025, https://jbi.global/scoping-review-network
+                                       28. How CLIP became ECLIPSE: a mnemonic to assist in searching for health policy/management information - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/11071906_How_CLIP_became_ECLIPSE_a_mnemonic_to_assist_in_searching_for_health_policymanagement_information
+                                       29. How CLIP became ECLIPSE: a mnemonic to assist in searching for health policy/ management information - PubMed, accessed September 24, 2025, https://pubmed.ncbi.nlm.nih.gov/12389609/
+                                       30. Systematic searching for theory to inform systematic reviews: is it feasible? Is it desirable? - PubMed, accessed September 24, 2025, https://pubmed.ncbi.nlm.nih.gov/26095232/
+                                       31. A simple method for identifying the theoretical basis for systematic reviews: the BeHEMoTh Procedure - JISCMail, accessed September 24, 2025, https://www.jiscmail.ac.uk/cgi-bin/webadmin?A3=ind1207&L=RAMESES&E=base64&P=873671&B=--------------040208060809080009090102&T=application%2Fpdf+reviews+Edited+Highlights.pdf%22;%20name=%22A%20simple%20method%20for%20enhancing%20the%20theoretical%20underpinnings%20for%20systematic%22&N=A%20simple%20method%20for%20enhancing%20the%20theoretical%20underpinnings%20for%20systematic&attachment=q
+                                       32. Applications of the CIMO-logic from the literature and examples of design propositions, accessed September 24, 2025, https://www.researchgate.net/figure/Applications-of-the-CIMO-logic-from-the-literature-and-examples-of-design-propositions_tbl1_327205537
+                                       33. Formulating questions to explore complex interventions within qualitative evidence synthesis - PMC - PubMed Central, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC6350737/
+                                       34. Evolving the PICOT Method for the Digital Age: The PICOT-D - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/282287733_Evolving_the_PICOT_Method_for_the_Digital_Age_The_PICOT-D
+                                       35. Evolving the PICOT Method for the Digital Age: The PICOT-D - PubMed, accessed September 24, 2025, https://pubmed.ncbi.nlm.nih.gov/26431521/
+                                       36. Clinical Questions: PICO and PEO Research | Elsevier Blog, accessed September 24, 2025, https://scientific-publishing.webshop.elsevier.com/research-process/clinical-questions-pico-and-peo-research/
+                                       37. How to Choose Between PEO and PICO When Writing Your Research Question - Lumono, accessed September 24, 2025, https://www.lumono.ai/blog/how-to-choose-between-peo-and-pico-when-writing-your-research-question
+                                       38. PECODR Research Question Framework - Academy - Pubrica, accessed September 24, 2025, https://pubrica.com/academy/concepts-definitions/pecodr-research-question-framework/
+                                       39. Formulating non-PICO questions - JISCMail, accessed September 24, 2025, https://www.jiscmail.ac.uk/cgi-bin/webadmin?A3=ind0902&L=EVIDENCE-BASED-HEALTH&E=7bit&P=4080208&B=--------------060909070007020001060805&T=text%2Fhtml;%20charset=ISO-8859-1
+                                       40. scientific-publishing.webshop.elsevier.com, accessed September 24, 2025, https://scientific-publishing.webshop.elsevier.com/research-process/clinical-questions-pico-and-peo-research/#:~:text=A%20PEO%20research%20question%20focuses,lowered%20risk%20of%20heart%20attacks.
+                                       41. pmc.ncbi.nlm.nih.gov, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC6350737/#:~:text=Systematic%20reviews%20typically%20specify%20the,non%2Dintervention%20formulation%2C%20PECO.
+                                       42. Using PICO framework for systematic literature reviews - Lindexer, accessed September 24, 2025, https://www.lindexer.com/using-the-pico-framework-in-your-systematic-literature-review/
+                                       43. 5.2.3.1 Identifying your eligibility criteria / PICO framework - JBI Manual for Evidence Synthesis, accessed September 24, 2025, https://jbi-global-wiki.refined.site/space/MANUAL/355861805
+                                       44. The benefits of a systematic search strategy when conducting qualitative evidence synthesis; the SPIDER tool. - Leeds Trinity University Research Portal, accessed September 24, 2025, https://research.leedstrinity.ac.uk/en/publications/the-benefits-of-a-systematic-search-strategy-when-conducting-qual
+                                       45. PICO, PICOS and SPIDER: a comparison study of specificity and sensitivity in three search tools for qualitative systematic reviews - PMC - PubMed Central, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC4310146/
+                                       46. JBI Scoping Review Protocol Template, accessed September 24, 2025, https://jbi.global/sites/default/files/2024-04/JBI_Protocol_Template_Scoping_Reviews_2024.docx
+                                       47. A Simplified JBI Scoping Review Guideline - Education in Medicine Journal, accessed September 24, 2025, http://eduimed.usm.my/EIMJ20241602/EIMJ20241602_14.pdf
+                                       48. 10.3.6 Inclusion Criteria - JBI Manual for Evidence Synthesis, accessed September 24, 2025, https://jbi-global-wiki.refined.site/space/MANUAL/355862985
+                                       49. PICO SPICE ECLIPSE - WordPress.com, accessed September 24, 2025, https://bwclibrary.files.wordpress.com/2016/02/finding-evidence-preparing-to-search.pdf
+                                       50. pubrica.com, accessed September 24, 2025, https://pubrica.com/academy/concepts-definitions/behemoth-behaviour-health-context-exclusions-models-or-theories/#:~:text=BeHEMoTh%20is%20used%20to%20frame,want%20to%20investigate%20or%20measure.
+                                       51. BeHEMoTh Behaviour; Health context; Exclusions; Models or Theories - Academy - Pubrica, accessed September 24, 2025, https://pubrica.com/academy/concepts-definitions/behemoth-behaviour-health-context-exclusions-models-or-theories/
+                                       52. CIMO Framework - Academy - Pubrica, accessed September 24, 2025, https://pubrica.com/academy/concepts-definitions/cimo-framework/
+                                       53. FINER criteria – What does it mean? - Cosmoderma, accessed September 24, 2025, https://cosmoderma.org/finer-criteria-what-does-it-mean/
+                                       54. Designing Clinical Research: An Epidemiologic Approach - Goodreads, accessed September 24, 2025, https://www.goodreads.com/book/show/1451404
+                                       55. Medical acumen and scientific approach meet the FINER method - SciELO, accessed September 24, 2025, https://www.scielo.br/j/abo/a/hnPLjgHmYvvbkZdPsFh8Fdc/
+                                       56. FINER: a Research Framework | Elsevier Language Services, accessed September 24, 2025, https://scientific-publishing.webshop.elsevier.com/research-process/finer-research-framework/
+                                       57. PICOT Question Examples per type of Clinical Question in Evidence-based Practice Research – Nursing PICO Ideas, accessed September 24, 2025, https://studyingnurse.com/ideas/icu-picot-questions/
+                                       58. Beyond PICO: the SPIDER tool for qualitative evidence synthesis - PubMed, accessed September 24, 2025, https://pubmed.ncbi.nlm.nih.gov/22829486/
+                                       59. (PDF) Beyond PICO - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/230565751_Beyond_PICO
+                                       60. ECLIPSE Framework - Academy - Pubrica, accessed September 24, 2025, https://pubrica.com/academy/concepts-definitions/eclipse-framework/
+                                       61. Using PICO & PEO: - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/profile/Maria_Karabatzakis/post/How_do_I_conduct_a_organized_literature_search_for_topics_that_do_not_fit_in_a_PICO_format/attachment/59d6329579197b80779904db/AS%3A371030943125504%401465472078006/download/PICO+PEO+Searching.pdf
+                                       62. Evaluating digital health interventions: key questions and approaches - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC5324832/
+                                       63. Identifying optimal frameworks to implement or evaluate digital health interventions: a scoping review protocol | BMJ Open, accessed September 24, 2025, https://bmjopen.bmj.com/content/10/8/e037643
+                                       64. The PICOTS-ComTeC Framework for Defining Digital Health Interventions - ISPOR, accessed September 24, 2025, https://www.ispor.org/docs/default-source/intl2024/ispor24championmt22handout138831-pdf.pdf?sfvrsn=7e03f3bb_0
+                                       65. (PDF) Formulating questions to explore complex interventions within qualitative evidence synthesis - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/330641461_Formulating_questions_to_explore_complex_interventions_within_qualitative_evidence_synthesis
+                                       66. www.anjusoftware.com, accessed September 24, 2025, https://www.anjusoftware.com/insights/data-science/site-identification/ai-trial-research-questions-2/#:~:text=In%20clinical%20research%2C%20access%20to,study%20requirements%20to%20optimize%20results.
+                                       67. Can AI Generate Better Health Research Questions Than Humans? - Complete AI Training, accessed September 24, 2025, https://completeaitraining.com/news/can-ai-generate-better-health-research-questions-than-humans/
+                                       68. The question: types of research questions and how to develop them - ScienceDirect - DOI, accessed September 24, 2025, https://doi.org/10.1016/B978-0-323-91259-4.00097-7
+                                       69. 'The Correct Clinical Study' for Ultra-Rare Diseases Involving Genetic Defects: FDA's Rare Disease Evidence Principles Process Provides Guidance for Applications Supported by a Single Pivotal Trial // Cooley // Global Law Firm, accessed September 24, 2025, https://www.cooley.com/news/insight/2025/2025-09-19-the-correct-clinical-study-for-ultra-rare-diseases-involving-genetic-defects-fdas-rare-disease-evidence-principles-process-provides-guidance-for-applications-supported-by-a-single-pivotal-trial
+                                       70. Chapter 1 Research Question | Scientific Writing for Health Research, accessed September 24, 2025, https://ehsanx.github.io/Scientific-Writing-for-Health-Research/research-question.html
+                                       71. A framework for One Health research - PMC, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC5454183/
+                                       72. A Framework for One Health Research - RTI International, accessed September 24, 2025, https://www.rti.org/publication/framework-one-health-research
+                                       73. (PDF) A framework for One Health research - ResearchGate, accessed September 24, 2025, https://www.researchgate.net/publication/315634491_A_framework_for_One_Health_research
+                                       74. Relational One Health: A more-than-biomedical framework for more-than-human health, and lessons learned from Brazil, Ethiopia, and Israel - PMC - PubMed Central, accessed September 24, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC11247262/

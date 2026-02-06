@@ -90,6 +90,18 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+
+        /* === Wizard-specific colors (Define Tool v3.0) === */
+        wizard: {
+          primary: "hsl(210, 100%, 50%)",        // Clinical Blue
+          'primary-light': "hsl(210, 100%, 90%)",
+          'primary-dark': "hsl(210, 100%, 30%)",
+          step: {
+            active: "hsl(210, 100%, 50%)",       // Current step - Clinical Blue
+            complete: "hsl(142, 71%, 45%)",      // Completed step - Success green
+            pending: "hsl(0, 0%, 70%)",          // Pending step - Muted gray
+          }
+        },
       },
 
       /* === Border Radius (Semantic Profiles) === */
@@ -103,6 +115,12 @@ const config = {
       spacing: {
         "sidebar": "var(--sidebar-width)",
         "sidebar-collapsed": "var(--sidebar-width-collapsed)",
+
+        // Wizard-specific spacing (Define Tool v3.0)
+        "wizard-panel": "40%",          // Preview panel width (split-screen)
+        "wizard-gap": "1.5rem",         // Gap between input and preview panels
+        "step-indicator": "2.5rem",     // Progress step indicator size
+        "step-connector": "2rem",       // Line between steps
       },
 
       /* === Animations (Essential only) === */

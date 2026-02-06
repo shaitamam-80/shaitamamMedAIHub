@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MedAI Hub** is an AI-powered systematic literature review platform for medical researchers. It helps researchers formulate research questions, generate PubMed search queries, and screen abstracts using AI.
+**MedAI Hub** is an AI-powered research question formulation platform for medical researchers. It helps researchers define and refine research questions using structured frameworks (PICO, PEO, SPIDER, etc.) with AI assistance.
 
 ### Tech Stack
 
@@ -56,11 +56,189 @@ npx tsc --noEmit            # Type check
 
 ## Architecture
 
-### Three-Tool System
+### Define Tool
 
-1. **Define Tool** (`/define`): AI chat to formulate research questions using frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER, PFO, PICOT, PICOC)
-2. **Query Tool** (`/query`): Generates PubMed boolean search queries from framework data
-3. **Review Tool** (`/review`): Upload MEDLINE files, AI screens abstracts for relevance
+The **Define Tool** (`/define`) helps researchers formulate research questions using AI chat:
+
+- Supports 20+ research frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, etc.)
+- AI extracts framework components from natural conversation
+- FINER assessment evaluates question quality (Feasible, Interesting, Novel, Ethical, Relevant)
+
+### Define Tool v3.0 - Wizard Architecture
+
+**Status**: In development (replacing chat-based interface)
+
+Define Tool v3.0 introduces a **wizard-based** interface with split-screen live preview, replacing the free-form chat approach.
+
+#### Key Features
+
+- **Wizard Pattern**: Progressive disclosure through 6 structured steps
+- **Split-Screen Layout**: Input panel (left) + Live Preview panel (right, 40% width)
+- **All 17+ Frameworks**: Production-ready support from launch (no MVP)
+- **Clarification-Based Detection**: Interactive questions instead of keyword matching
+- **Qualitative FINER**: High/medium/low scores with reasoning (no artificial numeric scores)
+- **Three Question Types**: Narrow (PubMed-ready), Broad (exploratory), Clinical (practical)
+
+#### Wizard Steps
+
+1. **Welcome** - Language selection (EN/HE) and introduction
+2. **Framework** - Clarification-based framework selection
+3. **Components** - Extract framework components with real-time validation
+4. **FINER** - Qualitative assessment with improvement suggestions
+5. **Questions** - Generate three question formulations
+6. **Review** - Final review and save to project
+
+#### Framework Detection Strategy
+
+```typescript
+// v3.0 Approach: Clarification-based (NO keyword matching)
+// 1. Ask user INTENT questions
+// 2. Present framework options based on answers
+// 3. If ambiguous → ASK, don't guess
+// 4. No default to PICO
+```
+
+**Example Flow:**
+
+```
+AI: "What type of research question are you exploring?"
+   → Therapy/treatment effectiveness
+   → Risk factors or causes
+   → Patient experiences
+   → Prevalence/frequency
+   → Prognosis/outcomes
+
+User selects: "Risk factors"
+AI: → Suggests PECO (exposure-based)
+```
+
+#### FINER Assessment Philosophy
+
+**Qualitative Only** - No numeric scores, no formulas:
+
+```typescript
+interface FinerDimension {
+  score: "high" | "medium" | "low";  // Qualitative level
+  reason: string;                     // 2-3 sentence explanation
+}
+
+// Recommendation based on holistic judgment, NOT arithmetic
+recommendation: "proceed" | "revise" | "reconsider"
+```
+
+**Why qualitative?**
+
+- Removes false precision (100/66/33 points are arbitrary)
+- Focuses on reasoning over scoring
+- Aligns with actual research review processes
+
+#### Split-Screen Layout
+
+```
+┌─────────────────────────────────┬──────────────────────┐
+│ Input Panel (60%)               │ Preview Panel (40%)  │
+├─────────────────────────────────┼──────────────────────┤
+│ Step Progress Indicator         │ Framework Summary    │
+│                                 │                      │
+│ [Active Step Content]           │ Components Preview   │
+│ - Framework selection           │ ✓ P: ...             │
+│ - Component inputs              │ ✓ I: ...             │
+│ - FINER review                  │ ○ C: (optional)      │
+│                                 │ ✓ O: ...             │
+│ [Navigation: Back | Next]       │                      │
+│                                 │ FINER Assessment     │
+│                                 │ F: High - ...        │
+│                                 │                      │
+│                                 │ Generated Questions  │
+│                                 │ (shown in step 5)    │
+└─────────────────────────────────┴──────────────────────┘
+```
+
+#### Type System
+
+All types defined in `frontend/lib/types/wizard.types.ts`:
+
+- **WizardState** - Complete wizard state machine
+- **FrameworkComponent** - Dynamic component with validation
+- **FinerAssessment** - Qualitative FINER with reasoning
+- **GeneratedQuestions** - Three question formulations
+- **WizardAction** - Reducer actions for state management
+
+#### Supported Frameworks (17+)
+
+**PICO Family (5)**: PICO, PICOT, PICOS, PICOC, PICOTS
+**JBI Standards (7)**: CoCoPop, PEO, PECO, PFO, PIRD, PCC, PICo
+**Qualitative (2)**: SPIDER, SPICE
+**Policy/Complex (2)**: ECLIPSE, CIMO
+**Specialized (4)**: BeHEMoTh, PerSPEcTiF, PICOT-D, PICOTS-ComTeC
+
+#### Design System
+
+Tailwind configuration with Clinical Blue palette:
+
+```typescript
+// Wizard-specific colors
+wizard: {
+  primary: "hsl(210, 100%, 50%)",        // Clinical Blue
+  step: {
+    active: "hsl(210, 100%, 50%)",       // Current step
+    complete: "hsl(142, 71%, 45%)",      // Completed
+    pending: "hsl(0, 0%, 70%)",          // Pending
+  }
+}
+
+// Wizard spacing
+spacing: {
+  "wizard-panel": "40%",          // Preview panel width
+  "wizard-gap": "1.5rem",         // Gap between panels
+  "step-indicator": "2.5rem",     // Progress indicator
+}
+```
+
+#### API Changes (v3.0)
+
+New endpoints for wizard flow:
+
+```
+POST /api/v1/define/detect-framework    # Clarification-based detection
+POST /api/v1/define/extract-components  # Extract from conversation
+POST /api/v1/define/generate-questions  # Generate 3 formulations
+POST /api/v1/define/validate-component  # Real-time validation
+```
+
+#### Migration Strategy
+
+- Build v3.0 on feature branch
+- In-place replacement of `/define` route (NOT parallel routes)
+- Migrate existing projects via data migration script
+- Feature flag for gradual rollout
+
+#### Key Differences from v2.0
+
+| Aspect | v2.0 (Current) | v3.0 (Wizard) |
+| -------- | --------------- | --------------- |
+| **Interface** | Free-form chat | Structured wizard |
+| **Framework Detection** | Keyword matching | Clarification questions |
+| **FINER Scoring** | Numeric (100/66/33) | Qualitative (high/med/low) |
+| **Preview** | Final step only | Real-time split-screen |
+| **Navigation** | Linear chat | Step-based with back/next |
+| **Question Output** | Single version | Three formulations |
+
+#### File References (v3.0)
+
+| Purpose | File |
+|---------|------|
+| Wizard Types | `frontend/lib/types/wizard.types.ts` |
+| Wizard Component | `frontend/components/define/wizard.tsx` |
+| Step Components | `frontend/components/define/steps/*.tsx` |
+| Preview Panel | `frontend/components/define/preview-panel.tsx` |
+| Design Tokens | `frontend/tailwind.config.ts` |
+| Framework Configs | `docs/FRAMEWORK_CONFIGS.md` |
+| Implementation Plan | `docs/define-tool-v3-implementation-plan.md` |
+| Detection Prompts | `backend/app/core/prompts/define_v3_detect.py` |
+| Generation Prompts | `backend/app/core/prompts/define_v3_generate.py` |
+
+---
 
 ### Backend Structure
 
@@ -71,23 +249,19 @@ backend/
 │   ├── api/
 │   │   ├── models/
 │   │   │   ├── schemas.py      # Pydantic models + FRAMEWORK_SCHEMAS
-│   │   │   └── frameworks.py   # Typed framework models (PICO, PEO, SPIDER, etc.)
+│   │   │   └── frameworks.py   # Typed framework models (PICO, PEO, etc.)
 │   │   └── routes/
 │   │       ├── projects.py     # CRUD for projects
-│   │       ├── define.py       # Chat + framework extraction
-│   │       ├── query.py        # Query generation
-│   │       └── review.py       # File upload + screening
+│   │       └── define.py       # Chat + framework extraction
 │   ├── core/
-│   │   ├── config.py           # Settings from .env + cache config
+│   │   ├── config.py           # Settings from .env
 │   │   ├── auth.py             # Supabase JWT validation
 │   │   └── prompts/
-│   │       └── shared.py       # AI prompts + framework schemas
+│   │       ├── shared.py       # Framework schemas
+│   │       └── define.py       # AI prompts for Define tool
 │   └── services/
 │       ├── ai_service.py       # Gemini AI (singleton)
-│       ├── database.py         # Supabase client (singleton)
-│       ├── cache_service.py    # Memory/Redis cache (singleton)
-│       ├── mesh_service.py     # MeSH term lookup + caching
-│       └── medline_parser.py   # MEDLINE file parser
+│       └── database.py         # Supabase client (singleton)
 ```
 
 ### Frontend Structure
@@ -98,8 +272,6 @@ frontend/
 │   ├── page.tsx               # Home page
 │   ├── layout.tsx             # Root layout with sidebar
 │   ├── define/page.tsx        # Define tool (chat + form)
-│   ├── query/page.tsx         # Query generator
-│   ├── review/page.tsx        # Abstract screening
 │   ├── projects/page.tsx      # Project management
 │   └── auth/
 │       ├── login/page.tsx     # Login form
@@ -110,7 +282,7 @@ frontend/
 ├── contexts/
 │   └── auth-context.tsx       # Auth state provider
 └── lib/
-    ├── api.ts                 # Axios client with auth interceptor
+    ├── api/                   # API client modules
     ├── supabase.ts            # Supabase client (singleton)
     └── utils.ts               # Tailwind cn() utility
 ```
@@ -123,7 +295,7 @@ frontend/
 
 1. User logs in via Supabase Auth (email/password or OAuth)
 2. Frontend stores JWT in Supabase session
-3. `api.ts` interceptor adds `Authorization: Bearer {token}` to all requests
+3. API client interceptor adds `Authorization: Bearer {token}` to all requests
 4. Backend `auth.py` validates JWT with Supabase `/auth/v1/user` endpoint
 5. Protected routes use `Depends(get_current_user)`
 
@@ -131,8 +303,6 @@ frontend/
 
 - `ai_service` (singleton): All Gemini AI calls
 - `db_service` (singleton): All Supabase operations
-- `cache_service` (singleton): MeSH term caching (Memory/Redis)
-- `mesh_service` (singleton): NCBI MeSH API lookups
 - Routes never access DB/AI directly
 
 ### Dynamic Framework System
@@ -144,20 +314,6 @@ FRAMEWORK_SCHEMAS = {
     ...
 }
 # Frontend renders whatever backend provides - no hardcoding
-```
-
-### API Client (Frontend)
-
-```typescript
-// lib/api.ts - Axios with auto auth
-const client = axios.create({ baseURL: API_URL });
-client.interceptors.request.use(async (config) => {
-  const { data } = await supabase.auth.getSession();
-  if (data.session?.access_token) {
-    config.headers.Authorization = `Bearer ${data.session.access_token}`;
-  }
-  return config;
-});
 ```
 
 ---
@@ -182,16 +338,6 @@ Authorization: Bearer <token>
 | PATCH | `/api/v1/projects/{id}` | Update project |
 | DELETE | `/api/v1/projects/{id}` | Delete project (CASCADE) |
 
-**Create Project Request:**
-
-```json
-{
-  "name": "My Research Project",
-  "description": "Optional description",
-  "framework_type": "PICO"
-}
-```
-
 ### Define Tool
 
 | Method | Endpoint | Description |
@@ -199,6 +345,8 @@ Authorization: Bearer <token>
 | GET | `/api/v1/define/frameworks` | Get framework schemas |
 | POST | `/api/v1/define/chat` | Chat with AI |
 | GET | `/api/v1/define/conversation/{id}` | Get chat history |
+| DELETE | `/api/v1/define/conversation/{id}` | Clear chat history |
+| POST | `/api/v1/define/finer-assessment` | Evaluate research question |
 
 **Chat Request:**
 
@@ -206,7 +354,8 @@ Authorization: Bearer <token>
 {
   "project_id": "uuid",
   "message": "I want to study exercise for depression in elderly",
-  "framework_type": "PICO"
+  "framework_type": "PICO",
+  "language": "en"
 }
 ```
 
@@ -222,33 +371,16 @@ Authorization: Bearer <token>
     "O": "Depression symptoms"
   },
   "finer_assessment": {
-    "F": {"score": "high", "reason": "Large elderly population available for recruitment"},
-    "I": {"score": "high", "reason": "Depression in elderly is a major public health concern"},
-    "N": {"score": "medium", "reason": "Adds to existing evidence on exercise interventions"},
-    "E": {"score": "high", "reason": "Low-risk intervention with minimal ethical concerns"},
-    "R": {"score": "high", "reason": "Results could inform clinical guidelines"},
+    "F": {"score": "high", "reason": "..."},
+    "I": {"score": "high", "reason": "..."},
+    "N": {"score": "medium", "reason": "..."},
+    "E": {"score": "high", "reason": "..."},
+    "R": {"score": "high", "reason": "..."},
     "overall": "proceed",
-    "suggestions": ["Consider specifying exercise type (aerobic, resistance, etc.)"]
+    "suggestions": ["Consider specifying exercise type"]
   }
 }
 ```
-
-### Query Tool
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/query/generate` | Generate PubMed query |
-| GET | `/api/v1/query/history/{id}` | Get query history |
-
-### Review Tool
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/review/upload` | Upload MEDLINE file (multipart/form-data) |
-| GET | `/api/v1/review/files/{id}` | Get uploaded files |
-| GET | `/api/v1/review/abstracts/{id}` | Get abstracts (?status=pending) |
-| POST | `/api/v1/review/analyze` | Start AI screening |
-| PATCH | `/api/v1/review/abstracts/{id}` | Update decision |
 
 ### Error Responses
 
@@ -271,15 +403,6 @@ Authorization: Bearer <token>
 
 ## Database Schema
 
-### Entity Relationship
-
-```
-projects (1) ──┬── (N) files ──── (N) abstracts
-               ├── (N) chat_messages
-               ├── (N) query_strings
-               └── (N) analysis_runs
-```
-
 ### Tables
 
 #### projects
@@ -295,40 +418,6 @@ projects (1) ──┬── (N) files ──── (N) abstracts
 | created_at | TIMESTAMPTZ | Auto |
 | updated_at | TIMESTAMPTZ | Auto-trigger |
 
-#### files
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| project_id | UUID | FK → projects |
-| filename | VARCHAR(255) | Original name |
-| file_path | TEXT | Storage path |
-| file_size | BIGINT | Bytes |
-| file_type | VARCHAR(50) | MEDLINE, CSV |
-| status | VARCHAR(50) | uploaded/processing/completed/error |
-| uploaded_at | TIMESTAMPTZ | Auto |
-
-#### abstracts
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| project_id | UUID | FK → projects |
-| file_id | UUID | FK → files |
-| pmid | VARCHAR(20) | PubMed ID (unique) |
-| title | TEXT | Article title |
-| abstract | TEXT | Abstract text |
-| authors | TEXT | Author list |
-| journal | VARCHAR(255) | Journal name |
-| publication_date | DATE | Pub date |
-| keywords | TEXT[] | Array |
-| status | VARCHAR(20) | pending/included/excluded/maybe |
-| decision | VARCHAR(20) | AI decision |
-| ai_reasoning | TEXT | AI explanation |
-| human_decision | VARCHAR(20) | Override |
-| screened_at | TIMESTAMPTZ | When screened |
-| metadata | JSONB | Extra MEDLINE fields |
-
 #### chat_messages
 
 | Column | Type | Description |
@@ -339,46 +428,17 @@ projects (1) ──┬── (N) files ──── (N) abstracts
 | content | TEXT | Message |
 | created_at | TIMESTAMPTZ | Auto |
 
-#### query_strings
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| project_id | UUID | FK → projects |
-| query_text | TEXT | Boolean query |
-| query_type | VARCHAR(50) | boolean/mesh/advanced |
-| created_at | TIMESTAMPTZ | Auto |
-
-#### analysis_runs
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| project_id | UUID | FK → projects |
-| tool | VARCHAR(20) | DEFINE/QUERY/REVIEW |
-| status | VARCHAR(50) | pending/running/completed/failed |
-| started_at | TIMESTAMPTZ | Start |
-| completed_at | TIMESTAMPTZ | End |
-| results | JSONB | Results |
-| error_message | TEXT | Error if failed |
-
 ### Indexes
 
 ```sql
 CREATE INDEX idx_projects_user_id ON projects(user_id);
 CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
-CREATE INDEX idx_abstracts_project_id ON abstracts(project_id);
-CREATE INDEX idx_abstracts_pmid ON abstracts(pmid);
-CREATE INDEX idx_abstracts_status ON abstracts(status);
+CREATE INDEX idx_chat_messages_project_id ON chat_messages(project_id);
 ```
 
 ### Cascade Deletes
 
 All FK use `ON DELETE CASCADE` - deleting project removes all related data.
-
-### Row Level Security (Optional)
-
-Run `docs/rls_policies.sql` to enable user-level data isolation. Backend uses `service_role` key which bypasses RLS.
 
 ---
 
@@ -392,15 +452,6 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_KEY=eyJ...               # Anon key
 SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Service role (bypasses RLS)
 DEBUG=True                        # Enable /api/docs
-
-# Cache Settings (optional)
-REDIS_URL=                        # e.g., redis://localhost:6379 (uses memory cache if empty)
-CACHE_TTL_DAYS=30                 # MeSH term cache TTL
-CACHE_MAX_SIZE=10000              # Max in-memory cache entries
-
-# NCBI Settings (optional)
-NCBI_API_KEY=                     # From ncbi.nlm.nih.gov/account/settings
-NCBI_EMAIL=your@email.com         # Required by NCBI for identification
 ```
 
 ### Frontend `.env.local`
@@ -409,16 +460,6 @@ NCBI_EMAIL=your@email.com         # Required by NCBI for identification
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
-
-### Production (Railway)
-
-```env
-GOOGLE_API_KEY=...
-SUPABASE_URL=https://yronyapjuaswetrmotuk.supabase.co
-SUPABASE_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...     # Must start with "eyJ" (no spaces!)
-DEBUG=False
 ```
 
 ---
@@ -435,7 +476,7 @@ DEBUG=False
 1. Create route in `backend/app/api/routes/`
 2. Add Pydantic models in `schemas.py`
 3. Register in `main.py`
-4. Add method in `lib/api.ts`
+4. Add method in `frontend/lib/api/`
 
 ### Add UI Component
 
@@ -446,12 +487,7 @@ npx shadcn-ui@latest add [component]
 ### Reset Database
 
 ```sql
--- Drop all tables
-DROP TABLE IF EXISTS query_strings CASCADE;
 DROP TABLE IF EXISTS chat_messages CASCADE;
-DROP TABLE IF EXISTS abstracts CASCADE;
-DROP TABLE IF EXISTS analysis_runs CASCADE;
-DROP TABLE IF EXISTS files CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
 
 -- Then run docs/schema.sql
@@ -463,14 +499,13 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 ### Railway (Backend)
 
-- Auto-deploys from `main` branch
+- Auto-deploys from `develop` branch
 - Uses `Dockerfile` in `/backend` directory
 - Environment variables in Railway dashboard
-- Builder: Dockerfile (not Railpack/Nixpacks)
 
 ### Vercel (Frontend)
 
-- Auto-deploys from `main` branch
+- Auto-deploys from `develop` branch
 - Environment variables in Vercel dashboard
 - Domain: shaitamam.com
 
@@ -496,466 +531,6 @@ DROP TABLE IF EXISTS projects CASCADE;
 2. Gemini may return malformed JSON - check logs
 3. Rate limiting may kick in on heavy usage
 
-### Database Errors
-
-1. Verify `docs/schema.sql` was run
-2. Check Supabase project is not paused
-3. Service role key must match exactly
-
----
-
-## Recent Changes Log
-
-### 2025-12-07 - Smart Screener Module & UI Refresh
-
-#### Smart Screener Module (NEW)
-
-Implemented the **GEMS-based Smart Screener** - an automated literature screening tool that bridges Query Tool and Review Tool.
-
-**Architecture: Hybrid Filtering Engine**
-
-| Layer | Engine | Purpose | Speed |
-|-------|--------|---------|-------|
-| A | Python Rule Engine | Deterministic filtering (date, language, pub type) | ~1000 articles/sec |
-| B | Gemini AI | Semantic analysis, relevance scoring | ~5 concurrent |
-
-**New Backend Files:**
-
-```
-backend/
-├── app/
-│   ├── api/
-│   │   ├── models/screening.py      # Pydantic models (CriteriaConfig, ArticleDecision)
-│   │   └── routes/screening.py      # API endpoints
-│   ├── core/
-│   │   ├── gems/criteria_library.py # GEMS screening codes (P1, S2, S-Ex1, etc.)
-│   │   └── prompts/screening.py     # AI prompts for abstract analysis
-│   └── services/
-│       ├── rule_engine.py           # Layer A: Rule-based filtering
-│       └── screening_service.py     # Orchestrator: Pipeline management
-```
-
-**New Frontend Files:**
-
-```
-frontend/
-├── app/screening/page.tsx           # Screening page
-├── components/screening/
-│   ├── ScreeningWizard.tsx          # 4-step wizard container
-│   ├── Step1Framework.tsx           # Framework validation
-│   ├── Step2ReviewType.tsx          # Review type selection
-│   ├── Step3Criteria.tsx            # Criteria builder
-│   └── Step4Execution.tsx           # Execution console
-└── types/screening.ts               # TypeScript interfaces
-```
-
-**Key Features:**
-
-- **4-Step Wizard**: Framework → Review Type → Criteria → Execute
-- **Review Types**: Systematic (strict), Scoping (broad), Quick Answer
-- **Criteria Library**: Population codes (P1-P5), Study Design (S1-S5), Exclusions (S-Ex1-Ex5)
-- **AI Integration**: Gemini analyzes abstracts with PICO context
-- **Evidence Quotes**: AI extracts supporting text from abstracts
-
-**API Endpoints:**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/screening/init-criteria` | Save screening configuration |
-| POST | `/api/v1/screening/process-pmids` | Run full screening pipeline |
-| GET | `/api/v1/screening/criteria-library` | Get available criteria codes |
-
----
-
-#### Frontend UI Refresh
-
-**Design System Updates:**
-
-- Tailwind config extended with custom colors and animations
-- Updated button, card, badge components with new variants
-- Added glass morphism effects and gradient backgrounds
-- New progress.tsx and radio-group.tsx components
-
-**Homepage Redesign:**
-
-- Modern hero section with animated gradient
-- Feature cards with hover effects
-- Improved navigation and layout
-
-**Query Tool Enhancements:**
-
-- Interactive concept chips with edit/remove capability
-- Improved QueryBlockEditor with drag-and-drop
-- Enhanced SearchResultsScreen with better pagination
-- Real-time query validation feedback
-
-**Sidebar Improvements:**
-
-- Collapsible navigation groups
-- Active state indicators
-- Mobile-responsive drawer
-
----
-
-#### Backend Improvements
-
-**AI Service (`ai_service.py`):**
-
-- Added `analyze_abstract_gems()` method for GEMS screening
-- Batch translation support for Hebrew → English
-- Improved error handling and timeouts
-
-**MeSH Service (`mesh_service.py`):**
-
-- Enhanced term expansion with entry terms
-- Better fallback for failed lookups
-- Cache statistics method
-
-**PubMed Service (`pubmed_service.py`):**
-
-- Improved search result pagination
-- Better MEDLINE format handling
-- Error recovery mechanisms
-
-**MEDLINE Parser (`medline_parser.py`):**
-
-- Added study type extraction from PT field
-- Improved multi-line field parsing
-
----
-
-**Files Modified (26 total):**
-
-Backend:
-- `backend/main.py` - Added screening routes
-- `backend/app/core/gems/criteria_library.py` - GEMS criteria codes
-- `backend/app/services/ai_service.py` - GEMS AI methods
-- `backend/app/services/mesh_service.py` - Improved caching
-- `backend/app/services/pubmed_service.py` - Search improvements
-- `backend/app/services/medline_parser.py` - PT field parsing
-- `backend/app/services/query_builder.py` - Minor fixes
-
-Frontend:
-- `frontend/app/page.tsx` - Homepage redesign
-- `frontend/app/layout.tsx` - Layout improvements
-- `frontend/app/query/page.tsx` - Query tool updates
-- `frontend/app/globals.css` - Design system updates
-- `frontend/tailwind.config.ts` - Extended theme
-- `frontend/lib/api.ts` - Screening API methods
-- `frontend/lib/query-parser.ts` - Parser fixes
-- `frontend/components/query/*` - 6 component updates
-- `frontend/components/sidebar/app-sidebar.tsx` - Navigation update
-- `frontend/components/ui/*` - 5 component updates
-
-**New Files (15 total):**
-
-- `backend/app/api/models/screening.py`
-- `backend/app/api/routes/screening.py`
-- `backend/app/core/prompts/screening.py`
-- `backend/app/services/rule_engine.py`
-- `backend/app/services/screening_service.py`
-- `backend/tests/test_screening_integration.py`
-- `frontend/app/screening/page.tsx`
-- `frontend/components/screening/*.tsx` (5 files)
-- `frontend/components/ui/progress.tsx`
-- `frontend/components/ui/radio-group.tsx`
-- `frontend/types/screening.ts`
-- `docs/Smart Screener *.md` (3 spec files)
-
----
-
-### 2025-12-02 (Session 2) - Infrastructure: Caching, Type Safety, Testing
-
-#### Persistent Caching System
-
-New `backend/app/services/cache_service.py`:
-
-- **Cache Interface Pattern**: Abstract `CacheInterface` with pluggable implementations
-- **MemoryCache (default)**: LRU-like eviction, TTL support, no dependencies
-- **RedisCache**: Auto-enabled when `REDIS_URL` is set, scalable for production
-- **30-day TTL**: MeSH terms update annually, safe to cache for extended periods
-
-```python
-# Automatic selection based on environment
-from app.services.cache_service import get_cache, mesh_cache_key
-
-cache = get_cache()  # Returns MemoryCache or RedisCache
-key = mesh_cache_key("diabetes mellitus")
-await cache.set(key, data, ttl=timedelta(days=30))
-```
-
-#### Typed Framework Models
-
-New `backend/app/api/models/frameworks.py`:
-
-- **Pydantic models**: `PICOData`, `PEOData`, `SPIDERData`, `PICOTData`, `CoCoPoPData`, `GenericFrameworkData`
-- **Key normalization**: `@model_validator` converts full-word keys (e.g., "population" → "P")
-- **Type union**: `FrameworkDataUnion` for type-safe framework handling
-
-```python
-from app.api.models.schemas import PICOData, framework_to_dict
-
-# Accepts both formats
-pico = PICOData(population="Adults", intervention="Exercise", outcome="Health")
-pico = PICOData(P="Adults", I="Exercise", O="Health")
-
-# Always outputs single-letter keys
-dict_data = framework_to_dict(pico)  # {"P": "Adults", "I": "Exercise", "O": "Health"}
-```
-
-#### MeSH Service Caching Integration
-
-Updated `backend/app/services/mesh_service.py`:
-
-- **Serialization**: Added `to_dict()`/`from_dict()` to `ExpandedTerms` dataclass
-- **Cache integration**: Uses `cache_service` for persistent MeSH term storage
-- **Graceful degradation**: Cache errors are logged but don't break the service
-- **Statistics**: New `get_cache_stats()` method for monitoring
-
-#### Configuration Updates
-
-Updated `backend/app/core/config.py`:
-
-```python
-REDIS_URL: Optional[str] = None      # Auto-enables Redis cache
-CACHE_TTL_DAYS: int = 30             # MeSH term TTL
-CACHE_MAX_SIZE: int = 10000          # Memory cache max entries
-```
-
-#### Comprehensive Testing
-
-New test files:
-
-| File | Coverage |
-|------|----------|
-| `test_cache_service.py` | MemoryCache, key generation, factory, integration |
-| `test_mesh_service.py` | Error paths (timeout, network, HTTP), caching, expansion |
-| `test_ai_service.py` | Error paths (timeout, quota, Hebrew), fallback mechanisms |
-
-Test results: **172 passed, 1 skipped**
-
-**Files Created/Modified**:
-
-- `backend/app/api/models/frameworks.py` (NEW)
-- `backend/app/services/cache_service.py` (NEW)
-- `backend/app/services/mesh_service.py` (UPDATED - cache integration)
-- `backend/app/api/models/schemas.py` (UPDATED - imports)
-- `backend/app/core/config.py` (UPDATED - cache settings)
-- `backend/requirements.txt` (UPDATED - redis dependency)
-- `backend/tests/test_cache_service.py` (NEW)
-- `backend/tests/test_mesh_service.py` (NEW)
-- `backend/tests/test_ai_service.py` (UPDATED - error path tests)
-- `backend/tests/test_database_service.py` (FIXED - property access)
-
----
-
-### 2025-12-02 (Session 1) - Query Tool V2: Advanced Query Engine
-
-#### Split Query Logic for Comparison Questions
-
-**Problem**: Standard AND logic `(P AND I AND C AND O)` misses studies that only mention one intervention.
-
-**Solution**: Implemented Split Query Logic for PICO comparison questions:
-
-```text
-(P AND I AND O) OR (P AND C AND O)
-```
-
-This captures:
-
-- Studies comparing Intervention vs Comparator directly
-- Studies of Intervention alone
-- Studies of Comparator alone
-
-**Implementation** (`backend/app/services/query_builder.py`):
-
-1. **Detection**: Checks if framework has populated C (Comparison) component
-2. **Strategy A (Comprehensive)**: Uses split structure `(P AND I AND O) OR (P AND C AND O)`
-3. **Strategy B (Direct Comparison)**: Uses full AND `P AND I AND C AND O` for head-to-head studies
-4. **Strategy C (Clinical Filtered)**: Focused + validated hedge + animal exclusion
-
-**Example Output** (for GAD/CBT vs SSRIs question):
-
-```text
-(
-  ("Anxiety Disorders"[Mesh] OR "generalized anxiety"[tiab] OR GAD[tiab])
-  AND
-  ("Cognitive Behavioral Therapy"[Mesh] OR CBT[tiab])
-  AND
-  ("Treatment Outcome"[Mesh] OR "anxiety symptoms"[tiab])
-)
-OR
-(
-  ("Anxiety Disorders"[Mesh] OR "generalized anxiety"[tiab] OR GAD[tiab])
-  AND
-  ("Serotonin Uptake Inhibitors"[Mesh] OR SSRI*[tiab] OR benzodiazepine*[tiab])
-  AND
-  ("Treatment Outcome"[Mesh] OR "anxiety symptoms"[tiab])
-)
-```
-
-#### MeSH Expansion Service
-
-New `backend/app/services/mesh_service.py`:
-
-- **MeSH Lookup**: NCBI E-utilities API for term validation
-- **Entry Terms**: Extracts synonyms from MeSH thesaurus
-- **Query Variants**:
-  - `[Mesh]` - With explosion (includes narrower terms)
-  - `[Majr]` - Major topic only
-  - `[tiab]` - Title/abstract free-text
-- **Fallback**: Uses original term in quotes if MeSH lookup fails
-
-#### Query Builder Service
-
-New `backend/app/services/query_builder.py`:
-
-- **Programmatic query building** (no AI needed for basic queries)
-- **Three strategies**: Comprehensive, Direct/Focused, Clinical Filtered
-- **15+ Toolbox Filters**: Age, Article Type, Date, Language, Study Design
-- **Framework-specific logic**: 20+ frameworks supported (PICO, PEO, SPIDER, etc.)
-
-#### Validated Methodological Hedges
-
-`backend/app/core/prompts/query.py` includes:
-
-| Hedge | Use Case | Source |
-|-------|----------|--------|
-| RCT_COCHRANE | Intervention questions | Cochrane HSSS |
-| OBSERVATIONAL_SIGN | Exposure/etiology | SIGN |
-| PROGNOSIS_HAYNES | Prognosis questions | McMaster |
-| DIAGNOSIS_HAYNES | Diagnostic accuracy | McMaster |
-| QUALITATIVE_WONG | Qualitative research | Wong Filter |
-| PREVALENCE_FILTER | Epidemiology | Cochrane |
-
-#### API Response V2
-
-`QueryGenerateResponseV2` structure:
-
-```typescript
-{
-  report_intro: string;           // Markdown intro with methodology
-  concepts: ConceptAnalysisV2[];  // MeSH + free-text for each component
-  strategies: {
-    comprehensive: QueryStrategy; // High sensitivity (split for comparison)
-    direct: QueryStrategy;        // High precision (head-to-head)
-    clinical: QueryStrategy;      // With hedge + animal exclusion
-  };
-  toolbox: ToolboxFilter[];       // 15+ pre-built filters
-  formatted_report: string;       // Complete markdown report
-
-  // Legacy compatibility
-  queries: { broad, focused, clinical_filtered };
-  message: string;
-
-  // Transparency
-  translation_status?: TranslationStatus;
-  warnings: QueryWarning[];
-}
-```
-
-#### Frontend Components
-
-New components in `frontend/components/query/`:
-
-- `StrategyCard.tsx` - Displays strategy with formula, query, expected yield
-- `ConceptTable.tsx` - MeSH terms and free-text analysis table
-- `ToolboxAccordion.tsx` - Expandable filter categories
-- `ResultsPagination.tsx` - Search result pagination
-
-#### Tests Added
-
-New `backend/tests/test_query_builder.py`:
-
-- Split Query Logic tests (14 tests total)
-- Direct Comparison strategy tests
-- Clinical Filtered strategy tests
-- Toolbox generation tests
-- Legacy compatibility tests
-- Edge case handling
-
-**Files Modified**:
-
-- `backend/app/services/query_builder.py` - Split Query implementation
-- `backend/app/services/mesh_service.py` - Fallback for empty MeSH
-- `backend/tests/test_query_builder.py` - New test file
-
----
-
-### 2025-11-30 (Session 2) - Query Tool Hebrew Translation Fix
-
-#### Branch Reorganization
-
-- Renamed branches to human-readable names: `develop` (development) and `main` (production)
-- Deleted old auto-generated branch names (`claude/code-review-senior-*`, `claude/scaffold-medai-hub-*`)
-- Set GitHub default branch to `develop`
-- Updated Railway deployment to use `develop` branch
-
-#### Query Tool - Hebrew to English Translation
-
-**Problem**: Framework data (P, I, C, O) was displaying in Hebrew in the Query Tool, but PubMed requires English queries.
-
-**Solution**: Implemented multi-layer Hebrew translation and validation:
-
-1. **Batch Translation** (`_translate_framework_data`):
-   - Translates all Hebrew fields in ONE API call for performance
-   - Explicit instruction: "Do NOT include any Hebrew characters"
-   - Falls back to field-by-field translation if batch fails
-
-2. **Single Field Translation** (`_force_translate_single`):
-   - Dedicated method for stubborn Hebrew fields
-   - Used as fallback when batch translation misses fields
-   - 10-second timeout per field
-
-3. **Final Query Validation**:
-   - Checks generated queries for Hebrew characters
-   - If Hebrew detected, auto-generates clean English fallback query
-   - Logs error for debugging
-
-**Files Modified**:
-
-- `backend/app/services/ai_service.py` - Translation methods and validation
-- `backend/app/api/routes/query.py` - Added translation call in `get_research_questions`
-
-#### Performance Optimizations
-
-- Reduced retry attempts from 3 to 2 for faster failure
-- Added 25-second timeout for query generation
-- Added 10-second timeout for single field translation
-- Batch translation (one API call instead of 4)
-
-#### Fallback Query Generation
-
-Added `_generate_fallback_query()` method that creates proper PubMed queries when AI fails:
-
-- Maps framework keys to population, intervention, comparison, outcome roles
-- Generates Boolean queries with proper `[tiab]` tags
-- Used automatically on timeout, parse error, or Hebrew detection
-
-### 2025-11-30 (Session 1)
-
-- Fixed Railway deployment (switched from Railpack to Dockerfile)
-- Added lazy initialization for `ai_service` and `db_service` to avoid build-time env var issues
-- Added default empty values for required env vars (`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`) for Docker build
-- Updated database constraint to support additional frameworks: PFO, PICOT, PICOC
-- Removed temporary debug endpoint `/debug/env`
-- Removed Research Framework selection from project creation form (AI auto-detects framework type)
-- **Added FINER Assessment**: AI now evaluates research questions using FINER criteria (Feasible, Interesting, Novel, Ethical, Relevant) when a complete question is formulated
-
-### 2024-11-27
-
-- Fixed Supabase connection (service role key had extra space)
-- Removed debug endpoint `/debug/config`
-- Cleaned up old PRD files and design artifacts
-- Consolidated all docs into CLAUDE.md
-- Added test files structure
-
-### Schema Changes
-
-- `ProjectResponse.id` and `user_id` changed from UUID to str (Supabase compatibility)
-- `framework_data` relaxed to `Any` type for legacy data support
-- `valid_framework_type` constraint updated to include: PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, FINER, PFO, PICOT, PICOC
-
 ---
 
 ## File Reference
@@ -967,20 +542,14 @@ Added `_generate_fallback_query()` method that creates proper PubMed queries whe
 | Auth | `backend/app/core/auth.py` |
 | AI Service | `backend/app/services/ai_service.py` |
 | DB Service | `backend/app/services/database.py` |
-| Cache Service | `backend/app/services/cache_service.py` |
-| Query Builder | `backend/app/services/query_builder.py` |
-| MeSH Service | `backend/app/services/mesh_service.py` |
-| PubMed Service | `backend/app/services/pubmed_service.py` |
 | Schemas | `backend/app/api/models/schemas.py` |
 | Framework Models | `backend/app/api/models/frameworks.py` |
 | Framework prompts | `backend/app/core/prompts/shared.py` |
-| Query prompts | `backend/app/core/prompts/query.py` |
+| Define prompts | `backend/app/core/prompts/define.py` |
 | Dockerfile | `backend/Dockerfile` |
-| API Client | `frontend/lib/api.ts` |
+| API Client | `frontend/lib/api/` |
 | Supabase Client | `frontend/lib/supabase.ts` |
 | Auth Context | `frontend/contexts/auth-context.tsx` |
 | Define Page | `frontend/app/define/page.tsx` |
-| Query Page | `frontend/app/query/page.tsx` |
-| Query Components | `frontend/components/query/` |
 | DB Schema | `docs/schema.sql` |
 | RLS Policies | `docs/rls_policies.sql` |

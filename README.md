@@ -1,16 +1,12 @@
 # MedAI Hub
 
-**AI-Powered Systematic Literature Review Platform**
+**AI-Powered Research Question Formulation Platform**
 
-A production-ready SaaS platform for medical researchers conducting systematic literature reviews. MedAI Hub streamlines the entire review process from research question formulation to abstract screening using AI assistance.
+A platform for medical researchers to formulate precise, structured research questions using AI assistance and proven research frameworks.
 
 ## Overview
 
-MedAI Hub provides three integrated tools for systematic reviews:
-
-1. **Define Tool**: Research question formulator with AI chat and dynamic framework forms
-2. **Query Tool**: PubMed boolean search query generator
-3. **Review Tool**: MEDLINE file parser and AI-powered abstract screening
+MedAI Hub helps researchers transform vague research ideas into well-structured research questions using frameworks like PICO, SPIDER, PEO, and more. The AI assistant guides you through the question formulation process and provides FINER assessment for research feasibility.
 
 ## Technology Stack
 
@@ -23,39 +19,29 @@ MedAI Hub provides three integrated tools for systematic reviews:
 ### Backend
 - **FastAPI** (Python)
 - **Google Gemini AI** (via LangChain)
-- **Supabase** (PostgreSQL)
-
-### AI
-- **Model**: Google Gemini 1.5 Pro & Flash
-- **Framework**: LangChain
-- **No OpenAI dependency** ✅
+- **Supabase** (PostgreSQL + Auth)
 
 ## Features
 
-### 🔬 Research Frameworks
+### Research Frameworks
 Support for multiple research question frameworks:
-- PICO (Population, Intervention, Comparison, Outcome)
-- CoCoPop (Condition, Context, Population)
-- PEO (Population, Exposure, Outcome)
-- SPIDER, SPICE, ECLIPSE, FINER
+- **PICO** - Population, Intervention, Comparison, Outcome
+- **CoCoPop** - Condition, Context, Population
+- **PEO** - Population, Exposure, Outcome
+- **SPIDER** - Sample, Phenomenon of Interest, Design, Evaluation, Research type
+- **SPICE** - Setting, Perspective, Intervention, Comparison, Evaluation
+- **ECLIPSE** - Expectation, Client, Location, Impact, Professionals, Service
+- **FINER** - Feasibility, Interesting, Novel, Ethical, Relevant
+- And more...
 
-### 🤖 AI-Powered Features
+### AI-Powered Features
 - Interactive chat for research question formulation
 - Automatic extraction of framework components
-- PubMed query generation with MeSH terms
-- Batch abstract screening with reasoning
+- FINER assessment for research feasibility
+- Hebrew/English bilingual support
 
-### 📊 Dynamic Forms
-Forms automatically adapt to the selected research framework, rendering fields dynamically based on backend schema definitions.
-
-### 📁 Project Management
-Organize all your systematic reviews by project. Each tool operates within project context for seamless workflow.
-
-### 📄 MEDLINE Parser
-Advanced parser for PubMed MEDLINE format:
-- Handles multi-line abstracts
-- Extracts metadata (authors, journals, keywords)
-- Bulk import and processing
+### Project Management
+Organize your research projects with full CRUD operations and conversation history.
 
 ## Project Structure
 
@@ -64,34 +50,28 @@ MedAI Hub/
 ├── backend/                 # FastAPI Backend
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── routes/     # API endpoints
+│   │   │   ├── routes/     # API endpoints (projects, define)
 │   │   │   └── models/     # Pydantic schemas
-│   │   ├── core/           # Configuration
-│   │   └── services/       # Business logic
-│   │       ├── ai_service.py
-│   │       ├── database.py
-│   │       └── medline_parser.py
+│   │   ├── core/           # Configuration, auth, prompts
+│   │   └── services/       # Business logic (ai_service, database)
 │   ├── main.py
-│   ├── requirements.txt
-│   └── README.md
+│   └── requirements.txt
 │
 ├── frontend/                # Next.js Frontend
 │   ├── app/                # App Router pages
-│   │   ├── define/        # Define tool
-│   │   ├── query/         # Query tool
-│   │   ├── review/        # Review tool
+│   │   ├── define/        # Define tool (research questions)
 │   │   └── projects/      # Project management
 │   ├── components/
 │   │   ├── ui/            # Shadcn/UI components
 │   │   └── sidebar/       # Navigation
 │   ├── lib/
-│   │   ├── api.ts         # API client
-│   │   └── utils.ts
-│   ├── package.json
-│   └── README.md
+│   │   └── api/           # API client modules
+│   └── package.json
 │
-├── schema.sql              # Database schema
-└── README.md              # This file
+├── docs/
+│   └── schema.sql         # Database schema
+│
+└── README.md
 ```
 
 ## Quick Start
@@ -107,8 +87,7 @@ MedAI Hub/
 Create a Supabase project and run the SQL schema:
 
 ```bash
-# In Supabase SQL Editor, run:
-cat schema.sql
+# In Supabase SQL Editor, run docs/schema.sql
 ```
 
 ### 2. Backend Setup
@@ -116,21 +95,23 @@ cat schema.sql
 ```bash
 cd backend
 
+# Create virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1  # Windows
+# source venv/bin/activate   # Mac/Linux
+
 # Install dependencies
 pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env and add:
-# - GOOGLE_API_KEY
-# - SUPABASE_URL
-# - SUPABASE_KEY
+# Edit .env with your keys
 
 # Run server
 python main.py
 ```
 
-Backend will run at: http://localhost:8000
+Backend runs at: http://localhost:8000
 
 ### 3. Frontend Setup
 
@@ -142,67 +123,20 @@ npm install
 
 # Configure environment
 cp .env.local.example .env.local
-# Edit .env.local:
-# NEXT_PUBLIC_API_URL=http://localhost:8000
+# Edit with your Supabase keys
 
 # Run development server
 npm run dev
 ```
 
-Frontend will run at: http://localhost:3000
+Frontend runs at: http://localhost:3000
 
 ## Usage
 
-### 1. Create a Project
-Navigate to "Projects" and create a new systematic review project.
-
-### 2. Define Your Research Question
-Use the Define tool to:
-- Select your research framework (PICO, CoCoPop, etc.)
-- Chat with AI to formulate your question
-- See the form auto-populate as you chat
-
-### 3. Generate PubMed Queries
-The Query tool converts your framework data into optimized PubMed search strings.
-
-### 4. Screen Abstracts
-Upload MEDLINE files and use AI to batch analyze abstracts with include/exclude decisions.
-
-## API Documentation
-
-Once the backend is running, visit:
-- **Swagger UI**: http://localhost:8000/api/docs
-- **ReDoc**: http://localhost:8000/api/redoc
-
-## Architecture Highlights
-
-### Split Screen Interface
-The Define tool features a unique split-screen design:
-- **Left**: Dynamic form that adapts to framework type
-- **Right**: Real-time AI chat interface
-- **Auto-sync**: Chat extracts data to populate form fields
-
-### Dynamic Schema System
-Framework schemas are defined in the backend and consumed by the frontend:
-```python
-# Backend defines schema
-FRAMEWORK_SCHEMAS = {
-    "PICO": {
-        "fields": [
-            {"key": "P", "label": "Population", ...},
-            {"key": "I", "label": "Intervention", ...},
-            ...
-        ]
-    }
-}
-```
-
-Frontend blindly renders whatever fields are provided, making it easy to add new frameworks.
-
-### AI Integration
-Uses Google Gemini with two models:
-- **gemini-1.5-pro**: Heavy lifting (batch analysis, complex reasoning)
-- **gemini-1.5-flash**: Speed (chat, quick extractions)
+1. **Create a Project** - Start a new research project
+2. **Define Your Question** - Chat with AI to formulate your research question
+3. **Select Framework** - Choose PICO, SPIDER, PEO, or other frameworks
+4. **Get FINER Assessment** - AI evaluates feasibility, novelty, and relevance
 
 ## Environment Variables
 
@@ -210,78 +144,34 @@ Uses Google Gemini with two models:
 ```env
 GOOGLE_API_KEY=your_google_api_key
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your_supabase_key
-DEBUG=False
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+DEBUG=True
 ```
 
 ### Frontend (.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## Development
+## API Documentation
 
-### Backend Development
-```bash
-# Run with auto-reload
-uvicorn main:app --reload
+When running in DEBUG mode, visit:
+- **Swagger UI**: http://localhost:8000/api/docs
+- **ReDoc**: http://localhost:8000/api/redoc
 
-# Run tests
-pytest
-```
+## Deployment
 
-### Frontend Development
-```bash
-# Development mode
-npm run dev
-
-# Build for production
-npm run build
-
-# Run production build
-npm start
-```
-
-## Production Deployment
-
-### Backend
-- Deploy to AWS, GCP, or Heroku
-- Use production ASGI server (uvicorn with workers)
-- Enable Supabase Row Level Security
-- Set up proper CORS origins
-
-### Frontend
-- Deploy to Vercel (recommended for Next.js)
-- Or use Docker for containerized deployment
-- Set production API URL
-
-## Contributing
-
-This is a production-ready scaffold. To extend:
-
-1. **Add Framework**: Update `FRAMEWORK_SCHEMAS` in `backend/app/api/models/schemas.py`
-2. **Add Route**: Create new route in `backend/app/api/routes/`
-3. **Add Page**: Create new page in `frontend/app/`
-4. **Add UI Component**: Use Shadcn/UI: `npx shadcn-ui@latest add [component]`
+- **Backend**: Railway (via Dockerfile)
+- **Frontend**: Vercel
+- **Live URL**: https://shaitamam.com
 
 ## License
 
-MIT License - feel free to use for your research projects.
-
-## Support
-
-For issues or questions:
-- Backend API: Check `/api/docs` for endpoint documentation
-- Frontend: See `frontend/README.md`
-- Database: See `schema.sql` for schema reference
-
-## Acknowledgments
-
-- Built with FastAPI, Next.js, and Google Gemini
-- UI components from Shadcn/UI
-- Icons from Lucide
+MIT License
 
 ---
 
-**Version**: 1.0.0
-**Status**: Production Ready ✅
+**Version**: 2.0.0 - Define Tool Only
