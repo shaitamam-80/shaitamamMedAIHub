@@ -101,13 +101,14 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: str  # String to handle Supabase UUID format
-    user_id: Optional[str] = None  # String to handle Supabase UUID format
+    owner_id: Optional[str] = None  # String to handle Supabase UUID format
     created_at: datetime
     updated_at: datetime
-    current_step: str = Field(
-        default="DEFINE",
-        description="Current workflow step: DEFINE"
+    current_stage: str = Field(
+        default="idea",
+        description="Current workflow stage"
     )
+    status: str = Field(default="active", description="Project status")
 
     class Config:
         from_attributes = True

@@ -111,3 +111,11 @@ Thumbs.db
 *.db
 nul
 backend/nul
+
+# Skills - exclude project data and PDFs (user-generated content)
+backend/app/core/skills/systematic-review/projects/
+*.pdf
+
+# Frontend env (handled by .env rules above, but be explicit)
+frontend/.env.local
+frontend/.env
