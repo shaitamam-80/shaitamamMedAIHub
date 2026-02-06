@@ -135,6 +135,7 @@ export default function StagePage() {
             initialMessages={initialMessages || undefined}
             onStageComplete={handleStageComplete}
             stageStatus={stageStatus}
+            acceptedFileTypes={stage.acceptsUploads}
           />
         )}
       </div>

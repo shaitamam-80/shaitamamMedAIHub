@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, define_v3, review, chat
+from app.api.routes import projects, profiles, define, define_v3, review, chat
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -47,6 +47,10 @@ tags_metadata = [
     {
         "name": "projects",
         "description": "Project management operations. Create, read, update, and delete research projects.",
+    },
+    {
+        "name": "profiles",
+        "description": "User profile management. Get and update authenticated user's profile settings.",
     },
     {
         "name": "define",
@@ -122,6 +126,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
+app.include_router(profiles.router, prefix=settings.API_V1_PREFIX)  # User Profiles (Phase 3)
 app.include_router(define.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define_v3.router, prefix=settings.API_V1_PREFIX)  # Define Tool v3.0
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)  # LangGraph Orchestrator

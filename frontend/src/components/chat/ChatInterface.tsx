@@ -34,6 +34,7 @@ interface ChatInterfaceProps {
   }>;
   onStageComplete?: () => void;
   stageStatus?: string;
+  acceptedFileTypes?: string[];
 }
 
 export default function ChatInterface({
@@ -42,6 +43,7 @@ export default function ChatInterface({
   initialMessages,
   onStageComplete,
   stageStatus,
+  acceptedFileTypes,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +96,7 @@ export default function ChatInterface({
     }
   }, [skillName, projectContext?.projectId, projectContext?.stage]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, fileContent?: string) => {
     if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -120,6 +122,7 @@ export default function ChatInterface({
         skillName,
         projectContext,
         language: 'he',
+        attachedFileContent: fileContent,
       };
 
       // Call the MedAI Hub backend (SSE streaming)
@@ -298,7 +301,11 @@ export default function ChatInterface({
       )}
 
       <div className="border-t border-[#1e293b] bg-[#111827]">
-        <ChatInput onSend={sendMessage} disabled={isLoading} />
+        <ChatInput
+          onSend={sendMessage}
+          disabled={isLoading}
+          acceptedFileTypes={acceptedFileTypes}
+        />
       </div>
     </div>
   );

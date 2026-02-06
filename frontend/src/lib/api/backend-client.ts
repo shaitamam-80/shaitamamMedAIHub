@@ -419,6 +419,60 @@ export async function getStages(): Promise<{ stages: StageInfo[]; total_stages: 
 }
 
 // ============================================================================
+// Profile API (Phase 3)
+// ============================================================================
+
+export interface UserProfile {
+  id: string;
+  full_name: string | null;
+  institution: string | null;
+  preferred_language: string;
+  role: string;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileUpdatePayload {
+  full_name?: string;
+  institution?: string;
+  preferred_language?: string;
+}
+
+/**
+ * Get the current authenticated user's profile.
+ */
+export async function getProfile(): Promise<UserProfile> {
+  const headers = await getHeaders();
+  const response = await fetch(apiUrl('/profiles/me'), {
+    method: 'GET',
+    headers,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch profile: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Update the current user's profile.
+ */
+export async function updateProfile(
+  payload: ProfileUpdatePayload
+): Promise<UserProfile> {
+  const headers = await getHeaders();
+  const response = await fetch(apiUrl('/profiles/me'), {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update profile: ${response.status}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
 // Health Check
 // ============================================================================
 

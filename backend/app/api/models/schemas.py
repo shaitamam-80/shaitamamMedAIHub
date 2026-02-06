@@ -635,6 +635,17 @@ class FrameworkSchemaResponse(BaseModel):
 
 
 # ============================================================================
+# Profile Models (Phase 3)
+# ============================================================================
+
+class ProfileUpdate(BaseModel):
+    """Update user profile fields. Only provided fields will be updated."""
+    full_name: Optional[str] = Field(None, max_length=255)
+    institution: Optional[str] = Field(None, max_length=255)
+    preferred_language: Optional[str] = Field(None, pattern="^(he|en)$")
+
+
+# ============================================================================
 # Stage Workflow Models (Phase 2)
 # ============================================================================
 
@@ -686,6 +697,8 @@ __all__ = [
     "FrameworkDataUnion",
     "framework_to_dict",
     "detect_framework_type",
+    # Profile models (Phase 3)
+    "ProfileUpdate",
     # Project models
     "ProjectCreate",
     "ProjectUpdate",
