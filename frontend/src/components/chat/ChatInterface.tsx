@@ -5,6 +5,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import StreamingMessage from './StreamingMessage';
 import { chatStream, type ChatRequestPayload } from '@/lib/api/backend-client';
+import { CheckCircle2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -25,9 +26,23 @@ interface ChatInterfaceProps {
     stage: string;
     stageName: string;
   };
+  initialMessages?: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+  }>;
+  onStageComplete?: () => void;
+  stageStatus?: string;
 }
 
-export default function ChatInterface({ skillName, projectContext }: ChatInterfaceProps) {
+export default function ChatInterface({
+  skillName,
+  projectContext,
+  initialMessages,
+  onStageComplete,
+  stageStatus,
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -57,17 +72,27 @@ export default function ChatInterface({ skillName, projectContext }: ChatInterfa
     checkBackend();
   }, []);
 
+  // Load initial messages (from DB history) or show greeting
   useEffect(() => {
-    const greetingMessage: Message = {
-      id: 'greeting',
-      role: 'assistant',
-      content: projectContext
-        ? `שלום! אני כאן לעזור לך עם השלב "${projectContext.stageName}". במה אוכל לסייע?`
-        : `שלום! אני כאן לעזור לך עם ${skillName}. במה אוכל לסייע?`,
-      timestamp: new Date(),
-    };
-    setMessages([greetingMessage]);
-  }, [skillName, projectContext]);
+    if (initialMessages && initialMessages.length > 0) {
+      // Use loaded history from DB
+      setMessages(initialMessages.map(m => ({
+        ...m,
+        artifacts: undefined,
+      })));
+    } else {
+      // Fresh conversation - show greeting
+      const greetingMessage: Message = {
+        id: 'greeting',
+        role: 'assistant',
+        content: projectContext
+          ? `שלום! אני כאן לעזור לך עם השלב "${projectContext.stageName}". במה אוכל לסייע?`
+          : `שלום! אני כאן לעזור לך עם ${skillName}. במה אוכל לסייע?`,
+        timestamp: new Date(),
+      };
+      setMessages([greetingMessage]);
+    }
+  }, [skillName, projectContext?.projectId, projectContext?.stage]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -84,12 +109,14 @@ export default function ChatInterface({ skillName, projectContext }: ChatInterfa
     setStreamingContent('');
 
     try {
-      // Build payload for backend API
+      // Build payload - filter out greeting from history sent to backend
       const payload: ChatRequestPayload = {
-        messages: [...messages, userMessage].map(m => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
+        messages: [...messages, userMessage]
+          .filter(m => m.id !== 'greeting')
+          .map(m => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
         skillName,
         projectContext,
         language: 'he',
@@ -179,22 +206,27 @@ export default function ChatInterface({ skillName, projectContext }: ChatInterfa
   const detectArtifacts = (content: string): Message['artifacts'] => {
     const artifacts: Message['artifacts'] = [];
 
-    const artifactRegex = /\[ARTIFACT:([^\]]+)\]/g;
+    // Match backend artifact format: ```artifact:filename.ext\ncontent```
+    const artifactRegex = /```artifact:([\w\-.]+)\n([\s\S]*?)```/g;
     let match;
 
     while ((match = artifactRegex.exec(content)) !== null) {
       const filename = match[1];
+      const fileContent = match[2].trim();
       const extension = filename.split('.').pop() || '';
 
       artifacts?.push({
         name: filename,
         type: extension,
-        content: '',
+        content: fileContent,
       });
     }
 
     return artifacts && artifacts.length > 0 ? artifacts : undefined;
   };
+
+  // Check if user has sent at least one real message (beyond greeting)
+  const hasUserMessages = messages.some(m => m.role === 'user');
 
   return (
     <div className="flex flex-col h-full bg-[#0a0e1a]">
@@ -240,6 +272,30 @@ export default function ChatInterface({ skillName, projectContext }: ChatInterfa
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Stage Completion Controls */}
+      {projectContext && stageStatus === 'completed' && (
+        <div className="px-4 py-3 border-t border-green-500/30 bg-green-500/10 flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <span className="text-sm text-green-400 font-medium">שלב זה הושלם</span>
+        </div>
+      )}
+
+      {projectContext && stageStatus !== 'completed' && onStageComplete && (
+        <div className="px-4 py-3 border-t border-[#1e293b] bg-[#0a0e1a] flex items-center justify-between">
+          <span className="text-sm text-[#94a3b8]">
+            סיימת לעבוד על שלב זה?
+          </span>
+          <button
+            onClick={onStageComplete}
+            disabled={isLoading || !hasUserMessages}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            סיים שלב
+          </button>
+        </div>
+      )}
 
       <div className="border-t border-[#1e293b] bg-[#111827]">
         <ChatInput onSend={sendMessage} disabled={isLoading} />

@@ -30,7 +30,7 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
         console.error('Failed to load stages:', err);
       })
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, pathname]);
 
   const isStageActive = (stageSlug: string) => {
     return pathname.includes(`/stages/${stageSlug}`);
