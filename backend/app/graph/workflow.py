@@ -331,12 +331,13 @@ def build_review_graph() -> StateGraph:
     return graph
 
 
-def get_compiled_graph(checkpointer: MemorySaver = None):
+def get_compiled_graph(checkpointer=None):
     """
     Get a compiled graph instance with optional checkpointer.
 
     Args:
-        checkpointer: Optional MemorySaver for state persistence
+        checkpointer: Optional checkpointer for state persistence
+                     (MemorySaver, AsyncPostgresSaver, etc.)
 
     Returns:
         Compiled graph ready for invocation
@@ -353,9 +354,19 @@ def get_compiled_graph(checkpointer: MemorySaver = None):
 # Graph Instance (Singleton-ish for the application)
 # ============================================================================
 
-# Global checkpointer for state persistence across requests
-_memory_saver = MemorySaver()
+# Use persistent checkpointer (PostgreSQL if DATABASE_URL set, else MemorySaver)
+_graph_instance = None
 
 def get_graph():
-    """Get the compiled graph with memory persistence."""
-    return get_compiled_graph(checkpointer=_memory_saver)
+    """
+    Get the compiled graph with persistent state.
+
+    Uses PostgreSQL checkpointer when DATABASE_URL is configured,
+    otherwise falls back to in-memory MemorySaver.
+    """
+    global _graph_instance
+    if _graph_instance is None:
+        from app.services.checkpointer import get_checkpointer
+        checkpointer = get_checkpointer()
+        _graph_instance = get_compiled_graph(checkpointer=checkpointer)
+    return _graph_instance

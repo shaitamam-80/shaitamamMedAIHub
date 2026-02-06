@@ -1,0 +1,30 @@
+'use client';
+
+import ChatInterface from '@/components/chat/ChatInterface';
+import { Search } from 'lucide-react';
+
+export default function FindJournalPage() {
+  return (
+    <div className="h-full flex flex-col">
+      {/* Tool Header */}
+      <div className="border-b border-[#1e293b] bg-[#111827] px-8 py-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-lg bg-purple-500/10">
+            <Search className="w-6 h-6 text-purple-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-[#f1f5f9]">Find Journal</h1>
+            <p className="text-sm text-[#94a3b8]">
+              מציאת כתבי עת מתאימים לפרסום המחקר שלך
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Interface */}
+      <div className="flex-1 overflow-hidden">
+        <ChatInterface skillName="find-journal" />
+      </div>
+    </div>
+  );
+}

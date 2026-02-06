@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, define_v3, review
+from app.api.routes import projects, define, define_v3, review, chat
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -59,6 +59,10 @@ tags_metadata = [
     {
         "name": "review",
         "description": "Systematic Review Workflow - LangGraph-powered orchestration. Sequential multi-stage workflow from research question to reporting.",
+    },
+    {
+        "name": "chat",
+        "description": "SSE Streaming Chat - Skill-based AI chat endpoint for SR-Portal frontend. Loads skill prompts and streams Gemini responses.",
     },
     {
         "name": "health",
@@ -121,6 +125,7 @@ app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define_v3.router, prefix=settings.API_V1_PREFIX)  # Define Tool v3.0
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)  # LangGraph Orchestrator
+app.include_router(chat.router, prefix=settings.API_V1_PREFIX)  # SSE Chat (SR-Portal)
 
 
 @app.get("/", tags=["health"])
@@ -187,6 +192,21 @@ async def startup_event():
     if not settings.SUPABASE_URL:
         logger.warning("SUPABASE_URL not configured - Database features disabled")
     logger.info(f"Running in {'DEBUG' if settings.DEBUG else 'PRODUCTION'} mode")
+
+    # Initialize persistent state checkpointer
+    try:
+        from app.services.checkpointer import setup_checkpointer
+        await setup_checkpointer()
+    except Exception as e:
+        logger.warning(f"Checkpointer setup failed (using in-memory fallback): {e}")
+
+    # Log available skills
+    try:
+        from app.services.skill_loader import get_available_skills
+        skills = get_available_skills()
+        logger.info(f"Available skills: {len(skills)} - {', '.join(skills)}")
+    except Exception as e:
+        logger.warning(f"Failed to list skills: {e}")
 
 
 @app.on_event("shutdown")

@@ -25,7 +25,7 @@ async def create_project(
     """Create a new research project"""
     try:
         project_data = project.model_dump()
-        project_data["user_id"] = current_user.id  # Associate with authenticated user
+        project_data["owner_id"] = current_user.id  # Associate with authenticated user
         created_project = await db_service.create_project(project_data)
 
         if not created_project:
@@ -50,7 +50,7 @@ async def list_projects(
 ):
     """List user's projects"""
     try:
-        projects = await db_service.list_projects(user_id=current_user.id, limit=limit)
+        projects = await db_service.list_projects(owner_id=current_user.id, limit=limit)
         return projects
     except Exception as e:
         logger.exception(f"Error listing projects for user {current_user.id}: {e}")
@@ -75,7 +75,7 @@ async def get_project(
             )
 
         # Verify ownership
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -107,7 +107,7 @@ async def update_project(
             )
 
         # Verify ownership
-        if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
+        if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -158,7 +158,7 @@ async def delete_project(
             )
 
         # Verify ownership
-        if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
+        if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
