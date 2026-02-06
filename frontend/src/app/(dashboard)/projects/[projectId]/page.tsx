@@ -1,79 +1,109 @@
 'use client';
 
-import { ArrowLeft, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, FileText, CheckCircle2, Clock, AlertCircle, Loader2, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import StageProgress from '@/components/dashboard/StageProgress';
-
-// Mock project data
-const mockProject = {
-  id: '1',
-  title: 'השפעת הבינה המלאכותית על החינוך הגבוה',
-  reviewType: 'Systematic Review',
-  framework: 'PRISMA',
-  currentStage: 'data-extraction',
-  completedStages: 3,
-  totalStages: 10,
-  createdAt: '2024-01-15',
-  lastUpdated: '2024-02-05T10:30:00Z',
-};
-
-const metrics = [
-  {
-    label: 'שלבים הושלמו',
-    value: '3/10',
-    icon: CheckCircle2,
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/10',
-  },
-  {
-    label: 'מאמרים נסקרו',
-    value: '47',
-    icon: FileText,
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
-  },
-  {
-    label: 'זמן פעיל',
-    value: '12 שעות',
-    icon: Clock,
-    color: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
-  },
-  {
-    label: 'בעיות לטיפול',
-    value: '2',
-    icon: AlertCircle,
-    color: 'text-red-500',
-    bgColor: 'bg-red-500/10',
-  },
-];
-
-const recentArtifacts = [
-  {
-    id: '1',
-    name: 'PRISMA_Checklist_v1.pdf',
-    stage: 'Protocol Development',
-    date: '2024-02-05',
-  },
-  {
-    id: '2',
-    name: 'Search_Strategy_PubMed.txt',
-    stage: 'Literature Search',
-    date: '2024-02-04',
-  },
-  {
-    id: '3',
-    name: 'Extraction_Template.xlsx',
-    stage: 'Data Extraction',
-    date: '2024-02-03',
-  },
-];
+import { getProject, getProjectStages, type Project, type ProjectStage } from '@/lib/api/backend-client';
+import { REVIEW_TYPES, STAGES, type ReviewType, type StageName } from '@/lib/utils/stage-config';
 
 export default function ProjectOverviewPage({
   params,
 }: {
   params: { projectId: string };
 }) {
+  const [project, setProject] = useState<Project | null>(null);
+  const [stages, setStages] = useState<ProjectStage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      getProject(params.projectId),
+      getProjectStages(params.projectId),
+    ])
+      .then(([proj, stgs]) => {
+        setProject(proj);
+        setStages(stgs);
+      })
+      .catch((err) => {
+        console.error('Failed to load project:', err);
+        setError('שגיאה בטעינת הפרויקט');
+      })
+      .finally(() => setLoading(false));
+  }, [params.projectId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          <p className="text-[#94a3b8] text-sm">טוען פרויקט...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-red-400 mb-4">{error || 'הפרויקט לא נמצא'}</p>
+          <Link
+            href="/"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            חזרה ללוח בקרה
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Derive metrics from real data
+  const completedCount = stages.filter((s) => s.status === 'completed').length;
+  const inProgressStage = stages.find((s) => s.status === 'in_progress');
+  const currentStageName = inProgressStage?.stage_name || project.current_stage;
+
+  // Get Hebrew display name for current stage
+  const currentStageConfig = STAGES[currentStageName as StageName];
+  const currentStageDisplayName = currentStageConfig?.name?.he || currentStageName;
+
+  // Get review type display name
+  const reviewTypeDisplay = REVIEW_TYPES[project.review_type as ReviewType]?.he || project.review_type;
+
+  const metrics = [
+    {
+      label: 'שלבים הושלמו',
+      value: `${completedCount}/10`,
+      icon: CheckCircle2,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+    },
+    {
+      label: 'מאמרים שנמצאו',
+      value: String(project.total_records_found || 0),
+      icon: FileText,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      label: 'נכללו',
+      value: String(project.total_included || 0),
+      icon: BarChart3,
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10',
+    },
+    {
+      label: 'הודרו',
+      value: String(project.total_excluded || 0),
+      icon: AlertCircle,
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
+    },
+  ];
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -89,14 +119,14 @@ export default function ProjectOverviewPage({
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-[#f1f5f9] mb-3">
-              {mockProject.title}
+              {project.title}
             </h1>
             <div className="flex items-center gap-3">
               <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-sm font-medium rounded-full border border-blue-500/20">
-                {mockProject.reviewType}
+                {reviewTypeDisplay}
               </span>
               <span className="px-3 py-1 bg-purple-500/10 text-purple-500 text-sm font-medium rounded-full border border-purple-500/20">
-                {mockProject.framework}
+                {project.framework}
               </span>
             </div>
           </div>
@@ -106,7 +136,7 @@ export default function ProjectOverviewPage({
       {/* Stage Progress */}
       <div className="mb-8 bg-[#111827] border border-[#1e293b] rounded-xl p-6">
         <h2 className="text-lg font-semibold text-[#f1f5f9] mb-4">התקדמות השלבים</h2>
-        <StageProgress currentStage={mockProject.currentStage} completedStages={mockProject.completedStages} />
+        <StageProgress currentStage={currentStageName} completedStages={completedCount} />
       </div>
 
       {/* Metrics Grid */}
@@ -142,11 +172,11 @@ export default function ProjectOverviewPage({
               הפעולה הבאה
             </h3>
             <p className="text-[#94a3b8]">
-              המשך עם שלב Data Extraction - חלץ נתונים מ-47 מאמרים
+              המשך עם שלב {currentStageDisplayName}
             </p>
           </div>
           <Link
-            href={`/projects/${params.projectId}/stages/data-extraction`}
+            href={`/projects/${params.projectId}/stages/${currentStageName}`}
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <span>המשך</span>
@@ -155,27 +185,32 @@ export default function ProjectOverviewPage({
         </div>
       </div>
 
-      {/* Recent Artifacts */}
+      {/* Project Info */}
       <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-[#f1f5f9] mb-4">קבצים אחרונים</h2>
+        <h2 className="text-lg font-semibold text-[#f1f5f9] mb-4">פרטי הפרויקט</h2>
         <div className="space-y-3">
-          {recentArtifacts.map((artifact) => (
-            <div
-              key={artifact.id}
-              className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg hover:border-blue-500/50 transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-500" />
-                <div>
-                  <div className="text-[#f1f5f9] font-medium">{artifact.name}</div>
-                  <div className="text-sm text-[#64748b]">{artifact.stage}</div>
-                </div>
-              </div>
-              <div className="text-sm text-[#64748b]">
-                {new Date(artifact.date).toLocaleDateString('he-IL')}
-              </div>
+          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
+            <span className="text-[#94a3b8]">תאריך יצירה</span>
+            <span className="text-[#f1f5f9]">
+              {new Date(project.created_at).toLocaleDateString('he-IL')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
+            <span className="text-[#94a3b8]">עדכון אחרון</span>
+            <span className="text-[#f1f5f9]">
+              {new Date(project.updated_at).toLocaleDateString('he-IL')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
+            <span className="text-[#94a3b8]">סטטוס</span>
+            <span className="text-green-400">{project.status === 'active' ? 'פעיל' : project.status}</span>
+          </div>
+          {project.prospero_id && (
+            <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
+              <span className="text-[#94a3b8]">PROSPERO ID</span>
+              <span className="text-[#f1f5f9]">{project.prospero_id}</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

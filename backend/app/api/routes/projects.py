@@ -1,9 +1,11 @@
 """
 MedAI Hub - Projects API Routes
-Handles project CRUD operations
+Handles project CRUD operations.
+Aligned with Supabase projects table schema (001_initial_schema.sql).
 """
 
 import logging
+import re
 from typing import List
 from uuid import UUID
 
@@ -17,15 +19,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
+def slugify(text: str) -> str:
+    """Generate a URL-safe slug from text. Handles Hebrew and English."""
+    text = text.lower().strip()
+    # Replace Hebrew/non-latin chars with empty, keep alphanumeric, spaces, hyphens
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[-\s]+', '-', text)
+    text = text.strip('-')
+    return text[:100] if text else 'untitled'
+
+
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project: ProjectCreate,
     current_user: UserPayload = Depends(get_current_user)
 ):
-    """Create a new research project"""
+    """Create a new research project. Auto-generates slug and triggers 10 stage creation."""
     try:
         project_data = project.model_dump()
-        project_data["owner_id"] = current_user.id  # Associate with authenticated user
+        project_data["owner_id"] = current_user.id
+        project_data["slug"] = slugify(project_data["title"])
+
         created_project = await db_service.create_project(project_data)
 
         if not created_project:
@@ -35,6 +49,8 @@ async def create_project(
             )
 
         return created_project
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception(f"Error creating project: {e}")
         raise HTTPException(
@@ -67,7 +83,7 @@ async def get_project(
 ):
     """Get a specific project by ID"""
     try:
-        project = await db_service.get_project(project_id)
+        project = await db_service.get_project(str(project_id))
 
         if not project:
             raise HTTPException(
@@ -91,6 +107,37 @@ async def get_project(
         )
 
 
+@router.get("/{project_id}/stages")
+async def get_project_stages(
+    project_id: UUID,
+    current_user: UserPayload = Depends(get_current_user)
+):
+    """Get all 10 stages for a project with their current status."""
+    try:
+        # Verify project exists and user has access
+        project = await db_service.get_project(str(project_id))
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+        stages = await db_service.get_project_stages(str(project_id))
+        return stages
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error getting stages for project {project_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while retrieving project stages.",
+        )
+
+
 @router.patch("/{project_id}", response_model=ProjectResponse)
 async def update_project(
     project_id: UUID,
@@ -99,30 +146,25 @@ async def update_project(
 ):
     """Update a project"""
     try:
-        # Check if project exists
-        existing_project = await db_service.get_project(project_id)
+        existing_project = await db_service.get_project(str(project_id))
         if not existing_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
-        # Verify ownership
         if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
-        # Update only provided fields
         update_data = project_update.model_dump(exclude_unset=True)
-
         if not update_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No fields to update",
             )
 
-        updated_project = await db_service.update_project(project_id, update_data)
-
+        updated_project = await db_service.update_project(str(project_id), update_data)
         return updated_project
     except HTTPException:
         raise
@@ -141,31 +183,21 @@ async def delete_project(
 ):
     """
     Delete a project and all associated data.
-
-    This will CASCADE delete all related:
-    - Files
-    - Abstracts
-    - Chat messages
-    - Query strings
-    - Analysis runs
+    CASCADE deletes all related stages, conversations, messages, artifacts.
     """
     try:
-        # Check if project exists
-        existing_project = await db_service.get_project(project_id)
+        existing_project = await db_service.get_project(str(project_id))
         if not existing_project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
-        # Verify ownership
         if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
-        # Delete project (CASCADE will handle related data)
-        success = await db_service.delete_project(project_id)
-
+        success = await db_service.delete_project(str(project_id))
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
