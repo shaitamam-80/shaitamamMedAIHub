@@ -69,11 +69,13 @@ class ProtocolArtifact(TypedDict, total=False):
 
 class SearchArtifact(TypedDict, total=False):
     """Output from search stage"""
-    pubmed_query: str             # Final PubMed query
+    pubmed_query: str             # Final/primary PubMed query
     mesh_terms: List[str]         # MeSH terms used
     search_filters: List[str]     # Applied filters
     results_count: int            # Number of results
     exported_file: str            # Path to exported results
+    strategies: Dict[str, str]    # {broad: query, focused: query, precision: query}
+    question_type: str            # effectiveness, prevalence, prognosis, etc.
 
 
 class ScreeningArtifact(TypedDict, total=False):
@@ -87,9 +89,10 @@ class ScreeningArtifact(TypedDict, total=False):
 
 class ExtractionArtifact(TypedDict, total=False):
     """Output from extraction stage"""
-    extracted_studies: List[Dict[str, Any]]
-    extraction_template: str
-    risk_of_bias: Dict[str, Any]
+    extracted_studies: List[Dict[str, Any]]  # List of extracted study data dicts
+    extraction_template: str                 # Template ID used (template_a/b/c/d)
+    current_design: str                      # Last detected study design
+    user_confirmed_complete: bool            # User confirmed all studies extracted
 
 
 class SynthesisArtifact(TypedDict, total=False):
@@ -159,6 +162,11 @@ class ReviewState(TypedDict, total=False):
     # }
 
     # ========================================
+    # Stage Completion Tracking
+    # ========================================
+    completed_stages: List[str]   # List of completed stage names (for progress)
+
+    # ========================================
     # Error Tracking
     # ========================================
     errors: List[str]             # List of error messages
@@ -190,6 +198,7 @@ def get_initial_state(project_id: str, user_id: str, language: str = "en") -> Re
         next_action="Describe your research question or topic",
         messages=[],
         artifacts={},
+        completed_stages=[],
         errors=[],
         last_error=None
     )

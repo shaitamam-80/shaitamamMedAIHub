@@ -9,17 +9,30 @@ with specialized AI logic.
 Nodes:
     - research_question: Research question formulation with framework detection
     - protocol: PROSPERO-ready protocol building
-    - search: PubMed query construction (stub)
-    - screening: Abstract/full-text screening (stub)
-    - extraction: Data extraction (stub)
-    - synthesis: Meta-analysis and GRADE (stub)
-    - reporting: PRISMA manuscript generation (stub)
+    - search: PubMed query construction with MeSH enrichment
+    - screening: Abstract/full-text screening (rule engine + AI)
+    - extraction: Structured data extraction with design detection + templates
+    - risk_of_bias: RoB assessment with tool selection + judgment algorithms
+    - synthesis: Meta-analysis + GRADE certainty assessment
+    - reporting: PRISMA 2020 manuscript writing with journal formatting
 """
 
 from .research_question import research_question_node
 from .protocol import protocol_builder_node
+from .search import search_node
+from .screening import screening_node
+from .extraction import extraction_node
+from .risk_of_bias import risk_of_bias_node
+from .synthesis import synthesis_node
+from .reporting import reporting_node
 
 __all__ = [
     "research_question_node",
     "protocol_builder_node",
+    "search_node",
+    "screening_node",
+    "extraction_node",
+    "risk_of_bias_node",
+    "synthesis_node",
+    "reporting_node",
 ]

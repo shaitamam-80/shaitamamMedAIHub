@@ -1,7 +1,18 @@
 import { updateSession } from '@/lib/supabase/middleware';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Skip auth entirely when NEXT_PUBLIC_SKIP_AUTH is true
+  if (process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+    // If on login/register page, redirect to dashboard
+    if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   return await updateSession(request);
 }
 

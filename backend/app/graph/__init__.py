@@ -43,6 +43,12 @@ from .workflow import (
 from .nodes import (
     research_question_node,
     protocol_builder_node,
+    search_node,
+    screening_node,
+    extraction_node,
+    risk_of_bias_node,
+    synthesis_node,
+    reporting_node,
 )
 
 __all__ = [
@@ -73,4 +79,10 @@ __all__ = [
     # Nodes
     "research_question_node",
     "protocol_builder_node",
+    "search_node",
+    "screening_node",
+    "extraction_node",
+    "risk_of_bias_node",
+    "synthesis_node",
+    "reporting_node",
 ]

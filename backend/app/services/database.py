@@ -105,7 +105,7 @@ class DatabaseService:
         query = self.client.table("projects").select("*")
 
         if owner_id:
-            query = query.eq("owner_id", owner_id)
+            query = query.eq("user_id", owner_id)
         if status:
             query = query.eq("status", status)
 
@@ -289,6 +289,175 @@ class DatabaseService:
 
         response = query.order("created_at", desc=True).execute()
         return response.data or []
+
+    # ========================================================================
+    # Search Runs
+    # ========================================================================
+
+    async def create_search_run(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a new search run record."""
+        response = self.client.table("search_runs").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    async def get_search_runs(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get all search runs for a project."""
+        response = (
+            self.client.table("search_runs")
+            .select("*")
+            .eq("project_id", project_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return response.data or []
+
+    # ========================================================================
+    # Articles
+    # ========================================================================
+
+    async def create_article(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a single article record."""
+        response = self.client.table("articles").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    async def bulk_create_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Bulk insert articles. Returns created records."""
+        if not articles:
+            return []
+        response = self.client.table("articles").upsert(
+            articles, on_conflict="project_id,pmid"
+        ).execute()
+        return response.data or []
+
+    async def get_articles(
+        self,
+        project_id: str,
+        screening_status: Optional[str] = None,
+        limit: int = 500,
+    ) -> List[Dict[str, Any]]:
+        """Get articles for a project, optionally filtered by screening status."""
+        query = (
+            self.client.table("articles")
+            .select("*")
+            .eq("project_id", project_id)
+            .eq("is_duplicate", False)
+        )
+        if screening_status:
+            query = query.eq("screening_status", screening_status)
+        response = query.order("created_at").limit(limit).execute()
+        return response.data or []
+
+    async def get_article_by_pmid(self, project_id: str, pmid: str) -> Optional[Dict[str, Any]]:
+        """Get a specific article by PMID within a project."""
+        response = (
+            self.client.table("articles")
+            .select("*")
+            .eq("project_id", project_id)
+            .eq("pmid", pmid)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    async def update_article(self, article_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update an article record."""
+        response = (
+            self.client.table("articles")
+            .update(data)
+            .eq("id", article_id)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    # ========================================================================
+    # Screening Decisions
+    # ========================================================================
+
+    async def create_screening_decision(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Record a screening decision."""
+        response = self.client.table("screening_decisions").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    async def bulk_create_screening_decisions(self, decisions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Bulk insert screening decisions."""
+        if not decisions:
+            return []
+        response = self.client.table("screening_decisions").insert(decisions).execute()
+        return response.data or []
+
+    async def get_screening_decisions(
+        self,
+        project_id: str,
+        final_only: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Get screening decisions for a project."""
+        query = (
+            self.client.table("screening_decisions")
+            .select("*")
+            .eq("project_id", project_id)
+        )
+        if final_only:
+            query = query.eq("is_final", True)
+        response = query.order("created_at").execute()
+        return response.data or []
+
+    # ========================================================================
+    # Extractions
+    # ========================================================================
+
+    async def create_extraction(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a data extraction record."""
+        response = self.client.table("extractions").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    async def get_extractions(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get all extractions for a project."""
+        response = (
+            self.client.table("extractions")
+            .select("*")
+            .eq("project_id", project_id)
+            .order("created_at")
+            .execute()
+        )
+        return response.data or []
+
+    async def update_extraction(self, extraction_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update an extraction record."""
+        response = (
+            self.client.table("extractions")
+            .update(data)
+            .eq("id", extraction_id)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    # ========================================================================
+    # RoB Assessments
+    # ========================================================================
+
+    async def create_rob_assessment(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create a risk of bias assessment record."""
+        response = self.client.table("rob_assessments").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    async def get_rob_assessments(self, project_id: str) -> List[Dict[str, Any]]:
+        """Get all RoB assessments for a project."""
+        response = (
+            self.client.table("rob_assessments")
+            .select("*")
+            .eq("project_id", project_id)
+            .order("created_at")
+            .execute()
+        )
+        return response.data or []
+
+    async def update_rob_assessment(self, assessment_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a RoB assessment record."""
+        response = (
+            self.client.table("rob_assessments")
+            .update(data)
+            .eq("id", assessment_id)
+            .execute()
+        )
+        return response.data[0] if response.data else None
 
 
 # Global instance

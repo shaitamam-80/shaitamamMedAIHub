@@ -36,6 +36,14 @@ async def get_current_user(
     This function verifies the token by calling Supabase's /auth/v1/user endpoint,
     which validates the JWT signature and returns user data if valid.
     """
+    # In DEBUG mode, return a dev user when no credentials are provided
+    if settings.DEBUG and credentials is None:
+        return UserPayload(
+            id="00000000-0000-0000-0000-000000000000",
+            email="dev@localhost",
+            role="authenticated",
+        )
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

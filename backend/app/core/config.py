@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: Optional[str] = None  # Optional: Direct PostgreSQL connection
 
+    # PubMed / NCBI
+    NCBI_API_KEY: Optional[str] = None       # 10 req/sec vs 3 without
+    PUBMED_EMAIL: Optional[str] = None       # Required for Unpaywall & NCBI E-utilities
+
+    # Full-text sources
+    CORE_API_KEY: Optional[str] = None       # CORE.ac.uk API key
+    EZPROXY_PREFIX: Optional[str] = None     # Institutional proxy URL prefix
+
     # AI Settings
     MAX_TOKENS: int = 8192
     TEMPERATURE: float = 0.7

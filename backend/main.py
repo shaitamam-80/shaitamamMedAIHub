@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, define_v3, review, chat
+from app.api.routes import projects, define, define_v3, review, chat, fulltext
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -63,6 +63,10 @@ tags_metadata = [
     {
         "name": "chat",
         "description": "SSE Streaming Chat - Skill-based AI chat endpoint for SR-Portal frontend. Loads skill prompts and streams Gemini responses.",
+    },
+    {
+        "name": "fulltext",
+        "description": "Full-text availability checking. Check Open Access sources (PMC, Unpaywall, CORE, S2, EZproxy) for article PDFs.",
     },
     {
         "name": "health",
@@ -126,6 +130,7 @@ app.include_router(define.router, prefix=settings.API_V1_PREFIX)
 app.include_router(define_v3.router, prefix=settings.API_V1_PREFIX)  # Define Tool v3.0
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)  # LangGraph Orchestrator
 app.include_router(chat.router, prefix=settings.API_V1_PREFIX)  # SSE Chat (SR-Portal)
+app.include_router(fulltext.router, prefix=settings.API_V1_PREFIX)  # Full-text OA check
 
 
 @app.get("/", tags=["health"])
@@ -213,6 +218,8 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown event handler"""
     logger.info("MedAI Hub Backend shutting down...")
+    from app.services.fulltext_service import fulltext_service
+    await fulltext_service.close()
 
 
 @app.exception_handler(Exception)

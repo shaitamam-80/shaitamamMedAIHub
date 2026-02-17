@@ -41,6 +41,11 @@ from app.core.config import settings
 from app.graph.nodes import (
     research_question_node,
     protocol_builder_node,
+    search_node,
+    screening_node,
+    extraction_node,
+    synthesis_node,
+    reporting_node,
 )
 
 logger = logging.getLogger(__name__)
@@ -140,76 +145,7 @@ async def orchestrator_node(state: ReviewState) -> Dict[str, Any]:
         }
 
 
-# research_question_node and protocol_builder_node are now imported from app.graph.nodes
-# See app/graph/nodes/research_question.py and app/graph/nodes/protocol.py for implementations
-
-
-async def search_query_node(state: ReviewState) -> Dict[str, Any]:
-    """
-    Stub node for Search Query building stage.
-
-    This will be fully implemented in Epic 3.
-    """
-    logger.info("Search Query node processing...")
-
-    response_content = """[STAGE: Search Strategy]
-
-I'm helping you create your database search strategy.
-
-**Status:** AI processing for Search stage...
-
-This node will:
-- Translate question to search terms
-- Identify MeSH terms
-- Build Boolean queries
-- Test and validate searches
-
-Please confirm you're ready to build the search strategy."""
-
-    return {
-        "messages": [AIMessage(content=response_content)],
-        "status": "waiting_for_user",
-    }
-
-
-async def screening_node(state: ReviewState) -> Dict[str, Any]:
-    """Stub node for Screening stage."""
-    logger.info("Screening node processing...")
-
-    return {
-        "messages": [AIMessage(content="[STAGE: Screening]\n\nAI processing for Screening stage...")],
-        "status": "waiting_for_user",
-    }
-
-
-async def extraction_node(state: ReviewState) -> Dict[str, Any]:
-    """Stub node for Data Extraction stage."""
-    logger.info("Extraction node processing...")
-
-    return {
-        "messages": [AIMessage(content="[STAGE: Data Extraction]\n\nAI processing for Extraction stage...")],
-        "status": "waiting_for_user",
-    }
-
-
-async def synthesis_node(state: ReviewState) -> Dict[str, Any]:
-    """Stub node for Synthesis stage."""
-    logger.info("Synthesis node processing...")
-
-    return {
-        "messages": [AIMessage(content="[STAGE: Synthesis]\n\nAI processing for Synthesis stage...")],
-        "status": "waiting_for_user",
-    }
-
-
-async def reporting_node(state: ReviewState) -> Dict[str, Any]:
-    """Stub node for Reporting stage."""
-    logger.info("Reporting node processing...")
-
-    return {
-        "messages": [AIMessage(content="[STAGE: Reporting]\n\nAI processing for Reporting stage...")],
-        "status": "waiting_for_user",
-    }
+# All stage nodes are imported from app.graph.nodes
 
 
 # ============================================================================
@@ -232,7 +168,7 @@ def route_by_stage(state: ReviewState) -> str:
     stage_to_node = {
         "research_question": "research_question_node",
         "protocol": "protocol_builder_node",
-        "search": "search_query_node",
+        "search": "search_node",
         "screening": "screening_node",
         "extraction": "extraction_node",
         "synthesis": "synthesis_node",
@@ -293,7 +229,7 @@ def build_review_graph() -> StateGraph:
     graph.add_node("orchestrator", orchestrator_node)
     graph.add_node("research_question_node", research_question_node)
     graph.add_node("protocol_builder_node", protocol_builder_node)
-    graph.add_node("search_query_node", search_query_node)
+    graph.add_node("search_node", search_node)
     graph.add_node("screening_node", screening_node)
     graph.add_node("extraction_node", extraction_node)
     graph.add_node("synthesis_node", synthesis_node)
@@ -309,7 +245,7 @@ def build_review_graph() -> StateGraph:
         {
             "research_question_node": "research_question_node",
             "protocol_builder_node": "protocol_builder_node",
-            "search_query_node": "search_query_node",
+            "search_node": "search_node",
             "screening_node": "screening_node",
             "extraction_node": "extraction_node",
             "synthesis_node": "synthesis_node",
@@ -322,7 +258,7 @@ def build_review_graph() -> StateGraph:
     # In a more complex setup, they could route back to orchestrator
     graph.add_edge("research_question_node", END)
     graph.add_edge("protocol_builder_node", END)
-    graph.add_edge("search_query_node", END)
+    graph.add_edge("search_node", END)
     graph.add_edge("screening_node", END)
     graph.add_edge("extraction_node", END)
     graph.add_edge("synthesis_node", END)

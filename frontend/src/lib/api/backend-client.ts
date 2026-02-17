@@ -419,6 +419,297 @@ export async function getStages(): Promise<{ stages: StageInfo[]; total_stages: 
 }
 
 // ============================================================================
+// Full-Text Availability API
+// ============================================================================
+
+export interface FullTextResult {
+  pmid: string;
+  doi: string;
+  title: string;
+  available: boolean;
+  source: string;
+  pdf_url: string;
+  oa_status: string;
+  format: string;
+  note: string;
+}
+
+export interface FullTextCheckResponse {
+  results: FullTextResult[];
+  summary: {
+    total: number;
+    available: number;
+    not_available: number;
+    sources: Record<string, number>;
+  };
+}
+
+/**
+ * Check full-text availability for articles by PMID or DOI.
+ */
+export async function checkFullTextAvailability(
+  pmids: string[] = [],
+  doi?: string,
+  sources: string = 'all'
+): Promise<FullTextCheckResponse> {
+  const headers = await getHeaders();
+  const response = await fetch(apiUrl('/fulltext/check'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ pmids, doi, sources }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to check full-text availability: ${response.status}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
+// Articles API
+// ============================================================================
+
+export interface Article {
+  id: string;
+  project_id: string;
+  pmid?: string;
+  pmcid?: string;
+  doi?: string;
+  title: string;
+  abstract_text?: string;
+  authors?: Array<{ name: string; affiliation?: string }>;
+  journal?: string;
+  publication_year?: number;
+  screening_status: string;
+  study_design?: string;
+  fulltext_available: boolean;
+  created_at: string;
+}
+
+/**
+ * Get articles for a project, optionally filtered by screening status.
+ */
+export async function getProjectArticles(
+  projectId: string,
+  screeningStatus?: string
+): Promise<Article[]> {
+  const headers = await getHeaders();
+  const url = screeningStatus
+    ? apiUrl(`/projects/${projectId}/articles?screening_status=${screeningStatus}`)
+    : apiUrl(`/projects/${projectId}/articles`);
+  const response = await fetch(url, { method: 'GET', headers });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch articles: ${response.status}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
+// Screening API
+// ============================================================================
+
+export interface ScreeningDecision {
+  id: string;
+  article_id: string;
+  decided_by: string;
+  decision: string;
+  phase: string;
+  exclusion_reason?: string;
+  confidence_score?: number;
+  rationale?: string;
+  is_final: boolean;
+  created_at: string;
+}
+
+/**
+ * Get screening decisions for a project.
+ */
+export async function getScreeningDecisions(
+  projectId: string,
+  finalOnly: boolean = false
+): Promise<ScreeningDecision[]> {
+  const headers = await getHeaders();
+  const url = finalOnly
+    ? apiUrl(`/projects/${projectId}/screening?final_only=true`)
+    : apiUrl(`/projects/${projectId}/screening`);
+  const response = await fetch(url, { method: 'GET', headers });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch screening decisions: ${response.status}`);
+  }
+  return response.json();
+}
+
+// ============================================================================
+// Extraction Data API
+// ============================================================================
+
+export interface ExtractedStudy {
+  study_id?: string;
+  title?: string;
+  authors?: string;
+  year?: number;
+  _study_design?: string;
+  _design_confidence?: number;
+  _template_id?: string;
+  [key: string]: unknown;
+}
+
+export interface ExtractionData {
+  extracted_studies: ExtractedStudy[];
+  extraction_template?: string;
+  current_design?: string;
+  user_confirmed_complete?: boolean;
+}
+
+/**
+ * Get extraction data for a project from its artifacts.
+ */
+export async function getExtractionData(projectId: string): Promise<ExtractionData | null> {
+  const artifacts = await getProjectArtifacts(projectId, 'extraction');
+  const extractionArtifact = artifacts.find(a => a.filename === 'extraction-data.json');
+  if (extractionArtifact?.content) {
+    try {
+      return JSON.parse(extractionArtifact.content);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// Risk of Bias Data API
+// ============================================================================
+
+export interface RobDomainJudgment {
+  judgment: string;
+  justification?: string;
+}
+
+export interface RobAssessment {
+  study_id: string;
+  tool_id: string;
+  domain_judgments: Record<string, RobDomainJudgment>;
+  overall_judgment: string;
+  overall_justification?: string;
+}
+
+export interface RobData {
+  tool_id: string;
+  tool_name?: string;
+  assessments: RobAssessment[];
+  summary_table?: string;
+}
+
+/**
+ * Get Risk of Bias data for a project from its artifacts.
+ */
+export async function getRobData(projectId: string): Promise<RobData | null> {
+  const artifacts = await getProjectArtifacts(projectId, 'rob');
+  const robArtifact = artifacts.find(a => a.filename === 'rob-data.json');
+  if (robArtifact?.content) {
+    try {
+      return JSON.parse(robArtifact.content);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// Synthesis Data API
+// ============================================================================
+
+export interface SynthesisData {
+  meta_analysis?: Record<string, unknown>;
+  grade_assessment?: Record<string, unknown>;
+  forest_plots?: string[];
+  summary_of_findings?: string;
+}
+
+/**
+ * Get synthesis (meta-analysis + GRADE) data for a project.
+ */
+export async function getSynthesisData(projectId: string): Promise<SynthesisData | null> {
+  const artifacts = await getProjectArtifacts(projectId, 'synthesis');
+  const synthArtifact = artifacts.find(a => a.filename === 'synthesis-data.json');
+  if (synthArtifact?.content) {
+    try {
+      return JSON.parse(synthArtifact.content);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// Reporting / Manuscript Data API
+// ============================================================================
+
+export interface ManuscriptSectionData {
+  section_id: string;
+  section_name: string;
+  content: string;
+  prisma_items?: string;
+  word_count?: number;
+}
+
+export interface ReportingData {
+  manuscript_text?: string;
+  sections?: ManuscriptSectionData[];
+  prisma_flowchart?: string;
+  prisma_flow_data?: Record<string, unknown>;
+  tables?: string[];
+  figures?: string[];
+}
+
+/**
+ * Get reporting/manuscript data for a project from its artifacts.
+ */
+export async function getReportingData(projectId: string): Promise<ReportingData | null> {
+  const artifacts = await getProjectArtifacts(projectId, 'manuscript');
+  const reportArtifact = artifacts.find(a => a.filename === 'reporting-data.json');
+  if (reportArtifact?.content) {
+    try {
+      return JSON.parse(reportArtifact.content);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get manuscript text artifact for download.
+ */
+export async function getManuscriptArtifact(projectId: string): Promise<Artifact | null> {
+  const artifacts = await getProjectArtifacts(projectId, 'manuscript');
+  return artifacts.find(a => a.filename === 'manuscript.md') || null;
+}
+
+// ============================================================================
+// Review State Artifacts API
+// ============================================================================
+
+/**
+ * Get workflow artifacts for a specific stage directly from the review state.
+ * This is useful when data hasn't been persisted as separate artifacts yet
+ * but exists in the LangGraph state.
+ */
+export async function getStageArtifactFromState(
+  projectId: string,
+  stageName: string
+): Promise<Record<string, unknown> | null> {
+  try {
+    const state = await getReviewState(projectId);
+    return (state.artifacts?.[stageName] as Record<string, unknown>) || null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================================
 // Health Check
 // ============================================================================
 
