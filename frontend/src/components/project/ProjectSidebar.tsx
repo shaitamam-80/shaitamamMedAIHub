@@ -45,7 +45,7 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
   };
 
   return (
-    <aside className="w-80 bg-[#111827] border-l border-[#1e293b] overflow-y-auto">
+    <aside className="w-80 bg-white border-l border-[#e2e8f0] overflow-y-auto">
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
@@ -55,8 +55,8 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
           >
             ← חזרה לסקירה כללית
           </Link>
-          <h2 className="text-lg font-bold text-[#f1f5f9] mt-4 mb-2">שלבי הפרויקט</h2>
-          <p className="text-xs text-[#64748b]">10 שלבים לסקירה שיטתית מושלמת</p>
+          <h2 className="text-lg font-bold text-[#0f172a] mt-4 mb-2">שלבי הפרויקט</h2>
+          <p className="text-xs text-[#94a3b8]">10 שלבים לסקירה שיטתית מושלמת</p>
         </div>
 
         {/* Loading indicator */}
@@ -83,7 +83,7 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                     'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500',
                   !isActive && isCompleted && 'bg-green-500/5 border-green-500/20',
                   !isActive && isInProgress && 'border-amber-500/30 bg-amber-500/5',
-                  !isActive && !isCompleted && !isInProgress && 'border-[#1e293b] hover:border-blue-500/50'
+                  !isActive && !isCompleted && !isInProgress && 'border-[#e2e8f0] hover:border-blue-500/50 hover:bg-[#f8fafc]'
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -94,7 +94,7 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                       isActive && 'bg-blue-500 text-white',
                       !isActive && isCompleted && 'bg-green-500 text-white',
                       !isActive && isInProgress && 'bg-amber-500 text-white',
-                      !isActive && !isCompleted && !isInProgress && 'bg-[#1e293b] text-[#64748b]'
+                      !isActive && !isCompleted && !isInProgress && 'bg-[#e2e8f0] text-[#94a3b8]'
                     )}
                   >
                     {isCompleted ? (
@@ -114,12 +114,12 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                         isActive && 'text-blue-500',
                         !isActive && isCompleted && 'text-green-500',
                         !isActive && isInProgress && 'text-amber-500',
-                        !isActive && !isCompleted && !isInProgress && 'text-[#f1f5f9]'
+                        !isActive && !isCompleted && !isInProgress && 'text-[#0f172a]'
                       )}
                     >
                       {stage.name.he}
                     </div>
-                    <div className="text-xs text-[#64748b] line-clamp-2">
+                    <div className="text-xs text-[#94a3b8] line-clamp-2">
                       {stage.description.he}
                     </div>
                   </div>

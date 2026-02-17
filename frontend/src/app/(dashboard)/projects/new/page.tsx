@@ -84,7 +84,7 @@ export default function NewProjectPage() {
                       ? 'bg-green-500 text-white'
                       : s === step
                       ? 'bg-blue-500 text-white'
-                      : 'bg-[#1e293b] text-[#64748b]'
+                      : 'bg-[#e2e8f0] text-[#94a3b8]'
                   }`}
                 >
                   {s < step ? <Check className="w-5 h-5" /> : s}
@@ -92,7 +92,7 @@ export default function NewProjectPage() {
                 {s < 3 && (
                   <div
                     className={`w-20 h-1 mx-2 transition-all ${
-                      s < step ? 'bg-green-500' : 'bg-[#1e293b]'
+                      s < step ? 'bg-green-500' : 'bg-[#e2e8f0]'
                     }`}
                   />
                 )}
@@ -100,22 +100,22 @@ export default function NewProjectPage() {
             ))}
           </div>
           <div className="flex justify-center gap-32 mt-4">
-            <span className={`text-sm ${step === 1 ? 'text-blue-500' : 'text-[#64748b]'}`}>נושא</span>
-            <span className={`text-sm ${step === 2 ? 'text-blue-500' : 'text-[#64748b]'}`}>סוג סקירה</span>
-            <span className={`text-sm ${step === 3 ? 'text-blue-500' : 'text-[#64748b]'}`}>אישור</span>
+            <span className={`text-sm ${step === 1 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>נושא</span>
+            <span className={`text-sm ${step === 2 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>סוג סקירה</span>
+            <span className={`text-sm ${step === 3 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>אישור</span>
           </div>
         </div>
 
         {/* Step Content */}
-        <div className="bg-[#111827] border border-[#1e293b] rounded-2xl p-8 min-h-[400px]">
+        <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-2xl p-8 min-h-[400px]">
           {/* Step 1: Topic */}
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-[#f1f5f9] mb-2">מה נושא המחקר שלך?</h2>
-              <p className="text-[#94a3b8] mb-6">תאר בקצרה את נושא הסקירה השיטתית</p>
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">מה נושא המחקר שלך?</h2>
+              <p className="text-[#475569] mb-6">תאר בקצרה את נושא הסקירה השיטתית</p>
 
               <div>
-                <label htmlFor="topic" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+                <label htmlFor="topic" className="block text-sm font-medium text-[#0f172a] mb-2">
                   נושא המחקר
                 </label>
                 <textarea
@@ -123,10 +123,10 @@ export default function NewProjectPage() {
                   value={formData.topic}
                   onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
                   rows={6}
-                  className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                   placeholder="לדוגמה: השפעת הבינה המלאכותית על שיטות הוראה בחינוך הגבוה - סקירה שיטתית של מחקרים שפורסמו בין 2020-2024"
                 />
-                <p className="text-xs text-[#64748b] mt-2">
+                <p className="text-xs text-[#94a3b8] mt-2">
                   טיפ: כלול את הנושא, האוכלוסיה, וההקשר המחקרי
                 </p>
               </div>
@@ -136,8 +136,8 @@ export default function NewProjectPage() {
           {/* Step 2: Review Type */}
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-bold text-[#f1f5f9] mb-2">בחר סוג סקירה</h2>
-              <p className="text-[#94a3b8] mb-6">בחר את סוג הסקירה המתאימה למטרות המחקר שלך</p>
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">בחר סוג סקירה</h2>
+              <p className="text-[#475569] mb-6">בחר את סוג הסקירה המתאימה למטרות המחקר שלך</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(REVIEW_TYPES).map(([reviewTypeKey, reviewTypeData]) => {
@@ -151,11 +151,11 @@ export default function NewProjectPage() {
                       className={`p-6 rounded-xl border-2 text-right transition-all relative ${
                         isSelected
                           ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-[#1e293b] bg-[#0a0e1a] hover:border-blue-500/50'
+                          : 'border-[#e2e8f0] bg-[#f8fafc] hover:border-blue-500/50'
                       }`}
                     >
-                      <Icon className={`w-8 h-8 mb-3 ${isSelected ? 'text-blue-500' : 'text-[#94a3b8]'}`} />
-                      <h3 className={`font-semibold mb-1 ${isSelected ? 'text-blue-500' : 'text-[#f1f5f9]'}`}>
+                      <Icon className={`w-8 h-8 mb-3 ${isSelected ? 'text-blue-500' : 'text-[#475569]'}`} />
+                      <h3 className={`font-semibold mb-1 ${isSelected ? 'text-blue-500' : 'text-[#0f172a]'}`}>
                         {reviewTypeData.he}
                       </h3>
                       {isSelected && (
@@ -176,27 +176,27 @@ export default function NewProjectPage() {
           {/* Step 3: Confirmation */}
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-bold text-[#f1f5f9] mb-2">אישור פרטי הפרויקט</h2>
-              <p className="text-[#94a3b8] mb-6">בדוק את הפרטים לפני יצירת הפרויקט</p>
+              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">אישור פרטי הפרויקט</h2>
+              <p className="text-[#475569] mb-6">בדוק את הפרטים לפני יצירת הפרויקט</p>
 
               <div className="space-y-6">
-                <div className="bg-[#0a0e1a] border border-[#1e293b] rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-[#94a3b8] mb-2">נושא המחקר</h3>
-                  <p className="text-[#f1f5f9]">{formData.topic}</p>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-[#475569] mb-2">נושא המחקר</h3>
+                  <p className="text-[#0f172a]">{formData.topic}</p>
                 </div>
 
-                <div className="bg-[#0a0e1a] border border-[#1e293b] rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-[#94a3b8] mb-2">סוג הסקירה</h3>
+                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-[#475569] mb-2">סוג הסקירה</h3>
                   <div className="flex items-center gap-2">
                     {(() => {
                       const Icon = reviewTypeIcons[formData.reviewType as ReviewType] || FileText;
                       return <Icon className="w-5 h-5 text-blue-500" />;
                     })()}
-                    <span className="text-[#f1f5f9] font-medium">
+                    <span className="text-[#0f172a] font-medium">
                       {formData.reviewType ? REVIEW_TYPES[formData.reviewType as ReviewType]?.he : ''}
                     </span>
                   </div>
-                  <div className="mt-2 text-sm text-[#64748b]">
+                  <div className="mt-2 text-sm text-[#94a3b8]">
                     Framework: {REVIEW_TYPE_FRAMEWORKS[formData.reviewType] || 'PICO'}
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function NewProjectPage() {
           <button
             onClick={handleBack}
             disabled={step === 1}
-            className="px-6 py-3 bg-[#1e293b] text-[#f1f5f9] font-medium rounded-lg hover:bg-[#334155] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+            className="px-6 py-3 bg-[#e2e8f0] text-[#0f172a] font-medium rounded-lg hover:bg-[#f8fafc] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           >
             <ArrowRight className="w-5 h-5" />
             <span>חזרה</span>

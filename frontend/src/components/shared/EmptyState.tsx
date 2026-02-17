@@ -22,12 +22,12 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="p-4 bg-[#1e293b] rounded-full mb-4">
-        <Icon className="w-12 h-12 text-[#64748b]" />
+      <div className="p-4 bg-[#f1f5f9] rounded-full mb-4">
+        <Icon className="w-12 h-12 text-[#94a3b8]" />
       </div>
 
-      <h3 className="text-xl font-semibold text-[#f1f5f9] mb-2">{title}</h3>
-      <p className="text-[#94a3b8] text-center max-w-md mb-6">{description}</p>
+      <h3 className="text-xl font-semibold text-[#0f172a] mb-2">{title}</h3>
+      <p className="text-[#475569] text-center max-w-md mb-6">{description}</p>
 
       {actionLabel && (actionHref || onAction) && (
         <>

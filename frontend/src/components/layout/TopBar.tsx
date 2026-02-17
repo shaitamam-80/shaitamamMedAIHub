@@ -47,18 +47,18 @@ export default function TopBar() {
   const breadcrumbs = generateBreadcrumbs();
 
   return (
-    <header className="h-14 bg-[#111827] border-b border-[#1e293b] flex items-center justify-between px-6">
+    <header className="h-14 bg-white border-b border-[#e2e8f0] flex items-center justify-between px-6">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-sm">
         {breadcrumbs.map((crumb, index) => (
           <div key={crumb.href} className="flex items-center gap-2">
-            {index > 0 && <ChevronLeft className="w-4 h-4 text-[#64748b]" />}
+            {index > 0 && <ChevronLeft className="w-4 h-4 text-[#94a3b8]" />}
             {index === breadcrumbs.length - 1 ? (
-              <span className="text-[#f1f5f9] font-medium">{crumb.label}</span>
+              <span className="text-[#0f172a] font-medium">{crumb.label}</span>
             ) : (
               <Link
                 href={crumb.href}
-                className="text-[#94a3b8] hover:text-blue-500 transition-colors"
+                className="text-[#475569] hover:text-blue-500 transition-colors"
               >
                 {crumb.label}
               </Link>
@@ -76,14 +76,14 @@ export default function TopBar() {
         <div className="flex items-center gap-2">
           <Link
             href="/settings"
-            className="p-2 hover:bg-[#1e293b] rounded-lg transition-colors"
+            className="p-2 hover:bg-[#f1f5f9] rounded-lg transition-colors"
             title="הגדרות"
           >
-            <SettingsIcon className="w-5 h-5 text-[#94a3b8]" />
+            <SettingsIcon className="w-5 h-5 text-[#475569]" />
           </Link>
 
           <button
-            className="flex items-center gap-2 px-3 py-2 hover:bg-[#1e293b] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 hover:bg-[#f1f5f9] rounded-lg transition-colors"
             title="פרופיל"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-sm font-bold">

@@ -7,14 +7,14 @@ export default function FindJournalPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Tool Header */}
-      <div className="border-b border-[#1e293b] bg-[#111827] px-8 py-4">
+      <div className="border-b border-[#e2e8f0] bg-white px-8 py-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 rounded-lg bg-purple-500/10">
             <Search className="w-6 h-6 text-purple-500" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#f1f5f9]">Find Journal</h1>
-            <p className="text-sm text-[#94a3b8]">
+            <h1 className="text-xl font-bold text-[#0f172a]">Find Journal</h1>
+            <p className="text-sm text-[#475569]">
               מציאת כתבי עת מתאימים לפרסום המחקר שלך
             </p>
           </div>

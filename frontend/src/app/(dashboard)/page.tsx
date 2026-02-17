@@ -66,11 +66,11 @@ export default function DashboardPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#f1f5f9] mb-2">
+        <h1 className="text-3xl font-bold text-[#0f172a] mb-2">
           לוח בקרה
         </h1>
-        <p className="text-[#94a3b8]">
-          ברוך הבא למערכת ניהול הסקירות השיטתיות
+        <p className="text-[#475569]">
+          ברוך הבא ל-MedAI Hub
         </p>
       </div>
 
@@ -81,17 +81,17 @@ export default function DashboardPage() {
           return (
             <div
               key={index}
-              className="bg-[#111827] border border-[#1e293b] rounded-xl p-6 hover:border-blue-500/50 transition-all"
+              className="bg-white border border-[#e2e8f0] rounded-xl p-6 hover:border-blue-500/50 transition-all shadow-sm"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${stat.bgColor}`}>
                   <Icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-[#f1f5f9] mb-1">
+              <div className="text-3xl font-bold text-[#0f172a] mb-1">
                 {stat.value}
               </div>
-              <div className="text-sm text-[#94a3b8]">
+              <div className="text-sm text-[#475569]">
                 {stat.label}
               </div>
             </div>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
       {/* Projects Section */}
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#f1f5f9]">הפרויקטים שלי</h2>
+        <h2 className="text-2xl font-bold text-[#0f172a]">הפרויקטים שלי</h2>
         <Link
           href="/projects/new"
           className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all"
@@ -115,7 +115,7 @@ export default function DashboardPage() {
       {loading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <span className="mr-3 text-[#94a3b8]">טוען פרויקטים...</span>
+          <span className="mr-3 text-[#475569]">טוען פרויקטים...</span>
         </div>
       )}
 

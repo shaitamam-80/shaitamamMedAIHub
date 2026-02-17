@@ -13,7 +13,7 @@ export default function StageProgress({ currentStage, completedStages }: StagePr
   return (
     <div className="relative">
       {/* Progress line */}
-      <div className="absolute top-5 right-0 left-0 h-0.5 bg-[#1e293b]" />
+      <div className="absolute top-5 right-0 left-0 h-0.5 bg-[#e2e8f0]" />
 
       {/* Stages */}
       <div className="relative grid grid-cols-10 gap-2">
@@ -30,7 +30,7 @@ export default function StageProgress({ currentStage, completedStages }: StagePr
                   'w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all z-10',
                   isCompleted && 'bg-green-500 border-green-500 text-white',
                   isCurrent && 'bg-blue-500 border-blue-500 text-white animate-pulse',
-                  isUpcoming && 'bg-[#0a0e1a] border-[#1e293b] text-[#64748b]'
+                  isUpcoming && 'bg-[#f1f5f9] border-[#e2e8f0] text-[#94a3b8]'
                 )}
               >
                 {isCompleted ? (
@@ -47,7 +47,7 @@ export default function StageProgress({ currentStage, completedStages }: StagePr
                     'text-xs font-medium transition-colors line-clamp-2',
                     isCurrent && 'text-blue-500',
                     isCompleted && 'text-green-500',
-                    isUpcoming && 'text-[#64748b]'
+                    isUpcoming && 'text-[#94a3b8]'
                   )}
                 >
                   {stage.name.he}

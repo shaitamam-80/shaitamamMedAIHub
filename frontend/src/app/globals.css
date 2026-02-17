@@ -2,9 +2,9 @@
 
 /* ===== Design System Variables ===== */
 :root {
-  --bg-dark: #0a0e1a;
-  --bg-card: #111827;
-  --bg-card-hover: #1a2340;
+  --bg-dark: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
   --accent-blue: #3b82f6;
   --accent-cyan: #06b6d4;
   --accent-green: #10b981;
@@ -12,10 +12,10 @@
   --accent-red: #ef4444;
   --accent-purple: #8b5cf6;
   --accent-pink: #ec4899;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border: #1e293b;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
   --gradient-1: linear-gradient(135deg, #3b82f6, #8b5cf6);
   --gradient-2: linear-gradient(135deg, #06b6d4, #10b981);
   --gradient-3: linear-gradient(135deg, #f59e0b, #ef4444);
@@ -61,7 +61,7 @@ body {
 
 /* ===== Selection ===== */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.15);
   color: var(--text-primary);
 }
 
@@ -94,7 +94,7 @@ body {
   .card-hover:hover {
     border-color: var(--accent-blue);
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.08);
   }
 }
 
@@ -114,7 +114,8 @@ body {
   font-family: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 .markdown-content pre {
-  background: #0d1117;
+  background: #f8fafc;
+  color: #334155;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;

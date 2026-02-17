@@ -61,13 +61,13 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-[#111827] rounded-2xl border border-[#1e293b] p-8 shadow-2xl">
+    <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg">
       {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          SR Portal
+          MedAI Hub
         </h1>
-        <p className="text-[#94a3b8] mt-2">ברוכים הבאים חזרה</p>
+        <p className="text-[#475569] mt-2">ברוכים הבאים חזרה</p>
       </div>
 
       {/* Error Message */}
@@ -81,7 +81,7 @@ function LoginForm() {
       {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="email" className="block text-sm font-medium text-[#0f172a] mb-2">
             אימייל
           </label>
           <input
@@ -90,13 +90,13 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="your@email.com"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="password" className="block text-sm font-medium text-[#0f172a] mb-2">
             סיסמה
           </label>
           <input
@@ -105,7 +105,7 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="••••••••"
           />
         </div>
@@ -113,7 +113,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#111827] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -129,10 +129,10 @@ function LoginForm() {
       {/* Divider */}
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[#1e293b]" />
+          <div className="w-full border-t border-[#e2e8f0]" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-[#111827] text-[#64748b]">או</span>
+          <span className="px-2 bg-white text-[#94a3b8]">או</span>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ function LoginForm() {
       <button
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="w-full py-3 px-4 bg-[#0a0e1a] border border-[#1e293b] text-[#f1f5f9] font-medium rounded-lg hover:bg-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#111827] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+        className="w-full py-3 px-4 bg-white border border-[#e2e8f0] text-[#0f172a] font-medium rounded-lg hover:bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path
@@ -164,7 +164,7 @@ function LoginForm() {
       </button>
 
       {/* Register Link */}
-      <p className="text-center text-[#94a3b8] text-sm mt-6">
+      <p className="text-center text-[#475569] text-sm mt-6">
         אין לך חשבון?{' '}
         <Link href="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
           הרשמה
@@ -177,7 +177,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="bg-[#111827] rounded-2xl border border-[#1e293b] p-8 shadow-2xl text-center">
+      <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg text-center">
         <div className="w-8 h-8 mx-auto border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
       </div>
     }>

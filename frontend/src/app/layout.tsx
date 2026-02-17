@@ -15,8 +15,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SR Portal - Systematic Review Assistant',
-  description: 'AI-powered systematic review research assistant',
+  title: 'MedAI Hub',
+  description: 'AI-powered medical research assistant',
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable}`}>
-      <body className="font-sans antialiased bg-[#0a0e1a] text-[#f1f5f9] min-h-screen">
+      <body className="font-sans antialiased bg-[#f8fafc] text-[#0f172a] min-h-screen">
         {children}
       </body>
     </html>

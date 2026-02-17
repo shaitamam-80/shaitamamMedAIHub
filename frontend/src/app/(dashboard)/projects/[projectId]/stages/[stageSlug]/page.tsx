@@ -93,8 +93,8 @@ export default function StagePage() {
     return (
       <div className="h-full flex items-center justify-center p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#f1f5f9] mb-2">שלב לא נמצא</h1>
-          <p className="text-[#94a3b8]">השלב המבוקש אינו קיים במערכת</p>
+          <h1 className="text-2xl font-bold text-[#0f172a] mb-2">שלב לא נמצא</h1>
+          <p className="text-[#475569]">השלב המבוקש אינו קיים במערכת</p>
         </div>
       </div>
     );
@@ -103,14 +103,14 @@ export default function StagePage() {
   return (
     <div className="h-full flex flex-col">
       {/* Stage Header */}
-      <div className="border-b border-[#1e293b] bg-[#111827] px-8 py-4">
+      <div className="border-b border-[#e2e8f0] bg-white px-8 py-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
             {stage.order}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#f1f5f9]">{stage.name.he}</h1>
-            <p className="text-sm text-[#94a3b8]">{stage.description.he}</p>
+            <h1 className="text-xl font-bold text-[#0f172a]">{stage.name.he}</h1>
+            <p className="text-sm text-[#475569]">{stage.description.he}</p>
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function StagePage() {
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-              <p className="text-[#94a3b8] text-sm">טוען שיחה...</p>
+              <p className="text-[#475569] text-sm">טוען שיחה...</p>
             </div>
           </div>
         ) : (

@@ -34,23 +34,23 @@ export default function SettingsPage() {
     <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#f1f5f9] mb-2">הגדרות</h1>
-        <p className="text-[#94a3b8]">נהל את פרטי החשבון וההעדפות שלך</p>
+        <h1 className="text-3xl font-bold text-[#0f172a] mb-2">הגדרות</h1>
+        <p className="text-[#475569]">נהל את פרטי החשבון וההעדפות שלך</p>
       </div>
 
       {/* Settings Form */}
-      <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-8">
+      <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-xl p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile Section */}
           <div>
-            <h2 className="text-xl font-semibold text-[#f1f5f9] mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
               <User className="w-5 h-5" />
               <span>פרופיל</span>
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+                <label htmlFor="fullName" className="block text-sm font-medium text-[#0f172a] mb-2">
                   שם מלא
                 </label>
                 <div className="relative">
@@ -60,14 +60,14 @@ export default function SettingsPage() {
                     type="text"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-white focus:border-transparent transition-all"
                   />
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#64748b]" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-[#0f172a] mb-2">
                   אימייל
                 </label>
                 <div className="relative">
@@ -77,14 +77,14 @@ export default function SettingsPage() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-white focus:border-transparent transition-all"
                   />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#64748b]" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="institution" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+                <label htmlFor="institution" className="block text-sm font-medium text-[#0f172a] mb-2">
                   מוסד אקדמי
                 </label>
                 <div className="relative">
@@ -94,26 +94,26 @@ export default function SettingsPage() {
                     type="text"
                     value={formData.institution}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-white focus:border-transparent transition-all"
                   />
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#64748b]" />
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#1e293b]" />
+          <div className="border-t border-[#e2e8f0]" />
 
           {/* Preferences Section */}
           <div>
-            <h2 className="text-xl font-semibold text-[#f1f5f9] mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
               <Globe className="w-5 h-5" />
               <span>העדפות</span>
             </h2>
 
             <div>
-              <label htmlFor="language" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+              <label htmlFor="language" className="block text-sm font-medium text-[#0f172a] mb-2">
                 שפה מועדפת
               </label>
               <select
@@ -121,12 +121,12 @@ export default function SettingsPage() {
                 name="language"
                 value={formData.language}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+                className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-white focus:border-transparent transition-all cursor-pointer"
               >
                 <option value="he">עברית</option>
                 <option value="en">English</option>
               </select>
-              <p className="text-xs text-[#64748b] mt-1">
+              <p className="text-xs text-[#94a3b8] mt-1">
                 השפה בה תוצגנה התגובות והממשק
               </p>
             </div>

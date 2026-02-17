@@ -229,7 +229,7 @@ export default function ChatInterface({
   const hasUserMessages = messages.some(m => m.role === 'user');
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0e1a]">
+    <div className="flex flex-col h-full bg-[#f8fafc]">
       {/* Backend Status Indicator */}
       {backendStatus === 'disconnected' && (
         <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 flex items-center gap-2 text-sm">
@@ -260,7 +260,7 @@ export default function ChatInterface({
 
         {isLoading && !streamingContent && (
           <div className="flex justify-start">
-            <div className="bg-[#111827] border border-[#1e293b] rounded-2xl px-6 py-4">
+            <div className="bg-white border border-[#e2e8f0] rounded-2xl px-6 py-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75" />
@@ -282,8 +282,8 @@ export default function ChatInterface({
       )}
 
       {projectContext && stageStatus !== 'completed' && onStageComplete && (
-        <div className="px-4 py-3 border-t border-[#1e293b] bg-[#0a0e1a] flex items-center justify-between">
-          <span className="text-sm text-[#94a3b8]">
+        <div className="px-4 py-3 border-t border-[#e2e8f0] bg-white flex items-center justify-between">
+          <span className="text-sm text-[#475569]">
             סיימת לעבוד על שלב זה?
           </span>
           <button
@@ -297,7 +297,7 @@ export default function ChatInterface({
         </div>
       )}
 
-      <div className="border-t border-[#1e293b] bg-[#111827]">
+      <div className="border-t border-[#e2e8f0] bg-white">
         <ChatInput onSend={sendMessage} disabled={isLoading} />
       </div>
     </div>

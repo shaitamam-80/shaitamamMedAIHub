@@ -68,12 +68,12 @@ export default function RegisterPage() {
   // Success screen
   if (success) {
     return (
-      <div className="bg-[#111827] rounded-2xl border border-[#1e293b] p-8 shadow-2xl text-center">
+      <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg text-center">
         <div className="w-16 h-16 mx-auto mb-6 bg-green-500/10 rounded-full flex items-center justify-center">
           <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#f1f5f9] mb-2">ההרשמה הושלמה!</h2>
-        <p className="text-[#94a3b8] mb-6">
+        <h2 className="text-2xl font-bold text-[#0f172a] mb-2">ההרשמה הושלמה!</h2>
+        <p className="text-[#475569] mb-6">
           שלחנו אליך אימייל אימות לכתובת <span className="text-blue-400">{formData.email}</span>
           <br />
           אנא אשר את האימייל כדי להמשיך.
@@ -89,13 +89,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="bg-[#111827] rounded-2xl border border-[#1e293b] p-8 shadow-2xl">
+    <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg">
       {/* Logo */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          SR Portal
+          MedAI Hub
         </h1>
-        <p className="text-[#94a3b8] mt-2">צור חשבון חדש</p>
+        <p className="text-[#475569] mt-2">צור חשבון חדש</p>
       </div>
 
       {/* Error Message */}
@@ -109,7 +109,7 @@ export default function RegisterPage() {
       {/* Registration Form */}
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="fullName" className="block text-sm font-medium text-[#0f172a] mb-2">
             שם מלא
           </label>
           <input
@@ -119,13 +119,13 @@ export default function RegisterPage() {
             value={formData.fullName}
             onChange={handleChange}
             required
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="ישראל ישראלי"
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="email" className="block text-sm font-medium text-[#0f172a] mb-2">
             אימייל
           </label>
           <input
@@ -135,13 +135,13 @@ export default function RegisterPage() {
             value={formData.email}
             onChange={handleChange}
             required
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="your@email.com"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="password" className="block text-sm font-medium text-[#0f172a] mb-2">
             סיסמה
           </label>
           <input
@@ -152,14 +152,14 @@ export default function RegisterPage() {
             onChange={handleChange}
             required
             minLength={8}
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="••••••••"
           />
-          <p className="text-xs text-[#64748b] mt-1">לפחות 8 תווים</p>
+          <p className="text-xs text-[#94a3b8] mt-1">לפחות 8 תווים</p>
         </div>
 
         <div>
-          <label htmlFor="institution" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="institution" className="block text-sm font-medium text-[#0f172a] mb-2">
             מוסד אקדמי (אופציונלי)
           </label>
           <input
@@ -168,13 +168,13 @@ export default function RegisterPage() {
             type="text"
             value={formData.institution}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="אוניברסיטה עברית"
           />
         </div>
 
         <div>
-          <label htmlFor="language" className="block text-sm font-medium text-[#f1f5f9] mb-2">
+          <label htmlFor="language" className="block text-sm font-medium text-[#0f172a] mb-2">
             שפה מועדפת
           </label>
           <select
@@ -182,7 +182,7 @@ export default function RegisterPage() {
             name="language"
             value={formData.language}
             onChange={handleChange}
-            className="w-full px-4 py-3 bg-[#0a0e1a] border border-[#1e293b] rounded-lg text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
           >
             <option value="he">עברית</option>
             <option value="en">English</option>
@@ -192,7 +192,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#111827] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -206,7 +206,7 @@ export default function RegisterPage() {
       </form>
 
       {/* Login Link */}
-      <p className="text-center text-[#94a3b8] text-sm mt-6">
+      <p className="text-center text-[#475569] text-sm mt-6">
         יש לך כבר חשבון?{' '}
         <Link href="/login" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
           התחברות

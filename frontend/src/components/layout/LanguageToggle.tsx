@@ -16,22 +16,22 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={toggleLanguage}
-      className="flex items-center gap-1 px-3 py-1.5 bg-[#0a0e1a] border border-[#1e293b] rounded-lg hover:border-blue-500/50 transition-all"
+      className="flex items-center gap-1 px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-lg hover:border-blue-500/50 transition-all"
       title="החלף שפה"
     >
       <span
         className={cn(
           'text-xs font-medium transition-colors',
-          language === 'he' ? 'text-blue-500' : 'text-[#64748b]'
+          language === 'he' ? 'text-blue-500' : 'text-[#94a3b8]'
         )}
       >
         עב
       </span>
-      <span className="text-[#64748b]">/</span>
+      <span className="text-[#94a3b8]">/</span>
       <span
         className={cn(
           'text-xs font-medium transition-colors',
-          language === 'en' ? 'text-blue-500' : 'text-[#64748b]'
+          language === 'en' ? 'text-blue-500' : 'text-[#94a3b8]'
         )}
       >
         EN

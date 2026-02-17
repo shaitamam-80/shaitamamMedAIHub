@@ -38,7 +38,7 @@ export default function ProjectOverviewPage({
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <p className="text-[#94a3b8] text-sm">טוען פרויקט...</p>
+          <p className="text-[#475569] text-sm">טוען פרויקט...</p>
         </div>
       </div>
     );
@@ -108,17 +108,17 @@ export default function ProjectOverviewPage({
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-[#94a3b8] text-sm mb-3">
+        <div className="flex items-center gap-2 text-[#475569] text-sm mb-3">
           <Link href="/" className="hover:text-blue-500 transition-colors">
             לוח בקרה
           </Link>
           <span>/</span>
-          <span className="text-[#f1f5f9]">סקירה כללית</span>
+          <span className="text-[#0f172a]">סקירה כללית</span>
         </div>
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-[#f1f5f9] mb-3">
+            <h1 className="text-3xl font-bold text-[#0f172a] mb-3">
               {project.title}
             </h1>
             <div className="flex items-center gap-3">
@@ -134,8 +134,8 @@ export default function ProjectOverviewPage({
       </div>
 
       {/* Stage Progress */}
-      <div className="mb-8 bg-[#111827] border border-[#1e293b] rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-[#f1f5f9] mb-4">התקדמות השלבים</h2>
+      <div className="mb-8 bg-white border border-[#e2e8f0] shadow-sm rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-[#0f172a] mb-4">התקדמות השלבים</h2>
         <StageProgress currentStage={currentStageName} completedStages={completedCount} />
       </div>
 
@@ -146,17 +146,17 @@ export default function ProjectOverviewPage({
           return (
             <div
               key={index}
-              className="bg-[#111827] border border-[#1e293b] rounded-xl p-6 hover:border-blue-500/50 transition-all"
+              className="bg-white border border-[#e2e8f0] shadow-sm rounded-xl p-6 hover:border-blue-500/50 transition-all"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${metric.bgColor}`}>
                   <Icon className={`w-6 h-6 ${metric.color}`} />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-[#f1f5f9] mb-1">
+              <div className="text-2xl font-bold text-[#0f172a] mb-1">
                 {metric.value}
               </div>
-              <div className="text-sm text-[#94a3b8]">
+              <div className="text-sm text-[#475569]">
                 {metric.label}
               </div>
             </div>
@@ -168,10 +168,10 @@ export default function ProjectOverviewPage({
       <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#f1f5f9] mb-1">
+            <h3 className="text-lg font-semibold text-[#0f172a] mb-1">
               הפעולה הבאה
             </h3>
-            <p className="text-[#94a3b8]">
+            <p className="text-[#475569]">
               המשך עם שלב {currentStageDisplayName}
             </p>
           </div>
@@ -186,29 +186,29 @@ export default function ProjectOverviewPage({
       </div>
 
       {/* Project Info */}
-      <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-[#f1f5f9] mb-4">פרטי הפרויקט</h2>
+      <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-[#0f172a] mb-4">פרטי הפרויקט</h2>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
-            <span className="text-[#94a3b8]">תאריך יצירה</span>
-            <span className="text-[#f1f5f9]">
+          <div className="flex items-center justify-between p-4 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg">
+            <span className="text-[#475569]">תאריך יצירה</span>
+            <span className="text-[#0f172a]">
               {new Date(project.created_at).toLocaleDateString('he-IL')}
             </span>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
-            <span className="text-[#94a3b8]">עדכון אחרון</span>
-            <span className="text-[#f1f5f9]">
+          <div className="flex items-center justify-between p-4 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg">
+            <span className="text-[#475569]">עדכון אחרון</span>
+            <span className="text-[#0f172a]">
               {new Date(project.updated_at).toLocaleDateString('he-IL')}
             </span>
           </div>
-          <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
-            <span className="text-[#94a3b8]">סטטוס</span>
+          <div className="flex items-center justify-between p-4 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg">
+            <span className="text-[#475569]">סטטוס</span>
             <span className="text-green-400">{project.status === 'active' ? 'פעיל' : project.status}</span>
           </div>
           {project.prospero_id && (
-            <div className="flex items-center justify-between p-4 bg-[#0a0e1a] border border-[#1e293b] rounded-lg">
-              <span className="text-[#94a3b8]">PROSPERO ID</span>
-              <span className="text-[#f1f5f9]">{project.prospero_id}</span>
+            <div className="flex items-center justify-between p-4 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg">
+              <span className="text-[#475569]">PROSPERO ID</span>
+              <span className="text-[#0f172a]">{project.prospero_id}</span>
             </div>
           )}
         </div>

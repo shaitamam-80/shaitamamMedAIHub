@@ -34,10 +34,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`}>
-      <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-6 hover:border-blue-500/50 transition-all group cursor-pointer">
+      <div className="bg-white border border-[#e2e8f0] rounded-xl p-6 hover:border-blue-500/50 transition-all group cursor-pointer shadow-sm">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-[#f1f5f9] mb-2 group-hover:text-blue-500 transition-colors line-clamp-2">
+          <h3 className="text-lg font-semibold text-[#0f172a] mb-2 group-hover:text-blue-500 transition-colors line-clamp-2">
             {project.title}
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
@@ -53,10 +53,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         {/* Progress */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-[#94a3b8]">התקדמות</span>
-            <span className="text-[#f1f5f9] font-medium">{project.progress}%</span>
+            <span className="text-[#475569]">התקדמות</span>
+            <span className="text-[#0f172a] font-medium">{project.progress}%</span>
           </div>
-          <div className="w-full bg-[#0a0e1a] rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-[#e2e8f0] rounded-full h-2 overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
@@ -71,13 +71,13 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
         {/* Current Stage */}
         <div className="mb-3">
-          <div className="text-xs text-[#64748b] mb-1">שלב נוכחי</div>
-          <div className="text-sm text-[#f1f5f9] font-medium">{project.currentStage}</div>
+          <div className="text-xs text-[#94a3b8] mb-1">שלב נוכחי</div>
+          <div className="text-sm text-[#0f172a] font-medium">{project.currentStage}</div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-[#1e293b]">
-          <div className="flex items-center gap-1.5 text-xs text-[#64748b]">
+        <div className="flex items-center justify-between pt-3 border-t border-[#e2e8f0]">
+          <div className="flex items-center gap-1.5 text-xs text-[#94a3b8]">
             <Clock className="w-3.5 h-3.5" />
             <span>{formatDate(project.lastUpdated)}</span>
           </div>
