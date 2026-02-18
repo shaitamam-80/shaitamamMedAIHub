@@ -101,10 +101,10 @@ export default function LandingPage() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl md:text-6xl font-bold leading-[1.08] tracking-tight">
+          <h1 className="text-4xl md:text-6xl font-bold leading-[1.12] tracking-tight">
             Systematic Reviews,{' '}
             <br className="hidden sm:block" />
-            <span className="gradient-text italic">Powered by AI</span>
+            <span className="gradient-text italic pr-1">Powered by AI</span>
           </h1>
 
           {/* Sub-headline */}
