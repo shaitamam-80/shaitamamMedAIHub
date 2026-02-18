@@ -203,7 +203,7 @@ export default function AppSidebar() {
     <Sidebar side="left" variant="sidebar" collapsible="icon">
       {/* ── Header / Logo ── */}
       <SidebarHeader className="p-4">
-        <Link href="/" className="flex items-center gap-3 px-2 group/logo">
+        <Link href="/landing" className="flex items-center gap-3 px-2 group/logo">
           <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 text-white font-bold text-sm shadow-md shadow-sky-500/20 transition-transform duration-200 group-hover/logo:scale-105">
             M
           </div>

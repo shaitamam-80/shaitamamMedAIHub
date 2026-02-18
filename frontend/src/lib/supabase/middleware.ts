@@ -62,8 +62,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If authenticated and on login/register/landing page, redirect to dashboard
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register' || request.nextUrl.pathname === '/landing')) {
+  // If authenticated and on login/register page, redirect to dashboard
+  // Note: /landing is accessible to authenticated users too (it's the main site page)
+  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

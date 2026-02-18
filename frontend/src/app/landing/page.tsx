@@ -13,6 +13,7 @@ import {
   ChevronRight,
   GraduationCap,
 } from 'lucide-react';
+import LandingNav from './LandingNav';
 
 export const metadata = {
   title: 'MedAI Hub — AI-Powered Systematic Reviews',
@@ -82,31 +83,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ═══ Navbar ═══ */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between bg-background/80 backdrop-blur-md px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 text-white font-bold text-sm shadow-md shadow-sky-500/20">
-            M
-          </div>
-          <span className="text-xl font-bold tracking-tight gradient-text">
-            MedAI Hub
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg shadow-md shadow-primary/20 hover:opacity-90 transition-opacity"
-          >
-            Get Started
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </nav>
+      <LandingNav />
 
       {/* ═══ Hero Section ═══ */}
       <section className="relative px-6 py-20 md:py-28 flex flex-col items-center text-center gap-8 overflow-hidden">
