@@ -202,7 +202,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
     <div className="flex justify-start gap-3">
       {/* AI avatar */}
       <div className="flex-shrink-0 mt-1">
-        <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 shadow-md shadow-primary/15">
+        <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 shadow-md shadow-primary/15">
           <Bot className="size-4 text-white" />
         </div>
       </div>

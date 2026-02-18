@@ -204,7 +204,7 @@ export default function AppSidebar() {
       {/* ── Header / Logo ── */}
       <SidebarHeader className="p-4">
         <Link href="/" className="flex items-center gap-3 px-2 group/logo">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white font-bold text-sm shadow-md shadow-blue-600/20 transition-transform duration-200 group-hover/logo:scale-105">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 text-white font-bold text-sm shadow-md shadow-sky-500/20 transition-transform duration-200 group-hover/logo:scale-105">
             M
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
@@ -343,7 +343,7 @@ export default function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="size-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-xs font-bold">
+                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 text-white text-xs font-bold">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>

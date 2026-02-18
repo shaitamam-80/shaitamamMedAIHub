@@ -6,9 +6,10 @@ import { Send } from 'lucide-react';
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  quickActions?: string[];
 }
 
-export default function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled = false, quickActions }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -38,30 +39,49 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
   }, [input]);
 
   return (
-    <form onSubmit={handleSubmit} className="p-4">
-      <div className="flex items-end gap-3">
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={disabled}
-            placeholder="Type a message..."
-            rows={1}
-            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ maxHeight: '200px', minHeight: '52px' }}
-          />
+    <div className="p-4 space-y-3">
+      {/* Quick action chips */}
+      {quickActions && quickActions.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          {quickActions.map((action) => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => !disabled && onSend(action)}
+              disabled={disabled}
+              className="flex-shrink-0 px-3 py-1.5 bg-secondary hover:bg-primary/10 border border-border hover:border-primary/30 rounded-full text-xs font-semibold text-muted-foreground hover:text-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {action}
+            </button>
+          ))}
         </div>
+      )}
 
-        <button
-          type="submit"
-          disabled={disabled || !input.trim()}
-          className="p-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-xl hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20"
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </div>
-    </form>
+      <form onSubmit={handleSubmit}>
+        <div className="flex items-end gap-3">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={disabled}
+              placeholder="Type a message..."
+              rows={1}
+              className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ maxHeight: '200px', minHeight: '52px' }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={disabled || !input.trim()}
+            className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-95"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

@@ -36,6 +36,33 @@ interface ChatInterfaceProps {
   stageStatus?: string;
 }
 
+// Contextual quick-action suggestions per skill/stage
+function getQuickActions(skillName: string, stage?: string): string[] {
+  const stageActions: Record<string, string[]> = {
+    idea: ['I have a research idea', 'Help me refine my topic', 'Suggest a research gap'],
+    question: ['Formulate a PICO question', 'Compare frameworks', 'Refine my question'],
+    protocol: ['Start building a protocol', 'PROSPERO registration', 'Define eligibility criteria'],
+    search: ['Build a PubMed query', 'Add MeSH terms', 'Validate my search'],
+    screening: ['Screen abstracts', 'Set inclusion criteria', 'Show screening stats'],
+    extraction: ['Extract study data', 'Choose a template', 'Calculate missing statistics'],
+    rob: ['Assess risk of bias', 'Select RoB tool', 'Generate traffic light plot'],
+    synthesis: ['Run meta-analysis', 'Assess heterogeneity', 'Create forest plot'],
+    grade: ['Start GRADE assessment', 'Generate SoF table', 'Rate certainty of evidence'],
+    manuscript: ['Write introduction', 'Generate PRISMA checklist', 'Draft methods section'],
+  };
+
+  const skillActions: Record<string, string[]> = {
+    'article-appraisal': ['Appraise an article', 'Assess methodology', 'Check for bias'],
+    'find-journal': ['Find a journal for my paper', 'Check journal quality', 'Compare impact factors'],
+    'retrospective-audit': ['Audit my review process', 'Find bottlenecks', 'Check protocol deviations'],
+    'systematic-review': ['Start a new review', 'Resume my project', 'What stage am I on?'],
+  };
+
+  if (stage && stageActions[stage]) return stageActions[stage];
+  if (skillActions[skillName]) return skillActions[skillName];
+  return ['Get started', 'What can you help with?', 'Show examples'];
+}
+
 export default function ChatInterface({
   skillName,
   projectContext,
@@ -228,6 +255,9 @@ export default function ChatInterface({
   // Check if user has sent at least one real message (beyond greeting)
   const hasUserMessages = messages.some(m => m.role === 'user');
 
+  // Quick action chips based on skill/stage
+  const quickActions = getQuickActions(skillName, projectContext?.stage);
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Backend Status Indicator */}
@@ -261,7 +291,7 @@ export default function ChatInterface({
         {isLoading && !streamingContent && (
           <div className="flex justify-start gap-3">
             <div className="flex-shrink-0 mt-1">
-              <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 shadow-md shadow-primary/15 animate-pulse" />
+              <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 shadow-md shadow-primary/15 animate-pulse" />
             </div>
             <div className="bg-card border border-border rounded-2xl px-6 py-4 shadow-sm">
               <div className="flex items-center gap-1.5">
@@ -301,7 +331,11 @@ export default function ChatInterface({
       )}
 
       <div className="border-t border-border bg-card">
-        <ChatInput onSend={sendMessage} disabled={isLoading} />
+        <ChatInput
+          onSend={sendMessage}
+          disabled={isLoading}
+          quickActions={!hasUserMessages ? quickActions : undefined}
+        />
       </div>
     </div>
   );
