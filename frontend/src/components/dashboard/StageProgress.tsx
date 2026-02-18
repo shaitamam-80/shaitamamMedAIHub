@@ -2,61 +2,79 @@
 
 import { Check } from 'lucide-react';
 import { STAGES } from '@/lib/utils/stage-config';
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface StageProgressProps {
   currentStage: string;
   completedStages: number;
 }
 
-export default function StageProgress({ currentStage, completedStages }: StageProgressProps) {
+export default function StageProgress({
+  currentStage,
+  completedStages,
+}: StageProgressProps) {
   return (
-    <div className="relative">
-      {/* Progress line */}
-      <div className="absolute top-5 right-0 left-0 h-0.5 bg-[#e2e8f0]" />
+    <TooltipProvider>
+      <div className="relative">
+        {/* Progress line */}
+        <div className="absolute top-4 right-0 left-0 h-0.5 bg-border" />
 
-      {/* Stages */}
-      <div className="relative grid grid-cols-10 gap-2">
-        {Object.values(STAGES).map((stage, index) => {
-          const isCompleted = index < completedStages;
-          const isCurrent = stage.slug === currentStage;
-          const isUpcoming = index >= completedStages && !isCurrent;
+        {/* Stages */}
+        <div className="relative grid grid-cols-10 gap-1.5">
+          {Object.values(STAGES).map((stage, index) => {
+            const isCompleted = index < completedStages;
+            const isCurrent = stage.slug === currentStage;
+            const isUpcoming = index >= completedStages && !isCurrent;
 
-          return (
-            <div key={stage.slug} className="flex flex-col items-center">
-              {/* Stage circle */}
-              <div
-                className={cn(
-                  'w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all z-10',
-                  isCompleted && 'bg-green-500 border-green-500 text-white',
-                  isCurrent && 'bg-blue-500 border-blue-500 text-white animate-pulse',
-                  isUpcoming && 'bg-[#f1f5f9] border-[#e2e8f0] text-[#94a3b8]'
-                )}
-              >
-                {isCompleted ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  <span>{stage.order}</span>
-                )}
-              </div>
+            return (
+              <Tooltip key={stage.slug}>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center">
+                    {/* Stage circle */}
+                    <div
+                      className={cn(
+                        'flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-all z-10',
+                        isCompleted && 'bg-emerald-500 border-emerald-500 text-white',
+                        isCurrent && 'bg-primary border-primary text-primary-foreground animate-pulse',
+                        isUpcoming && 'bg-muted border-border text-muted-foreground'
+                      )}
+                    >
+                      {isCompleted ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <span>{stage.order}</span>
+                      )}
+                    </div>
 
-              {/* Stage name */}
-              <div className="mt-2 text-center">
-                <div
-                  className={cn(
-                    'text-xs font-medium transition-colors line-clamp-2',
-                    isCurrent && 'text-blue-500',
-                    isCompleted && 'text-green-500',
-                    isUpcoming && 'text-[#94a3b8]'
-                  )}
-                >
-                  {stage.name.he}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                    {/* Stage name */}
+                    <div className="mt-1.5 text-center">
+                      <div
+                        className={cn(
+                          'text-[10px] font-medium transition-colors line-clamp-2 leading-tight',
+                          isCurrent && 'text-primary',
+                          isCompleted && 'text-emerald-600',
+                          isUpcoming && 'text-muted-foreground'
+                        )}
+                      >
+                        {stage.name.he}
+                      </div>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">{stage.description.he}</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
