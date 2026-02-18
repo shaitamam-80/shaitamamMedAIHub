@@ -43,20 +43,27 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Define public routes that don't need authentication
-  const publicRoutes = ['/login', '/register', '/auth/callback'];
+  const publicRoutes = ['/login', '/register', '/auth/callback', '/landing'];
   const isPublicRoute = publicRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
 
-  // If not authenticated and not on a public route, redirect to login
-  if (!user && !isPublicRoute) {
+  // If not authenticated and on root (/), redirect to landing page
+  if (!user && request.nextUrl.pathname === '/') {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = '/landing';
     return NextResponse.redirect(url);
   }
 
-  // If authenticated and on login/register page, redirect to dashboard
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register')) {
+  // If not authenticated and not on a public route, redirect to landing
+  if (!user && !isPublicRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/landing';
+    return NextResponse.redirect(url);
+  }
+
+  // If authenticated and on login/register/landing page, redirect to dashboard
+  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register' || request.nextUrl.pathname === '/landing')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

@@ -16,7 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 import ProjectCard from '@/components/dashboard/ProjectCard';
-import ToolCard from '@/components/tools/ToolCard';
+import ToolRow from '@/components/tools/ToolRow';
 import EmptyState from '@/components/shared/EmptyState';
 import { getProjects, type Project } from '@/lib/api/backend-client';
 import {
@@ -223,14 +223,15 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 stagger-in">
+        <div className="flex flex-col gap-3 stagger-in">
           {STAGE_ORDER.map((stageName, index) => {
             const stage = STAGES[stageName];
             return (
-              <ToolCard
+              <ToolRow
                 key={stage.slug}
                 tool={stage}
                 stepNumber={index + 1}
+                colorIndex={index}
                 lang={lang}
               />
             );
@@ -250,10 +251,17 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-in">
-          {STANDALONE_ORDER.map((toolName) => {
+        <div className="flex flex-col gap-3 stagger-in">
+          {STANDALONE_ORDER.map((toolName, index) => {
             const tool = STANDALONE_TOOLS[toolName];
-            return <ToolCard key={tool.slug} tool={tool} lang={lang} />;
+            return (
+              <ToolRow
+                key={tool.slug}
+                tool={tool}
+                colorIndex={index + 10}
+                lang={lang}
+              />
+            );
           })}
         </div>
       </section>
