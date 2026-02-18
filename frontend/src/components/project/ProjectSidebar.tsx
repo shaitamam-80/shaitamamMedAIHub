@@ -1,15 +1,50 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { STAGES } from '@/lib/utils/stage-config';
 import { cn } from '@/lib/utils';
-import { Check, Circle, Loader2, ArrowRight } from 'lucide-react';
+import { Check, Circle, Loader2, ArrowLeft } from 'lucide-react';
 import { getProjectStages, type ProjectStage } from '@/lib/api/backend-client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { type Language } from '@/components/layout/LanguageToggle';
+
+// ── Labels ──────────────────────────────────────────────────────────
+
+const LABELS = {
+  backToOverview: { en: 'Back to Overview', he: 'חזרה לסקירה כללית' },
+  projectStages: { en: 'Project Stages', he: 'שלבי הפרויקט' },
+  stagesDesc: {
+    en: '10 stages for systematic review',
+    he: '10 שלבים לסקירה שיטתית',
+  },
+} as const;
+
+// ── Hook: listen to language changes ──────────────────────────────
+
+function useLanguage(): Language {
+  const [lang, setLang] = React.useState<Language>('en');
+
+  React.useEffect(() => {
+    const htmlLang = document.documentElement.lang as Language;
+    if (htmlLang === 'he' || htmlLang === 'en') setLang(htmlLang);
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Language;
+      setLang(detail);
+    };
+    window.addEventListener('languagechange', handler);
+    return () => window.removeEventListener('languagechange', handler);
+  }, []);
+
+  return lang;
+}
+
+// ── Component ──────────────────────────────────────────────────────
 
 interface ProjectSidebarProps {
   projectId: string;
@@ -17,6 +52,7 @@ interface ProjectSidebarProps {
 
 export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
   const pathname = usePathname();
+  const lang = useLanguage();
   const [stageStatuses, setStageStatuses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -48,18 +84,20 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
   };
 
   return (
-    <aside className="w-72 border-s bg-background">
+    <aside className="w-72 border-e bg-background">
       <div className="p-4">
         {/* Header */}
         <Button variant="ghost" size="sm" asChild className="mb-3 -ms-2">
           <Link href={`/projects/${projectId}`}>
-            <ArrowRight className="size-4 me-1" />
-            חזרה לסקירה כללית
+            <ArrowLeft className="size-4 me-1" />
+            {LABELS.backToOverview[lang]}
           </Link>
         </Button>
-        <h2 className="text-sm font-semibold text-foreground mb-0.5">שלבי הפרויקט</h2>
+        <h2 className="text-sm font-semibold text-foreground mb-0.5">
+          {LABELS.projectStages[lang]}
+        </h2>
         <p className="text-xs text-muted-foreground mb-3">
-          10 שלבים לסקירה שיטתית
+          {LABELS.stagesDesc[lang]}
         </p>
         <Separator className="mb-3" />
       </div>
@@ -121,10 +159,10 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                       !isActive && !isCompleted && !isInProgress && 'text-foreground'
                     )}
                   >
-                    {stage.name.he}
+                    {stage.name[lang]}
                   </div>
                   <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
-                    {stage.description.he}
+                    {stage.description[lang]}
                   </div>
                 </div>
               </Link>

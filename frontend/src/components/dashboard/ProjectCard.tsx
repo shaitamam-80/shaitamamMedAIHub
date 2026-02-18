@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowRight, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { type Language } from '@/components/layout/LanguageToggle';
 
 interface Project {
   id: string;
@@ -18,9 +19,10 @@ interface Project {
 
 interface ProjectCardProps {
   project: Project;
+  lang?: Language;
 }
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+export default function ProjectCard({ project, lang = 'en' }: ProjectCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -28,12 +30,22 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       (now.getTime() - date.getTime()) / (1000 * 60 * 60)
     );
 
-    if (diffInHours < 1) return 'לפני פחות משעה';
-    if (diffInHours < 24) return `לפני ${diffInHours} שעות`;
+    if (lang === 'he') {
+      if (diffInHours < 1) return 'לפני פחות משעה';
+      if (diffInHours < 24) return `לפני ${diffInHours} שעות`;
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays === 1) return 'אתמול';
+      if (diffInDays < 7) return `לפני ${diffInDays} ימים`;
+      return date.toLocaleDateString('he-IL');
+    }
+
+    // English
+    if (diffInHours < 1) return 'Less than an hour ago';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays === 1) return 'אתמול';
-    if (diffInDays < 7) return `לפני ${diffInDays} ימים`;
-    return date.toLocaleDateString('he-IL');
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    return date.toLocaleDateString('en-US');
   };
 
   return (
@@ -58,7 +70,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {/* Progress */}
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground text-xs">התקדמות</span>
+              <span className="text-muted-foreground text-xs">
+                {lang === 'en' ? 'Progress' : 'התקדמות'}
+              </span>
               <span className="text-foreground text-xs font-medium">
                 {project.progress}%
               </span>
@@ -69,7 +83,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {/* Current Stage */}
           <div className="mb-3">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
-              שלב נוכחי
+              {lang === 'en' ? 'Current Stage' : 'שלב נוכחי'}
             </div>
             <div className="text-sm text-foreground font-medium">
               {project.currentStage}
@@ -83,8 +97,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
               <span>{formatDate(project.lastUpdated)}</span>
             </div>
             <div className="flex items-center gap-1 text-primary text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-              <span>פתח</span>
-              <ArrowLeft className="size-3" />
+              <span>{lang === 'en' ? 'Open' : 'פתח'}</span>
+              <ArrowRight className="size-3" />
             </div>
           </div>
         </CardContent>

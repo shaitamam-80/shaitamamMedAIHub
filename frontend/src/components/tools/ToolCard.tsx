@@ -16,12 +16,13 @@ import {
   BookOpen,
   ClipboardCheck,
   Workflow,
-  ArrowLeft,
+  ArrowRight,
   type LucideIcon,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type ToolConfig } from '@/lib/utils/stage-config';
+import { type Language } from '@/components/layout/LanguageToggle';
 
 // ── Icon Map ───────────────────────────────────────────────────────
 
@@ -52,9 +53,11 @@ interface ToolCardProps {
   tool: ToolConfig;
   /** Optional step number for pipeline tools (1-based) */
   stepNumber?: number;
+  /** Current language (defaults to 'en') */
+  lang?: Language;
 }
 
-export default function ToolCard({ tool, stepNumber }: ToolCardProps) {
+export default function ToolCard({ tool, stepNumber, lang = 'en' }: ToolCardProps) {
   const Icon = getIcon(tool.icon);
 
   return (
@@ -75,18 +78,18 @@ export default function ToolCard({ tool, stepNumber }: ToolCardProps) {
 
           {/* Name */}
           <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-            {tool.name.he}
+            {tool.name[lang]}
           </h3>
 
           {/* Description */}
           <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
-            {tool.description.he}
+            {tool.description[lang]}
           </p>
 
           {/* Open link indicator */}
           <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
-            <span>פתח כלי</span>
-            <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-1" />
+            <span>{lang === 'en' ? 'Open tool' : 'פתח כלי'}</span>
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
           </div>
         </CardContent>
       </Card>

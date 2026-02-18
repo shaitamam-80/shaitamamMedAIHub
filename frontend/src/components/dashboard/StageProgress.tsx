@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Check } from 'lucide-react';
 import { STAGES } from '@/lib/utils/stage-config';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { type Language } from '@/components/layout/LanguageToggle';
+
+// ── Hook: listen to language changes ──────────────────────────────
+
+function useLanguage(): Language {
+  const [lang, setLang] = React.useState<Language>('en');
+
+  React.useEffect(() => {
+    const htmlLang = document.documentElement.lang as Language;
+    if (htmlLang === 'he' || htmlLang === 'en') setLang(htmlLang);
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Language;
+      setLang(detail);
+    };
+    window.addEventListener('languagechange', handler);
+    return () => window.removeEventListener('languagechange', handler);
+  }, []);
+
+  return lang;
+}
+
+// ── Component ──────────────────────────────────────────────────────
 
 interface StageProgressProps {
   currentStage: string;
@@ -19,6 +43,8 @@ export default function StageProgress({
   currentStage,
   completedStages,
 }: StageProgressProps) {
+  const lang = useLanguage();
+
   return (
     <TooltipProvider>
       <div className="relative">
@@ -62,13 +88,13 @@ export default function StageProgress({
                           isUpcoming && 'text-muted-foreground'
                         )}
                       >
-                        {stage.name.he}
+                        {stage.name[lang]}
                       </div>
                     </div>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">{stage.description.he}</p>
+                  <p className="text-xs">{stage.description[lang]}</p>
                 </TooltipContent>
               </Tooltip>
             );

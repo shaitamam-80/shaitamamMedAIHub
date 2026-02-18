@@ -22,7 +22,7 @@ import {
   Home,
   Settings,
   LogOut,
-  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   type LucideIcon,
 } from 'lucide-react';
@@ -62,6 +62,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { type Language } from './LanguageToggle';
 
 // ── Icon Map ───────────────────────────────────────────────────────
 
@@ -86,16 +87,39 @@ function getIcon(name: string): LucideIcon {
   return ICON_MAP[name] || FileText;
 }
 
+// ── Hook: listen to language changes ──────────────────────────────
+
+function useLanguage(): Language {
+  const [lang, setLang] = React.useState<Language>('en');
+
+  React.useEffect(() => {
+    // Sync with current <html> lang on mount
+    const htmlLang = document.documentElement.lang as Language;
+    if (htmlLang === 'he' || htmlLang === 'en') setLang(htmlLang);
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Language;
+      setLang(detail);
+    };
+    window.addEventListener('languagechange', handler);
+    return () => window.removeEventListener('languagechange', handler);
+  }, []);
+
+  return lang;
+}
+
 // ── Sidebar Tool Item ──────────────────────────────────────────────
 
 function ToolMenuItem({
   tool,
   href,
   isActive,
+  lang,
 }: {
   tool: ToolConfig;
   href: string;
   isActive: boolean;
+  lang: Language;
 }) {
   const Icon = getIcon(tool.icon);
 
@@ -104,12 +128,24 @@ function ToolMenuItem({
       <SidebarMenuButton asChild isActive={isActive} tooltip={tool.name.en}>
         <Link href={href}>
           <Icon className="size-4" />
-          <span>{tool.name.he}</span>
+          <span>{tool.name[lang]}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
 }
+
+// ── Labels ──────────────────────────────────────────────────────────
+
+const LABELS = {
+  dashboard: { en: 'Dashboard', he: 'לוח בקרה' },
+  myProjects: { en: 'My Projects', he: 'הפרויקטים שלי' },
+  pipelineTools: { en: 'Pipeline Tools', he: 'כלי Pipeline' },
+  standaloneTools: { en: 'Standalone Tools', he: 'כלים עצמאיים' },
+  settings: { en: 'Settings', he: 'הגדרות' },
+  logout: { en: 'Log out', he: 'התנתקות' },
+  user: { en: 'User', he: 'משתמש' },
+} as const;
 
 // ── Main AppSidebar Component ──────────────────────────────────────
 
@@ -117,6 +153,7 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useSidebar();
+  const lang = useLanguage();
   const [user, setUser] = React.useState<{ email?: string; fullName?: string } | null>(null);
   const [pipelineOpen, setPipelineOpen] = React.useState(true);
   const [standaloneOpen, setStandaloneOpen] = React.useState(true);
@@ -163,7 +200,7 @@ export default function AppSidebar() {
   };
 
   return (
-    <Sidebar side="right" variant="sidebar" collapsible="icon">
+    <Sidebar side="left" variant="sidebar" collapsible="icon">
       {/* ── Header / Logo ── */}
       <SidebarHeader className="p-4">
         <Link href="/" className="flex items-center gap-3 px-2">
@@ -192,7 +229,7 @@ export default function AppSidebar() {
               <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Dashboard">
                 <Link href="/">
                   <Home className="size-4" />
-                  <span>לוח בקרה</span>
+                  <span>{LABELS.dashboard[lang]}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -204,7 +241,7 @@ export default function AppSidebar() {
               >
                 <Link href="/projects">
                   <FolderOpen className="size-4" />
-                  <span>הפרויקטים שלי</span>
+                  <span>{LABELS.myProjects[lang]}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -213,13 +250,13 @@ export default function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* Pipeline Tools (9) */}
+        {/* Pipeline Tools (10) */}
         <Collapsible open={pipelineOpen} onOpenChange={setPipelineOpen} className="group/collapsible">
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between">
-                <span>כלי Pipeline</span>
-                <ChevronLeft className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-[-90deg]" />
+                <span>{LABELS.pipelineTools[lang]}</span>
+                <ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -234,6 +271,7 @@ export default function AppSidebar() {
                         tool={stage}
                         href={href}
                         isActive={isActive(href)}
+                        lang={lang}
                       />
                     );
                   })}
@@ -250,8 +288,8 @@ export default function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between">
-                <span>כלים עצמאיים</span>
-                <ChevronLeft className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-[-90deg]" />
+                <span>{LABELS.standaloneTools[lang]}</span>
+                <ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -266,6 +304,7 @@ export default function AppSidebar() {
                         tool={tool}
                         href={href}
                         isActive={isActive(href)}
+                        lang={lang}
                       />
                     );
                   })}
@@ -287,7 +326,7 @@ export default function AppSidebar() {
             >
               <Link href="/settings">
                 <Settings className="size-4" />
-                <span>הגדרות</span>
+                <span>{LABELS.settings[lang]}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -310,7 +349,7 @@ export default function AppSidebar() {
                   </Avatar>
                   <div className="grid flex-1 text-start text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {user?.fullName || 'משתמש'}
+                      {user?.fullName || LABELS.user[lang]}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
                       {user?.email || ''}
@@ -328,13 +367,13 @@ export default function AppSidebar() {
                 <DropdownMenuItem asChild>
                   <Link href="/settings" className="cursor-pointer">
                     <Settings className="size-4" />
-                    <span>הגדרות</span>
+                    <span>{LABELS.settings[lang]}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
                   <LogOut className="size-4" />
-                  <span>התנתקות</span>
+                  <span>{LABELS.logout[lang]}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
@@ -9,7 +10,7 @@ import {
   FileText,
   TrendingUp,
   Loader2,
-  ArrowLeft,
+  ArrowRight,
   FolderOpen,
 } from 'lucide-react';
 import ProjectCard from '@/components/dashboard/ProjectCard';
@@ -25,8 +26,77 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { type Language } from '@/components/layout/LanguageToggle';
+
+// ── Labels ──────────────────────────────────────────────────────────
+
+const LABELS = {
+  dashboard: { en: 'Dashboard', he: 'לוח בקרה' },
+  welcome: {
+    en: 'Welcome to MedAI Hub — AI platform for systematic reviews',
+    he: 'ברוך הבא ל-MedAI Hub — פלטפורמת AI לסקירות שיטתיות',
+  },
+  activeProjects: { en: 'Active Projects', he: 'פרויקטים פעילים' },
+  totalProjects: { en: 'Total Projects', he: 'סה"כ פרויקטים' },
+  status: { en: 'Status', he: 'סטטוס' },
+  statusActive: { en: 'Active', he: 'פעיל' },
+  statusNew: { en: 'New', he: 'חדש' },
+  avgProgress: { en: 'Average Progress', he: 'התקדמות ממוצעת' },
+  pipelineTools: { en: 'Pipeline Tools', he: 'כלי Pipeline' },
+  pipelineDesc: {
+    en: '10 stages from Idea to Manuscript — the full systematic review pipeline',
+    he: '10 שלבים מ-Idea עד Manuscript — הצנרת המלאה של סקירה שיטתית',
+  },
+  standaloneTools: { en: 'Standalone Tools', he: 'כלים עצמאיים' },
+  standaloneDesc: {
+    en: 'Tools that can be used independently, outside of any project',
+    he: 'כלים שניתן להשתמש בהם באופן עצמאי, ללא קשר לפרויקט',
+  },
+  myProjects: { en: 'My Projects', he: 'הפרויקטים שלי' },
+  projectCount: { en: 'projects', he: 'פרויקטים' },
+  createFirst: {
+    en: 'Create your first project',
+    he: 'צור את הפרויקט הראשון שלך',
+  },
+  allProjects: { en: 'All Projects', he: 'כל הפרויקטים' },
+  newProject: { en: 'New Project', he: 'פרויקט חדש' },
+  loadingProjects: { en: 'Loading projects...', he: 'טוען פרויקטים...' },
+  loadError: {
+    en: 'Error loading projects',
+    he: 'שגיאה בטעינת הפרויקטים',
+  },
+  retry: { en: 'Try again', he: 'נסה שוב' },
+  noProjectsTitle: { en: 'No projects yet', he: 'אין פרויקטים עדיין' },
+  noProjectsDesc: {
+    en: 'Create your first project to start a systematic review',
+    he: 'צור את הפרויקט הראשון שלך כדי להתחיל סקירה שיטתית',
+  },
+} as const;
+
+// ── Hook: listen to language changes ──────────────────────────────
+
+function useLanguage(): Language {
+  const [lang, setLang] = React.useState<Language>('en');
+
+  React.useEffect(() => {
+    const htmlLang = document.documentElement.lang as Language;
+    if (htmlLang === 'he' || htmlLang === 'en') setLang(htmlLang);
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Language;
+      setLang(detail);
+    };
+    window.addEventListener('languagechange', handler);
+    return () => window.removeEventListener('languagechange', handler);
+  }, []);
+
+  return lang;
+}
+
+// ── Page Component ─────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const lang = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +106,7 @@ export default function DashboardPage() {
       .then(setProjects)
       .catch((err) => {
         console.error('Failed to load projects:', err);
-        setError('שגיאה בטעינת הפרויקטים');
+        setError(LABELS.loadError.en);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -56,28 +126,32 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      label: 'פרויקטים פעילים',
+      label: LABELS.activeProjects[lang],
       value: String(activeProjects),
       icon: FileText,
       color: 'text-blue-600',
       bgColor: 'bg-blue-600/10',
     },
     {
-      label: 'סה"כ פרויקטים',
+      label: LABELS.totalProjects[lang],
       value: String(projects.length),
       icon: CheckCircle,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-600/10',
     },
     {
-      label: 'סטטוס',
-      value: loading ? '...' : hasProjects ? 'פעיל' : 'חדש',
+      label: LABELS.status[lang],
+      value: loading
+        ? '...'
+        : hasProjects
+          ? LABELS.statusActive[lang]
+          : LABELS.statusNew[lang],
       icon: Clock,
       color: 'text-amber-600',
       bgColor: 'bg-amber-600/10',
     },
     {
-      label: 'התקדמות ממוצעת',
+      label: LABELS.avgProgress[lang],
       value: `${avgProgress}%`,
       icon: TrendingUp,
       color: 'text-cyan-600',
@@ -89,10 +163,10 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto space-y-8">
       {/* ── Hero ── */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground mb-1">לוח בקרה</h1>
-        <p className="text-muted-foreground">
-          ברוך הבא ל-MedAI Hub — פלטפורמת AI לסקירות שיטתיות
-        </p>
+        <h1 className="text-2xl font-bold text-foreground mb-1">
+          {LABELS.dashboard[lang]}
+        </h1>
+        <p className="text-muted-foreground">{LABELS.welcome[lang]}</p>
       </div>
 
       {/* ── Stats Grid ── */}
@@ -103,12 +177,18 @@ export default function DashboardPage() {
             <Card key={index}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`flex size-9 items-center justify-center rounded-lg ${stat.bgColor}`}>
+                  <div
+                    className={`flex size-9 items-center justify-center rounded-lg ${stat.bgColor}`}
+                  >
                     <Icon className={`size-4 ${stat.color}`} />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {stat.value}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {stat.label}
+                </div>
               </CardContent>
             </Card>
           );
@@ -119,9 +199,11 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">כלי Pipeline</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {LABELS.pipelineTools[lang]}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              10 שלבים מ-Idea עד Manuscript — הצנרת המלאה של סקירה שיטתית
+              {LABELS.pipelineDesc[lang]}
             </p>
           </div>
         </div>
@@ -133,6 +215,7 @@ export default function DashboardPage() {
                 key={stage.slug}
                 tool={stage}
                 stepNumber={index + 1}
+                lang={lang}
               />
             );
           })}
@@ -143,16 +226,18 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">כלים עצמאיים</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {LABELS.standaloneTools[lang]}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              כלים שניתן להשתמש בהם באופן עצמאי, ללא קשר לפרויקט
+              {LABELS.standaloneDesc[lang]}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {STANDALONE_ORDER.map((toolName) => {
             const tool = STANDALONE_TOOLS[toolName];
-            return <ToolCard key={tool.slug} tool={tool} />;
+            return <ToolCard key={tool.slug} tool={tool} lang={lang} />;
           })}
         </div>
       </section>
@@ -163,26 +248,28 @@ export default function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">הפרויקטים שלי</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {LABELS.myProjects[lang]}
+            </h2>
             <p className="text-sm text-muted-foreground">
               {hasProjects
-                ? `${projects.length} פרויקטים`
-                : 'צור את הפרויקט הראשון שלך'}
+                ? `${projects.length} ${LABELS.projectCount[lang]}`
+                : LABELS.createFirst[lang]}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {hasProjects && (
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/projects">
-                  <span>כל הפרויקטים</span>
-                  <ArrowLeft className="size-4 ms-1" />
+                  <span>{LABELS.allProjects[lang]}</span>
+                  <ArrowRight className="size-4 ms-1" />
                 </Link>
               </Button>
             )}
             <Button size="sm" asChild>
               <Link href="/projects/new">
                 <Plus className="size-4 me-1" />
-                <span>פרויקט חדש</span>
+                <span>{LABELS.newProject[lang]}</span>
               </Link>
             </Button>
           </div>
@@ -192,7 +279,9 @@ export default function DashboardPage() {
         {loading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 text-primary animate-spin" />
-            <span className="mr-3 text-muted-foreground text-sm">טוען פרויקטים...</span>
+            <span className="ml-3 text-muted-foreground text-sm">
+              {LABELS.loadingProjects[lang]}
+            </span>
           </div>
         )}
 
@@ -200,7 +289,7 @@ export default function DashboardPage() {
         {error && !loading && (
           <Card className="border-destructive/50">
             <CardContent className="p-6 text-center">
-              <p className="text-destructive text-sm">{error}</p>
+              <p className="text-destructive text-sm">{LABELS.loadError[lang]}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -210,19 +299,20 @@ export default function DashboardPage() {
                   setLoading(true);
                   getProjects()
                     .then(setProjects)
-                    .catch(() => setError('שגיאה בטעינת הפרויקטים'))
+                    .catch(() => setError(LABELS.loadError[lang]))
                     .finally(() => setLoading(false));
                 }}
               >
-                נסה שוב
+                {LABELS.retry[lang]}
               </Button>
             </CardContent>
           </Card>
         )}
 
         {/* Project Cards or Empty State */}
-        {!loading && !error && (
-          hasProjects ? (
+        {!loading &&
+          !error &&
+          (hasProjects ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {recentProjects.map((project) => (
                 <ProjectCard
@@ -236,19 +326,19 @@ export default function DashboardPage() {
                     currentStage: project.current_stage,
                     lastUpdated: project.updated_at,
                   }}
+                  lang={lang}
                 />
               ))}
             </div>
           ) : (
             <EmptyState
               icon={FolderOpen}
-              title="אין פרויקטים עדיין"
-              description="צור את הפרויקט הראשון שלך כדי להתחיל סקירה שיטתית"
-              actionLabel="פרויקט חדש"
+              title={LABELS.noProjectsTitle[lang]}
+              description={LABELS.noProjectsDesc[lang]}
+              actionLabel={LABELS.newProject[lang]}
               actionHref="/projects/new"
             />
-          )
-        )}
+          ))}
       </section>
     </div>
   );

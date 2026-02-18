@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import {
   Lightbulb,
   HelpCircle,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { type ToolConfig } from '@/lib/utils/stage-config';
+import { type Language } from '@/components/layout/LanguageToggle';
 
 // ── Icon Map ───────────────────────────────────────────────────────
 
@@ -56,6 +58,26 @@ const CATEGORY_CONFIG = {
   },
 };
 
+// ── Hook: listen to language changes ──────────────────────────────
+
+function useLanguage(): Language {
+  const [lang, setLang] = React.useState<Language>('en');
+
+  React.useEffect(() => {
+    const htmlLang = document.documentElement.lang as Language;
+    if (htmlLang === 'he' || htmlLang === 'en') setLang(htmlLang);
+
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Language;
+      setLang(detail);
+    };
+    window.addEventListener('languagechange', handler);
+    return () => window.removeEventListener('languagechange', handler);
+  }, []);
+
+  return lang;
+}
+
 // ── Component ──────────────────────────────────────────────────────
 
 interface ToolPageHeaderProps {
@@ -65,6 +87,7 @@ interface ToolPageHeaderProps {
 }
 
 export default function ToolPageHeader({ tool, stepNumber }: ToolPageHeaderProps) {
+  const lang = useLanguage();
   const Icon = getIcon(tool.icon);
   const categoryConfig = CATEGORY_CONFIG[tool.category];
 
@@ -79,13 +102,17 @@ export default function ToolPageHeader({ tool, stepNumber }: ToolPageHeaderProps
         {/* Text Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-xl font-bold text-foreground">{tool.name.he}</h1>
+            <h1 className="text-xl font-bold text-foreground">{tool.name[lang]}</h1>
             <Badge variant={categoryConfig.variant} className="text-[10px]">
-              {stepNumber ? `שלב ${stepNumber}` : categoryConfig.label.he}
+              {stepNumber
+                ? lang === 'en'
+                  ? `Step ${stepNumber}`
+                  : `שלב ${stepNumber}`
+                : categoryConfig.label[lang]}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
-            {tool.longDescription.he}
+            {tool.longDescription[lang]}
           </p>
         </div>
       </div>

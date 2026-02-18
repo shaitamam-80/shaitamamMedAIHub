@@ -17,7 +17,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     institution: '',
-    language: 'he',
+    language: 'en',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function RegisterPage() {
     setError(null);
 
     if (formData.password.length < 8) {
-      setError('הסיסמה חייבת להכיל לפחות 8 תווים');
+      setError('Password must be at least 8 characters');
       setIsLoading(false);
       return;
     }
@@ -51,7 +51,7 @@ export default function RegisterPage() {
 
     if (error) {
       if (error.message.includes('already registered')) {
-        setError('כתובת האימייל הזו כבר רשומה. נסה להתחבר.');
+        setError('This email is already registered. Try signing in.');
       } else {
         setError(error.message);
       }
@@ -80,16 +80,16 @@ export default function RegisterPage() {
             <CheckCircle className="size-8 text-emerald-600" />
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            ההרשמה הושלמה!
+            Registration Complete!
           </h2>
           <p className="text-muted-foreground text-sm mb-6">
-            שלחנו אליך אימייל אימות לכתובת{' '}
+            We&apos;ve sent a verification email to{' '}
             <span className="text-primary font-medium">{formData.email}</span>
             <br />
-            אנא אשר את האימייל כדי להמשיך.
+            Please confirm your email to continue.
           </p>
           <Button asChild>
-            <Link href="/login">עבור להתחברות</Link>
+            <Link href="/login">Go to Sign In</Link>
           </Button>
         </CardContent>
       </Card>
@@ -104,7 +104,7 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
             MedAI Hub
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">צור חשבון חדש</p>
+          <p className="text-muted-foreground mt-2 text-sm">Create a new account</p>
         </div>
 
         {/* Error */}
@@ -118,7 +118,7 @@ export default function RegisterPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">שם מלא</Label>
+            <Label htmlFor="fullName">Full Name</Label>
             <Input
               id="fullName"
               name="fullName"
@@ -126,12 +126,12 @@ export default function RegisterPage() {
               value={formData.fullName}
               onChange={handleChange}
               required
-              placeholder="ישראל ישראלי"
+              placeholder="John Doe"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">אימייל</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               name="email"
@@ -144,7 +144,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">סיסמה</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               name="password"
@@ -155,23 +155,23 @@ export default function RegisterPage() {
               minLength={8}
               placeholder="••••••••"
             />
-            <p className="text-xs text-muted-foreground">לפחות 8 תווים</p>
+            <p className="text-xs text-muted-foreground">At least 8 characters</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="institution">מוסד אקדמי (אופציונלי)</Label>
+            <Label htmlFor="institution">Academic Institution (optional)</Label>
             <Input
               id="institution"
               name="institution"
               type="text"
               value={formData.institution}
               onChange={handleChange}
-              placeholder="אוניברסיטה עברית"
+              placeholder="Your university"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="language">שפה מועדפת</Label>
+            <Label htmlFor="language">Preferred Language</Label>
             <select
               id="language"
               name="language"
@@ -179,8 +179,8 @@ export default function RegisterPage() {
               onChange={handleChange}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
-              <option value="he">עברית</option>
               <option value="en">English</option>
+              <option value="he">עברית</option>
             </select>
           </div>
 
@@ -190,7 +190,7 @@ export default function RegisterPage() {
             ) : (
               <>
                 <UserPlus className="size-4 me-2" />
-                הרשמה
+                Sign Up
               </>
             )}
           </Button>
@@ -199,12 +199,12 @@ export default function RegisterPage() {
 
       <CardFooter className="justify-center pb-6">
         <p className="text-muted-foreground text-sm">
-          יש לך כבר חשבון?{' '}
+          Already have an account?{' '}
           <Link
             href="/login"
             className="text-primary hover:underline font-medium"
           >
-            התחברות
+            Sign In
           </Link>
         </p>
       </CardFooter>

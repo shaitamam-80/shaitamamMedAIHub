@@ -19,7 +19,7 @@ export default async function DashboardLayout({
         <div className="flex-1 overflow-auto p-6">{children}</div>
       </SidebarInset>
 
-      {/* Sidebar (right side in RTL) */}
+      {/* Sidebar (left side in LTR) */}
       <AppSidebar />
     </SidebarProvider>
   );

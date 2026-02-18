@@ -20,7 +20,7 @@ function LoginForm() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'auth_callback_error'
-      ? 'שגיאה בהתחברות. נסה שנית.'
+      ? 'Authentication error. Please try again.'
       : null
   );
 
@@ -39,7 +39,7 @@ function LoginForm() {
     if (error) {
       setError(
         error.message === 'Invalid login credentials'
-          ? 'אימייל או סיסמה שגויים'
+          ? 'Invalid email or password'
           : error.message
       );
       setIsLoading(false);
@@ -76,7 +76,7 @@ function LoginForm() {
       }
     } catch (err) {
       console.error('Google OAuth unexpected error:', err);
-      setError('שגיאה בהתחברות עם Google. נסה שנית.');
+      setError('Error signing in with Google. Please try again.');
       setIsGoogleLoading(false);
     }
   };
@@ -89,7 +89,7 @@ function LoginForm() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
             MedAI Hub
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">ברוכים הבאים חזרה</p>
+          <p className="text-muted-foreground mt-2 text-sm">Welcome back</p>
         </div>
 
         {/* Error */}
@@ -103,7 +103,7 @@ function LoginForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">אימייל</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
@@ -115,7 +115,7 @@ function LoginForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">סיסמה</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
@@ -132,7 +132,7 @@ function LoginForm() {
             ) : (
               <>
                 <LogIn className="size-4 me-2" />
-                התחברות
+                Sign In
               </>
             )}
           </Button>
@@ -142,7 +142,7 @@ function LoginForm() {
         <div className="relative my-6">
           <Separator />
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="px-2 bg-card text-muted-foreground text-xs">או</span>
+            <span className="px-2 bg-card text-muted-foreground text-xs">or</span>
           </div>
         </div>
 
@@ -175,18 +175,18 @@ function LoginForm() {
               />
             </svg>
           )}
-          התחברות עם Google
+          Sign in with Google
         </Button>
       </CardContent>
 
       <CardFooter className="justify-center pb-6">
         <p className="text-muted-foreground text-sm">
-          אין לך חשבון?{' '}
+          Don&apos;t have an account?{' '}
           <Link
             href="/register"
             className="text-primary hover:underline font-medium"
           >
-            הרשמה
+            Sign up
           </Link>
         </p>
       </CardFooter>

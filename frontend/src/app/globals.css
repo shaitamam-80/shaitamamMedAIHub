@@ -133,16 +133,16 @@ html {
   scroll-behavior: smooth;
 }
 
-/* RTL: Heebo for Hebrew, Inter for English */
+/* Default LTR: Inter for English; RTL: Heebo for Hebrew */
 body {
-  font-family: var(--font-heebo);
+  font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
 }
 
-[dir="ltr"] body {
-  font-family: var(--font-inter);
+[dir="rtl"] body {
+  font-family: var(--font-heebo);
 }
 
 /* ===== Academic Typography ===== */

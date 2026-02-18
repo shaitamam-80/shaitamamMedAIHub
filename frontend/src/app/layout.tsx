@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable}`}>
+    <html lang="en" dir="ltr" className={`${heebo.variable} ${inter.variable}`}>
       <body className="antialiased min-h-screen">
         {children}
       </body>
