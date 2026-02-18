@@ -188,17 +188,19 @@ export default function DashboardPage() {
               key={index}
               className={`card-glow border ${stat.borderColor} overflow-hidden`}
             >
-              <CardContent className={`p-5 bg-gradient-to-br ${stat.gradient}`}>
-                <div className="flex items-center justify-between mb-3">
+              <CardContent className={`p-5 bg-gradient-to-br ${stat.gradient} flex flex-col min-h-[130px]`}>
+                <div className="flex items-center justify-between mb-auto">
                   <div className="flex size-10 items-center justify-center rounded-xl bg-white/80 shadow-sm">
                     <Icon className={`size-5 ${stat.iconColor}`} />
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-foreground tracking-tight">
-                  {stat.value}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 font-medium">
-                  {stat.label}
+                <div className="mt-3">
+                  <div className="text-2xl font-bold text-foreground tracking-tight leading-none">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1.5 font-medium">
+                    {stat.label}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -281,7 +283,7 @@ export default function DashboardPage() {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/projects">
                   <span>{LABELS.allProjects[lang]}</span>
-                  <ArrowRight className="size-3.5 ms-1" />
+                  <ArrowRight className="size-3.5 ms-1 rtl:-scale-x-100" />
                 </Link>
               </Button>
             )}

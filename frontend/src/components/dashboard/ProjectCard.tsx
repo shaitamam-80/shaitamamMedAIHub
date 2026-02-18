@@ -98,7 +98,7 @@ export default function ProjectCard({ project, lang = 'en' }: ProjectCardProps) 
             </div>
             <div className="flex items-center gap-1 text-primary text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
               <span>{lang === 'en' ? 'Open' : 'פתח'}</span>
-              <ArrowRight className="size-3" />
+              <ArrowRight className="size-3 rtl:-scale-x-100" />
             </div>
           </div>
         </CardContent>

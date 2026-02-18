@@ -63,10 +63,10 @@ export default function ToolCard({ tool, stepNumber, lang = 'en' }: ToolCardProp
     <Link href={`/tools/${tool.slug}`}>
       <Card className="group h-full card-glow gradient-border cursor-pointer relative overflow-hidden transition-all duration-300 hover:-translate-y-1">
         <CardContent className="p-5 relative">
-          {/* Step indicator — top-left accent line */}
+          {/* Step indicator — top accent line (start side) */}
           {stepNumber && (
             <div
-              className="absolute top-0 left-0 h-1 bg-gradient-to-r from-primary/60 to-primary/10 transition-all duration-300 group-hover:from-primary group-hover:to-primary/30"
+              className="absolute top-0 inset-inline-start-0 h-1 bg-gradient-to-r from-primary/60 to-primary/10 transition-all duration-300 group-hover:from-primary group-hover:to-primary/30"
               style={{ width: `${stepNumber * 10}%` }}
             />
           )}
@@ -96,7 +96,7 @@ export default function ToolCard({ tool, stepNumber, lang = 'en' }: ToolCardProp
           {/* Open link indicator */}
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50 group-hover:text-primary/70 transition-all duration-200">
             <span>{lang === 'en' ? 'Open' : 'פתח'}</span>
-            <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-1" />
+            <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5 rtl:-scale-x-100" />
           </div>
         </CardContent>
       </Card>
