@@ -188,6 +188,8 @@ h1, h2, h3, h4 {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    padding-inline: 0.05em;
+    margin-inline: -0.05em;
   }
 
   .gradient-text-2 {
