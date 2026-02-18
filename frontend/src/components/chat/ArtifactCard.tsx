@@ -44,22 +44,22 @@ export default function ArtifactCard({ artifact }: ArtifactCardProps) {
   };
 
   return (
-    <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-lg p-4 flex items-center justify-between hover:border-blue-500/50 transition-all">
+    <div className="bg-card border border-border shadow-sm rounded-lg p-4 flex items-center justify-between hover:border-primary/40 card-glow transition-all">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-500/10 rounded-lg">
-          <FileText className="w-5 h-5 text-blue-500" />
+        <div className="p-2 bg-primary/10 rounded-lg">
+          <FileText className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <div className="text-[#0f172a] font-medium text-sm">{artifact.name}</div>
-          <div className="text-[#94a3b8] text-xs">{artifact.type.toUpperCase()} File</div>
+          <div className="text-foreground font-medium text-sm">{artifact.name}</div>
+          <div className="text-muted-foreground text-xs">{artifact.type.toUpperCase()} File</div>
         </div>
       </div>
       <button
         onClick={handleDownload}
-        className="p-2 hover:bg-[#f8fafc] rounded-lg transition-colors"
-        title="הורדה"
+        className="p-2 hover:bg-muted rounded-lg transition-colors"
+        title="Download"
       >
-        <Download className="w-4 h-4 text-[#475569]" />
+        <Download className="w-4 h-4 text-muted-foreground" />
       </button>
     </div>
   );

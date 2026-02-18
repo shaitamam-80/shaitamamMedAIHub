@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Bot } from 'lucide-react';
 import ArtifactCard from './ArtifactCard';
 import {
   ExtractionTable,
@@ -140,38 +141,38 @@ function DataBlockRenderer({ block }: { block: DataBlock }) {
 }
 
 const markdownComponents = {
-  p: ({ children }: any) => <p className="text-[#0f172a] mb-3 last:mb-0">{children}</p>,
+  p: ({ children }: any) => <p className="text-foreground mb-3 last:mb-0">{children}</p>,
   ul: ({ children }: any) => (
-    <ul className="text-[#0f172a] list-disc list-inside mb-3 space-y-1">{children}</ul>
+    <ul className="text-foreground list-disc list-inside mb-3 space-y-1">{children}</ul>
   ),
   ol: ({ children }: any) => (
-    <ol className="text-[#0f172a] list-decimal list-inside mb-3 space-y-1">{children}</ol>
+    <ol className="text-foreground list-decimal list-inside mb-3 space-y-1">{children}</ol>
   ),
-  li: ({ children }: any) => <li className="text-[#0f172a]">{children}</li>,
+  li: ({ children }: any) => <li className="text-foreground">{children}</li>,
   code: ({ inline, children }: any) =>
     inline ? (
-      <code className="bg-[#f1f5f9] px-1.5 py-0.5 rounded text-blue-600 text-sm">{children}</code>
+      <code className="bg-primary/8 px-1.5 py-0.5 rounded text-primary text-sm font-mono">{children}</code>
     ) : (
-      <code className="block bg-[#f1f5f9] p-3 rounded-lg text-blue-600 text-sm overflow-x-auto">
+      <code className="block bg-muted p-3 rounded-lg text-primary text-sm overflow-x-auto font-mono">
         {children}
       </code>
     ),
   h1: ({ children }: any) => (
-    <h1 className="text-2xl font-bold text-[#0f172a] mb-3">{children}</h1>
+    <h1 className="text-2xl font-bold text-foreground mb-3">{children}</h1>
   ),
   h2: ({ children }: any) => (
-    <h2 className="text-xl font-bold text-[#0f172a] mb-3">{children}</h2>
+    <h2 className="text-xl font-bold text-foreground mb-3">{children}</h2>
   ),
   h3: ({ children }: any) => (
-    <h3 className="text-lg font-semibold text-[#0f172a] mb-2">{children}</h3>
+    <h3 className="text-lg font-semibold text-foreground mb-2">{children}</h3>
   ),
   strong: ({ children }: any) => (
-    <strong className="font-semibold text-blue-600">{children}</strong>
+    <strong className="font-semibold text-primary">{children}</strong>
   ),
   a: ({ href, children }: any) => (
     <a
       href={href}
-      className="text-blue-500 hover:text-blue-400 underline"
+      className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-primary/30 hover:decoration-primary/60 transition-colors"
       target="_blank"
       rel="noopener noreferrer"
     >
@@ -190,17 +191,24 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-2xl px-6 py-4">
-          <p className="text-[#0f172a] whitespace-pre-wrap">{message.content}</p>
+        <div className="max-w-[80%] bg-gradient-to-br from-primary/12 to-blue-500/8 border border-primary/20 rounded-2xl px-6 py-4 shadow-sm">
+          <p className="text-foreground whitespace-pre-wrap">{message.content}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-start gap-3">
+      {/* AI avatar */}
+      <div className="flex-shrink-0 mt-1">
+        <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 shadow-md shadow-primary/15">
+          <Bot className="size-4 text-white" />
+        </div>
+      </div>
+
       <div className="max-w-[85%]">
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl px-6 py-4 shadow-sm">
+        <div className="bg-card border border-border rounded-2xl px-6 py-4 shadow-sm">
           <div className="prose prose-sm max-w-none">
             {hasDataBlocks ? (
               contentBlocks.map((segment, idx) => {

@@ -2,6 +2,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Bot } from 'lucide-react';
 
 interface StreamingMessageProps {
   content: string;
@@ -9,28 +10,35 @@ interface StreamingMessageProps {
 
 export default function StreamingMessage({ content }: StreamingMessageProps) {
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[85%] bg-white border border-[#e2e8f0] rounded-2xl px-6 py-4 shadow-sm">
+    <div className="flex justify-start gap-3">
+      {/* AI avatar */}
+      <div className="flex-shrink-0 mt-1">
+        <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 shadow-md shadow-primary/15 animate-pulse">
+          <Bot className="size-4 text-white" />
+        </div>
+      </div>
+
+      <div className="max-w-[85%] bg-card border border-border rounded-2xl px-6 py-4 shadow-sm">
         <div className="prose prose-sm max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              p: ({ children }) => <p className="text-[#0f172a] mb-3 last:mb-0">{children}</p>,
-              ul: ({ children }) => <ul className="text-[#0f172a] list-disc list-inside mb-3 space-y-1">{children}</ul>,
-              ol: ({ children }) => <ol className="text-[#0f172a] list-decimal list-inside mb-3 space-y-1">{children}</ol>,
-              li: ({ children }) => <li className="text-[#0f172a]">{children}</li>,
+              p: ({ children }) => <p className="text-foreground mb-3 last:mb-0">{children}</p>,
+              ul: ({ children }) => <ul className="text-foreground list-disc list-inside mb-3 space-y-1">{children}</ul>,
+              ol: ({ children }) => <ol className="text-foreground list-decimal list-inside mb-3 space-y-1">{children}</ol>,
+              li: ({ children }) => <li className="text-foreground">{children}</li>,
               code: ({ inline, children }: any) =>
                 inline ? (
-                  <code className="bg-[#f1f5f9] px-1.5 py-0.5 rounded text-blue-600 text-sm">{children}</code>
+                  <code className="bg-primary/8 px-1.5 py-0.5 rounded text-primary text-sm font-mono">{children}</code>
                 ) : (
-                  <code className="block bg-[#f1f5f9] p-3 rounded-lg text-blue-600 text-sm overflow-x-auto">{children}</code>
+                  <code className="block bg-muted p-3 rounded-lg text-primary text-sm overflow-x-auto font-mono">{children}</code>
                 ),
-              h1: ({ children }) => <h1 className="text-2xl font-bold text-[#0f172a] mb-3">{children}</h1>,
-              h2: ({ children }) => <h2 className="text-xl font-bold text-[#0f172a] mb-3">{children}</h2>,
-              h3: ({ children }) => <h3 className="text-lg font-semibold text-[#0f172a] mb-2">{children}</h3>,
-              strong: ({ children }) => <strong className="font-semibold text-blue-600">{children}</strong>,
+              h1: ({ children }) => <h1 className="text-2xl font-bold text-foreground mb-3">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-xl font-bold text-foreground mb-3">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-lg font-semibold text-foreground mb-2">{children}</h3>,
+              strong: ({ children }) => <strong className="font-semibold text-primary">{children}</strong>,
               a: ({ href, children }) => (
-                <a href={href} className="text-blue-500 hover:text-blue-400 underline" target="_blank" rel="noopener noreferrer">
+                <a href={href} className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors" target="_blank" rel="noopener noreferrer">
                   {children}
                 </a>
               ),
@@ -39,8 +47,8 @@ export default function StreamingMessage({ content }: StreamingMessageProps) {
             {content}
           </ReactMarkdown>
         </div>
-        {/* Cursor */}
-        <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1" />
+        {/* Typing cursor */}
+        <span className="inline-block w-2 h-4 bg-primary rounded-sm animate-pulse ml-1" />
       </div>
     </div>
   );

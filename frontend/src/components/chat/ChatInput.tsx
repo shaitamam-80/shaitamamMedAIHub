@@ -47,9 +47,9 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            placeholder="הקלד הודעה..."
+            placeholder="Type a message..."
             rows={1}
-            className="w-full px-4 py-3 bg-white border border-[#e2e8f0] rounded-xl text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ maxHeight: '200px', minHeight: '52px' }}
           />
         </div>
@@ -57,7 +57,7 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
         <button
           type="submit"
           disabled={disabled || !input.trim()}
-          className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+          className="p-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-xl hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20"
         >
           <Send className="w-5 h-5" />
         </button>

@@ -5,7 +5,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import StreamingMessage from './StreamingMessage';
 import { chatStream, type ChatRequestPayload } from '@/lib/api/backend-client';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -86,8 +86,8 @@ export default function ChatInterface({
         id: 'greeting',
         role: 'assistant',
         content: projectContext
-          ? `שלום! אני כאן לעזור לך עם השלב "${projectContext.stageName}". במה אוכל לסייע?`
-          : `שלום! אני כאן לעזור לך עם ${skillName}. במה אוכל לסייע?`,
+          ? `Hello! I'm here to help you with the "${projectContext.stageName}" stage. How can I assist?`
+          : `Hello! I'm here to help you with ${skillName}. How can I assist?`,
         timestamp: new Date(),
       };
       setMessages([greetingMessage]);
@@ -186,8 +186,8 @@ export default function ChatInterface({
       console.error('Chat error:', error);
 
       const errorContent = backendStatus === 'disconnected'
-        ? 'לא ניתן להתחבר לשרת ה-Backend. ודא שה-Backend פועל ב-http://localhost:8000'
-        : 'מצטער, אירעה שגיאה. אנא נסה שוב.';
+        ? 'Unable to connect to the backend server. Please ensure the backend is running at ' + (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000')
+        : 'Sorry, an error occurred. Please try again.';
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -229,20 +229,20 @@ export default function ChatInterface({
   const hasUserMessages = messages.some(m => m.role === 'user');
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
+    <div className="flex flex-col h-full bg-background">
       {/* Backend Status Indicator */}
       {backendStatus === 'disconnected' && (
-        <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 bg-red-500 rounded-full" />
-          <span className="text-red-400">
-            Backend לא מחובר - ודא שהשרת פועל ב-{process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}
+        <div className="px-4 py-2.5 bg-destructive/8 border-b border-destructive/20 flex items-center gap-2.5 text-sm">
+          <WifiOff className="w-4 h-4 text-destructive" />
+          <span className="text-destructive">
+            Backend disconnected — ensure the server is running at {process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}
           </span>
         </div>
       )}
       {backendStatus === 'checking' && (
-        <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/30 flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-          <span className="text-yellow-400">בודק חיבור ל-Backend...</span>
+        <div className="px-4 py-2.5 bg-amber-500/8 border-b border-amber-500/20 flex items-center gap-2.5 text-sm">
+          <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
+          <span className="text-amber-700">Checking backend connection...</span>
         </div>
       )}
 
@@ -259,12 +259,15 @@ export default function ChatInterface({
         )}
 
         {isLoading && !streamingContent && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-[#e2e8f0] rounded-2xl px-6 py-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75" />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-150" />
+          <div className="flex justify-start gap-3">
+            <div className="flex-shrink-0 mt-1">
+              <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 shadow-md shadow-primary/15 animate-pulse" />
+            </div>
+            <div className="bg-card border border-border rounded-2xl px-6 py-4 shadow-sm">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -275,29 +278,29 @@ export default function ChatInterface({
 
       {/* Stage Completion Controls */}
       {projectContext && stageStatus === 'completed' && (
-        <div className="px-4 py-3 border-t border-green-500/30 bg-green-500/10 flex items-center justify-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
-          <span className="text-sm text-green-400 font-medium">שלב זה הושלם</span>
+        <div className="px-4 py-3 border-t border-emerald-500/30 bg-emerald-500/8 flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm text-emerald-700 font-medium">This stage is complete</span>
         </div>
       )}
 
       {projectContext && stageStatus !== 'completed' && onStageComplete && (
-        <div className="px-4 py-3 border-t border-[#e2e8f0] bg-white flex items-center justify-between">
-          <span className="text-sm text-[#475569]">
-            סיימת לעבוד על שלב זה?
+        <div className="px-4 py-3 border-t border-border bg-card flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            Done working on this stage?
           </span>
           <button
             onClick={onStageComplete}
             disabled={isLoading || !hasUserMessages}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
           >
             <CheckCircle2 className="w-4 h-4" />
-            סיים שלב
+            Complete Stage
           </button>
         </div>
       )}
 
-      <div className="border-t border-[#e2e8f0] bg-white">
+      <div className="border-t border-border bg-card">
         <ChatInput onSend={sendMessage} disabled={isLoading} />
       </div>
     </div>
