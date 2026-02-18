@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export default function LanguageToggle() {
   const [language, setLanguage] = useState<'he' | 'en'>('he');
@@ -14,28 +15,30 @@ export default function LanguageToggle() {
   };
 
   return (
-    <button
+    <Button
+      variant="outline"
+      size="sm"
       onClick={toggleLanguage}
-      className="flex items-center gap-1 px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-lg hover:border-blue-500/50 transition-all"
+      className="h-8 gap-1 px-3"
       title="החלף שפה"
     >
       <span
         className={cn(
           'text-xs font-medium transition-colors',
-          language === 'he' ? 'text-blue-500' : 'text-[#94a3b8]'
+          language === 'he' ? 'text-primary' : 'text-muted-foreground'
         )}
       >
         עב
       </span>
-      <span className="text-[#94a3b8]">/</span>
+      <span className="text-muted-foreground">/</span>
       <span
         className={cn(
           'text-xs font-medium transition-colors',
-          language === 'en' ? 'text-blue-500' : 'text-[#94a3b8]'
+          language === 'en' ? 'text-primary' : 'text-muted-foreground'
         )}
       >
         EN
       </span>
-    </button>
+    </Button>
   );
 }

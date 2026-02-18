@@ -1,26 +1,26 @@
 import AppSidebar from '@/components/layout/AppSidebar';
 import TopBar from '@/components/layout/TopBar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { cookies } from 'next/headers';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex h-screen bg-[#f8fafc]">
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <TopBar />
+  const cookieStore = await cookies();
+  const defaultOpen = cookieStore.get('sidebar_state')?.value !== 'false';
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+  return (
+    <SidebarProvider defaultOpen={defaultOpen}>
+      {/* Main content area */}
+      <SidebarInset>
+        <TopBar />
+        <div className="flex-1 overflow-auto p-6">{children}</div>
+      </SidebarInset>
 
       {/* Sidebar (right side in RTL) */}
       <AppSidebar />
-    </div>
+    </SidebarProvider>
   );
 }
