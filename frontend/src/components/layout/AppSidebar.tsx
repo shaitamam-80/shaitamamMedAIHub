@@ -1,49 +1,133 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, FolderOpen, Wrench, Settings, ChevronDown, User, LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
-import { useState, useEffect } from 'react';
+import {
+  Lightbulb,
+  HelpCircle,
+  FileText,
+  Search,
+  Filter,
+  Database,
+  Scale,
+  BarChart3,
+  Star,
+  PenTool,
+  FileSearch,
+  BookOpen,
+  ClipboardCheck,
+  Workflow,
+  FolderOpen,
+  Home,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronsUpDown,
+  type LucideIcon,
+} from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import {
+  STAGES,
+  STANDALONE_TOOLS,
+  STAGE_ORDER,
+  STANDALONE_ORDER,
+  type ToolConfig,
+} from '@/lib/utils/stage-config';
 
-const navItems = [
-  {
-    label: 'לוח בקרה',
-    href: '/',
-    icon: Home,
-  },
-  {
-    label: 'הפרויקטים שלי',
-    href: '/projects',
-    icon: FolderOpen,
-  },
-  {
-    label: 'כלים',
-    icon: Wrench,
-    submenu: [
-      { label: 'Article Appraisal', href: '/tools/article-appraisal' },
-      { label: 'Find Journal', href: '/tools/find-journal' },
-    ],
-  },
-  {
-    label: 'הגדרות',
-    href: '/settings',
-    icon: Settings,
-  },
-];
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+
+// ── Icon Map ───────────────────────────────────────────────────────
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Lightbulb,
+  HelpCircle,
+  FileText,
+  Search,
+  Filter,
+  Database,
+  Scale,
+  BarChart3,
+  Star,
+  PenTool,
+  FileSearch,
+  BookOpen,
+  ClipboardCheck,
+  Workflow,
+};
+
+function getIcon(name: string): LucideIcon {
+  return ICON_MAP[name] || FileText;
+}
+
+// ── Sidebar Tool Item ──────────────────────────────────────────────
+
+function ToolMenuItem({
+  tool,
+  href,
+  isActive,
+}: {
+  tool: ToolConfig;
+  href: string;
+  isActive: boolean;
+}) {
+  const Icon = getIcon(tool.icon);
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={tool.name.en}>
+        <Link href={href}>
+          <Icon className="size-4" />
+          <span>{tool.name.he}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+// ── Main AppSidebar Component ──────────────────────────────────────
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [user, setUser] = useState<{ email?: string; fullName?: string } | null>(null);
+  const { state } = useSidebar();
+  const [user, setUser] = React.useState<{ email?: string; fullName?: string } | null>(null);
+  const [pipelineOpen, setPipelineOpen] = React.useState(true);
+  const [standaloneOpen, setStandaloneOpen] = React.useState(true);
 
   const supabase = createClient();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setUser({
           email: user.email,
@@ -52,6 +136,7 @@ export default function AppSidebar() {
       }
     };
     getUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
@@ -65,114 +150,197 @@ export default function AppSidebar() {
     return pathname.startsWith(href);
   };
 
-  const getInitials = () => {
+  const getInitials = (): string => {
     if (user?.fullName) {
       const parts = user.fullName.split(' ');
-      return parts.map(p => p[0]).join('').slice(0, 2).toUpperCase();
+      return parts
+        .map((p) => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
     }
-    return <User className="w-5 h-5" />;
+    return '??';
   };
 
   return (
-    <aside className="w-[280px] bg-white border-l border-[#e2e8f0] flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-[#e2e8f0]">
-        <Link href="/" className="block">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-            MedAI Hub
-          </h1>
-          <p className="text-xs text-[#94a3b8] mt-1">AI-Powered Medical Research</p>
+    <Sidebar side="right" variant="sidebar" collapsible="icon">
+      {/* ── Header / Logo ── */}
+      <SidebarHeader className="p-4">
+        <Link href="/" className="flex items-center gap-3 px-2">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm">
+            M
+          </div>
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <span className="text-base font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+              MedAI Hub
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-none">
+              AI-Powered Research
+            </span>
+          </div>
         </Link>
-      </div>
+      </SidebarHeader>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item, index) => {
-          if (item.submenu) {
-            return (
-              <div key={index}>
-                <button
-                  onClick={() => setToolsOpen(!toolsOpen)}
-                  className={cn(
-                    'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-all',
-                    pathname.startsWith('/tools') && 'bg-[#f1f5f9] text-[#0f172a]'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      'w-4 h-4 transition-transform',
-                      toolsOpen && 'rotate-180'
-                    )}
-                  />
-                </button>
-                {toolsOpen && (
-                  <div className="mr-4 mt-1 space-y-1">
-                    {item.submenu.map((subItem, subIndex) => (
-                      <Link
-                        key={subIndex}
-                        href={subItem.href}
-                        className={cn(
-                          'block px-4 py-2 rounded-lg text-sm transition-all',
-                          isActive(subItem.href)
-                            ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-500 border-r-2 border-blue-500'
-                            : 'text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a]'
-                        )}
-                      >
-                        {subItem.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          }
+      <SidebarSeparator />
 
-          const Icon = item.icon;
-          return (
-            <Link
-              key={index}
-              href={item.href!}
-              className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all',
-                isActive(item.href!)
-                  ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 text-blue-500 border-r-2 border-blue-500'
-                  : 'text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a]'
-              )}
+      {/* ── Main Navigation ── */}
+      <SidebarContent>
+        {/* Dashboard + Projects */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Dashboard">
+                <Link href="/">
+                  <Home className="size-4" />
+                  <span>לוח בקרה</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive('/projects')}
+                tooltip="My Projects"
+              >
+                <Link href="/projects">
+                  <FolderOpen className="size-4" />
+                  <span>הפרויקטים שלי</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Pipeline Tools (9) */}
+        <Collapsible open={pipelineOpen} onOpenChange={setPipelineOpen} className="group/collapsible">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between">
+                <span>כלי Pipeline</span>
+                <ChevronLeft className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-[-90deg]" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {STAGE_ORDER.map((stageName) => {
+                    const stage = STAGES[stageName];
+                    const href = `/tools/${stage.slug}`;
+                    return (
+                      <ToolMenuItem
+                        key={stage.slug}
+                        tool={stage}
+                        href={href}
+                        isActive={isActive(href)}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        <SidebarSeparator />
+
+        {/* Standalone Tools (4) */}
+        <Collapsible open={standaloneOpen} onOpenChange={setStandaloneOpen} className="group/collapsible">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between">
+                <span>כלים עצמאיים</span>
+                <ChevronLeft className="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-[-90deg]" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {STANDALONE_ORDER.map((toolName) => {
+                    const tool = STANDALONE_TOOLS[toolName];
+                    const href = `/tools/${tool.slug}`;
+                    return (
+                      <ToolMenuItem
+                        key={tool.slug}
+                        tool={tool}
+                        href={href}
+                        isActive={isActive(href)}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+      </SidebarContent>
+
+      {/* ── Footer / User Section ── */}
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/settings')}
+              tooltip="Settings"
             >
-              <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+              <Link href="/settings">
+                <Settings className="size-4" />
+                <span>הגדרות</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-[#e2e8f0]">
-        <div className="flex items-center gap-3 px-4 py-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
-            {getInitials()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-[#0f172a] truncate">
-              {user?.fullName || 'משתמש'}
-            </div>
-            <div className="text-xs text-[#94a3b8] truncate">
-              {user?.email || ''}
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 hover:bg-[#f1f5f9] rounded-lg transition-colors"
-            title="התנתקות"
-          >
-            <LogOut className="w-4 h-4 text-[#94a3b8]" />
-          </button>
-        </div>
-      </div>
-    </aside>
+        <SidebarSeparator />
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="size-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-xs font-bold">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-start text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      {user?.fullName || 'משתמש'}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {user?.email || ''}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ms-auto size-4" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side="top"
+                align="end"
+                sideOffset={4}
+              >
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="size-4" />
+                    <span>הגדרות</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+                  <LogOut className="size-4" />
+                  <span>התנתקות</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl" className={`${heebo.variable} ${inter.variable}`}>
-      <body className="font-sans antialiased bg-[#f8fafc] text-[#0f172a] min-h-screen">
+      <body className="antialiased min-h-screen">
         {children}
       </body>
     </html>

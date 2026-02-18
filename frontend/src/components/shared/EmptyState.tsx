@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -22,29 +23,23 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="p-4 bg-[#f1f5f9] rounded-full mb-4">
-        <Icon className="w-12 h-12 text-[#94a3b8]" />
+      <div className="flex size-16 items-center justify-center rounded-full bg-muted mb-4">
+        <Icon className="size-8 text-muted-foreground" />
       </div>
 
-      <h3 className="text-xl font-semibold text-[#0f172a] mb-2">{title}</h3>
-      <p className="text-[#475569] text-center max-w-md mb-6">{description}</p>
+      <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
+      <p className="text-muted-foreground text-sm text-center max-w-md mb-6">
+        {description}
+      </p>
 
       {actionLabel && (actionHref || onAction) && (
         <>
           {actionHref ? (
-            <Link
-              href={actionHref}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all"
-            >
-              {actionLabel}
-            </Link>
+            <Button asChild>
+              <Link href={actionHref}>{actionLabel}</Link>
+            </Button>
           ) : (
-            <button
-              onClick={onAction}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all"
-            >
-              {actionLabel}
-            </button>
+            <Button onClick={onAction}>{actionLabel}</Button>
           )}
         </>
       )}

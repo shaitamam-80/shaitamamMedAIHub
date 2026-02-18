@@ -3,8 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -58,8 +62,10 @@ export default function RegisterPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }));
@@ -68,150 +74,140 @@ export default function RegisterPage() {
   // Success screen
   if (success) {
     return (
-      <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg text-center">
-        <div className="w-16 h-16 mx-auto mb-6 bg-green-500/10 rounded-full flex items-center justify-center">
-          <CheckCircle className="w-8 h-8 text-green-500" />
-        </div>
-        <h2 className="text-2xl font-bold text-[#0f172a] mb-2">ההרשמה הושלמה!</h2>
-        <p className="text-[#475569] mb-6">
-          שלחנו אליך אימייל אימות לכתובת <span className="text-blue-400">{formData.email}</span>
-          <br />
-          אנא אשר את האימייל כדי להמשיך.
-        </p>
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all"
-        >
-          עבור להתחברות
-        </Link>
-      </div>
+      <Card className="shadow-lg">
+        <CardContent className="pt-8 pb-6 px-8 text-center">
+          <div className="flex size-16 mx-auto items-center justify-center rounded-full bg-emerald-100 mb-6">
+            <CheckCircle className="size-8 text-emerald-600" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-2">
+            ההרשמה הושלמה!
+          </h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            שלחנו אליך אימייל אימות לכתובת{' '}
+            <span className="text-primary font-medium">{formData.email}</span>
+            <br />
+            אנא אשר את האימייל כדי להמשיך.
+          </p>
+          <Button asChild>
+            <Link href="/login">עבור להתחברות</Link>
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-[#e2e8f0] p-8 shadow-lg">
-      {/* Logo */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          MedAI Hub
-        </h1>
-        <p className="text-[#475569] mt-2">צור חשבון חדש</p>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <p className="text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Registration Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-[#0f172a] mb-2">
-            שם מלא
-          </label>
-          <input
-            id="fullName"
-            name="fullName"
-            type="text"
-            value={formData.fullName}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            placeholder="ישראל ישראלי"
-          />
+    <Card className="shadow-lg">
+      <CardContent className="pt-8 pb-6 px-8">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+            MedAI Hub
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">צור חשבון חדש</p>
         </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-[#0f172a] mb-2">
-            אימייל
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            placeholder="your@email.com"
-          />
-        </div>
+        {/* Error */}
+        {error && (
+          <div className="mb-6 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-3">
+            <AlertCircle className="size-4 text-destructive flex-shrink-0" />
+            <p className="text-destructive text-sm">{error}</p>
+          </div>
+        )}
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-[#0f172a] mb-2">
-            סיסמה
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            minLength={8}
-            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            placeholder="••••••••"
-          />
-          <p className="text-xs text-[#94a3b8] mt-1">לפחות 8 תווים</p>
-        </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">שם מלא</Label>
+            <Input
+              id="fullName"
+              name="fullName"
+              type="text"
+              value={formData.fullName}
+              onChange={handleChange}
+              required
+              placeholder="ישראל ישראלי"
+            />
+          </div>
 
-        <div>
-          <label htmlFor="institution" className="block text-sm font-medium text-[#0f172a] mb-2">
-            מוסד אקדמי (אופציונלי)
-          </label>
-          <input
-            id="institution"
-            name="institution"
-            type="text"
-            value={formData.institution}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            placeholder="אוניברסיטה עברית"
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">אימייל</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="your@email.com"
+            />
+          </div>
 
-        <div>
-          <label htmlFor="language" className="block text-sm font-medium text-[#0f172a] mb-2">
-            שפה מועדפת
-          </label>
-          <select
-            id="language"
-            name="language"
-            value={formData.language}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+          <div className="space-y-2">
+            <Label htmlFor="password">סיסמה</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              minLength={8}
+              placeholder="••••••••"
+            />
+            <p className="text-xs text-muted-foreground">לפחות 8 תווים</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="institution">מוסד אקדמי (אופציונלי)</Label>
+            <Input
+              id="institution"
+              name="institution"
+              type="text"
+              value={formData.institution}
+              onChange={handleChange}
+              placeholder="אוניברסיטה עברית"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="language">שפה מועדפת</Label>
+            <select
+              id="language"
+              name="language"
+              value={formData.language}
+              onChange={handleChange}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            >
+              <option value="he">עברית</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <UserPlus className="size-4 me-2" />
+                הרשמה
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+
+      <CardFooter className="justify-center pb-6">
+        <p className="text-muted-foreground text-sm">
+          יש לך כבר חשבון?{' '}
+          <Link
+            href="/login"
+            className="text-primary hover:underline font-medium"
           >
-            <option value="he">עברית</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-        >
-          {isLoading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>
-              <UserPlus className="w-5 h-5" />
-              <span>הרשמה</span>
-            </>
-          )}
-        </button>
-      </form>
-
-      {/* Login Link */}
-      <p className="text-center text-[#475569] text-sm mt-6">
-        יש לך כבר חשבון?{' '}
-        <Link href="/login" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
-          התחברות
-        </Link>
-      </p>
-    </div>
+            התחברות
+          </Link>
+        </p>
+      </CardFooter>
+    </Card>
   );
 }

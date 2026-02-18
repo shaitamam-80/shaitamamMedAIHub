@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { STAGES } from '@/lib/utils/stage-config';
-import { cn } from '@/lib/utils/cn';
-import { Check, Circle, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Check, Circle, Loader2, ArrowRight } from 'lucide-react';
 import { getProjectStages, type ProjectStage } from '@/lib/api/backend-client';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 interface ProjectSidebarProps {
   projectId: string;
@@ -45,29 +48,32 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
   };
 
   return (
-    <aside className="w-80 bg-white border-l border-[#e2e8f0] overflow-y-auto">
-      <div className="p-6">
+    <aside className="w-72 border-s bg-background">
+      <div className="p-4">
         {/* Header */}
-        <div className="mb-6">
-          <Link
-            href={`/projects/${projectId}`}
-            className="text-sm text-blue-500 hover:text-blue-400 transition-colors"
-          >
-            ← חזרה לסקירה כללית
+        <Button variant="ghost" size="sm" asChild className="mb-3 -ms-2">
+          <Link href={`/projects/${projectId}`}>
+            <ArrowRight className="size-4 me-1" />
+            חזרה לסקירה כללית
           </Link>
-          <h2 className="text-lg font-bold text-[#0f172a] mt-4 mb-2">שלבי הפרויקט</h2>
-          <p className="text-xs text-[#94a3b8]">10 שלבים לסקירה שיטתית מושלמת</p>
+        </Button>
+        <h2 className="text-sm font-semibold text-foreground mb-0.5">שלבי הפרויקט</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          10 שלבים לסקירה שיטתית
+        </p>
+        <Separator className="mb-3" />
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="size-5 text-primary animate-spin" />
         </div>
+      )}
 
-        {/* Loading indicator */}
-        {loading && (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-          </div>
-        )}
-
-        {/* Stages List */}
-        <div className="space-y-2">
+      {/* Stages List */}
+      <ScrollArea className="h-[calc(100vh-220px)]">
+        <div className="px-4 pb-4 space-y-1">
           {Object.values(STAGES).map((stage) => {
             const isActive = isStageActive(stage.slug);
             const isCompleted = isStageCompleted(stage.slug);
@@ -78,57 +84,54 @@ export default function ProjectSidebar({ projectId }: ProjectSidebarProps) {
                 key={stage.slug}
                 href={`/projects/${projectId}/stages/${stage.slug}`}
                 className={cn(
-                  'block p-4 rounded-lg border transition-all',
-                  isActive &&
-                    'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500',
-                  !isActive && isCompleted && 'bg-green-500/5 border-green-500/20',
-                  !isActive && isInProgress && 'border-amber-500/30 bg-amber-500/5',
-                  !isActive && !isCompleted && !isInProgress && 'border-[#e2e8f0] hover:border-blue-500/50 hover:bg-[#f8fafc]'
+                  'flex items-start gap-3 p-3 rounded-lg border transition-all',
+                  isActive && 'bg-primary/5 border-primary',
+                  !isActive && isCompleted && 'bg-emerald-50 border-emerald-200/50',
+                  !isActive && isInProgress && 'border-amber-200/50 bg-amber-50',
+                  !isActive && !isCompleted && !isInProgress && 'border-transparent hover:border-border hover:bg-accent'
                 )}
               >
-                <div className="flex items-start gap-3">
-                  {/* Stage Icon */}
+                {/* Stage number/icon */}
+                <div
+                  className={cn(
+                    'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                    isActive && 'bg-primary text-primary-foreground',
+                    !isActive && isCompleted && 'bg-emerald-500 text-white',
+                    !isActive && isInProgress && 'bg-amber-500 text-white',
+                    !isActive && !isCompleted && !isInProgress && 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="size-3.5" />
+                  ) : isActive ? (
+                    <Circle className="size-2.5 fill-current" />
+                  ) : (
+                    stage.order
+                  )}
+                </div>
+
+                {/* Stage info */}
+                <div className="flex-1 min-w-0">
                   <div
                     className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm',
-                      isActive && 'bg-blue-500 text-white',
-                      !isActive && isCompleted && 'bg-green-500 text-white',
-                      !isActive && isInProgress && 'bg-amber-500 text-white',
-                      !isActive && !isCompleted && !isInProgress && 'bg-[#e2e8f0] text-[#94a3b8]'
+                      'text-sm font-medium leading-tight',
+                      isActive && 'text-primary',
+                      !isActive && isCompleted && 'text-emerald-600',
+                      !isActive && isInProgress && 'text-amber-600',
+                      !isActive && !isCompleted && !isInProgress && 'text-foreground'
                     )}
                   >
-                    {isCompleted ? (
-                      <Check className="w-4 h-4" />
-                    ) : isActive ? (
-                      <Circle className="w-3 h-3 fill-current" />
-                    ) : (
-                      stage.order
-                    )}
+                    {stage.name.he}
                   </div>
-
-                  {/* Stage Info */}
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className={cn(
-                        'font-medium text-sm mb-1',
-                        isActive && 'text-blue-500',
-                        !isActive && isCompleted && 'text-green-500',
-                        !isActive && isInProgress && 'text-amber-500',
-                        !isActive && !isCompleted && !isInProgress && 'text-[#0f172a]'
-                      )}
-                    >
-                      {stage.name.he}
-                    </div>
-                    <div className="text-xs text-[#94a3b8] line-clamp-2">
-                      {stage.description.he}
-                    </div>
+                  <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                    {stage.description.he}
                   </div>
                 </div>
               </Link>
             );
           })}
         </div>
-      </div>
+      </ScrollArea>
     </aside>
   );
 }
