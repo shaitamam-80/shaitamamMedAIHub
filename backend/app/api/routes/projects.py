@@ -33,7 +33,7 @@ def slugify(text: str) -> str:
     return text[:100] if text else 'untitled'
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project: ProjectCreate,
     current_user: UserPayload = Depends(get_current_user)
@@ -63,7 +63,7 @@ async def create_project(
         )
 
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("", response_model=List[ProjectResponse])
 async def list_projects(
     limit: int = 100,
     current_user: UserPayload = Depends(get_current_user)
