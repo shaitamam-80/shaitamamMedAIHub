@@ -76,7 +76,7 @@ async def list_projects(
         logger.exception(f"Error listing projects for user {current_user.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while retrieving projects.",
+            detail=f"Error listing projects: {type(e).__name__}: {e}",
         )
 
 

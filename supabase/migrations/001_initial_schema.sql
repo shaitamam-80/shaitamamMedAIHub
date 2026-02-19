@@ -65,7 +65,7 @@ CREATE TABLE public.projects (
   framework TEXT NOT NULL DEFAULT 'PICO' CHECK (framework IN (
     'PICO', 'PICOT', 'PICOS', 'CoCoPop', 'PFO',
     'PEO', 'PECO', 'PIRD', 'PICo', 'SPIDER',
-    'PCC', 'SPICE', 'ECLIPSE', 'CMO', 'PerSPEcTiF', 'BeHEMoTh'
+    'PCC', 'SPICE', 'ECLIPSE', 'CIMO', 'PerSPEcTiF', 'BeHEMoTh'
   )),
   current_stage TEXT NOT NULL DEFAULT 'idea' CHECK (current_stage IN (
     'idea', 'question', 'protocol', 'search',

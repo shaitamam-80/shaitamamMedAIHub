@@ -94,24 +94,27 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
-    """Project response matching Supabase projects table."""
+    """Project response matching Supabase projects table.
+    Fields use Optional where the DB column allows NULL to prevent
+    response validation errors (FastAPI 500s).
+    """
     id: str
     owner_id: Optional[str] = None
-    title: str
-    slug: str
+    title: Optional[str] = None
+    slug: Optional[str] = None
     description: Optional[str] = None
-    review_type: str
-    framework: str
-    current_stage: str = Field(default="idea", description="Current workflow stage")
-    progress_percentage: int = Field(default=0, description="Overall progress 0-100")
-    status: str = Field(default="active", description="Project status")
+    review_type: Optional[str] = None
+    framework: Optional[str] = None
+    current_stage: Optional[str] = Field(default="idea", description="Current workflow stage")
+    progress_percentage: Optional[int] = Field(default=0, description="Overall progress 0-100")
+    status: Optional[str] = Field(default="active", description="Project status")
     prospero_id: Optional[str] = None
-    total_records_found: int = 0
-    total_screened: int = 0
-    total_included: int = 0
-    total_excluded: int = 0
-    created_at: datetime
-    updated_at: datetime
+    total_records_found: Optional[int] = 0
+    total_screened: Optional[int] = 0
+    total_included: Optional[int] = 0
+    total_excluded: Optional[int] = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

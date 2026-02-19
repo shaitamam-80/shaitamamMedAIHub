@@ -110,8 +110,10 @@ Thumbs.db
 # Database
 *.sqlite
 *.db
+
+# Windows artifacts
 nul
-backend/nul
+*.ps1
 
 # Skills - exclude project data and PDFs (user-generated content)
 backend/app/core/skills/systematic-review/projects/

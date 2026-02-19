@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { use, useState, useEffect } from 'react';
 import { ArrowLeft, FileText, CheckCircle2, Clock, AlertCircle, Loader2, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import StageProgress from '@/components/dashboard/StageProgress';
@@ -10,8 +10,9 @@ import { REVIEW_TYPES, STAGES, type ReviewType, type StageName } from '@/lib/uti
 export default function ProjectOverviewPage({
   params,
 }: {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }) {
+  const { projectId } = use(params);
   const [project, setProject] = useState<Project | null>(null);
   const [stages, setStages] = useState<ProjectStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,8 +20,8 @@ export default function ProjectOverviewPage({
 
   useEffect(() => {
     Promise.all([
-      getProject(params.projectId),
-      getProjectStages(params.projectId),
+      getProject(projectId),
+      getProjectStages(projectId),
     ])
       .then(([proj, stgs]) => {
         setProject(proj);
@@ -31,7 +32,7 @@ export default function ProjectOverviewPage({
         setError('שגיאה בטעינת הפרויקט');
       })
       .finally(() => setLoading(false));
-  }, [params.projectId]);
+  }, [projectId]);
 
   if (loading) {
     return (
@@ -176,7 +177,7 @@ export default function ProjectOverviewPage({
             </p>
           </div>
           <Link
-            href={`/projects/${params.projectId}/stages/${currentStageName}`}
+            href={`/projects/${projectId}/stages/${currentStageName}`}
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <span>המשך</span>
