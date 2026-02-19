@@ -6,15 +6,15 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Copy requirements and install public dependencies
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install sr-skills from private GitHub repo (token passed as build arg)
 ARG GH_TOKEN
 RUN pip install --no-cache-dir "sr-skills @ git+https://${GH_TOKEN}@github.com/shaitamam-80/sr-skills.git@main"
 
-# Copy application code
-COPY . .
+# Copy application code (from backend/ since Docker context is repo root)
+COPY backend/ .
 
 # Create uploads directory with proper permissions
 RUN mkdir -p uploads && chown -R appuser:appuser /app
