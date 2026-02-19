@@ -9,6 +9,9 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install git (needed for pip install from private GitHub repo), then remove it
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
 # Install sr-skills from private GitHub repo (token passed as build arg)
 ARG GH_TOKEN
 RUN pip install --no-cache-dir "sr-skills @ git+https://${GH_TOKEN}@github.com/shaitamam-80/sr-skills.git@main"
