@@ -5,13 +5,13 @@ WORKDIR /app
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Install sr-skills private package first (for better caching)
-COPY sr-skills/ /sr-skills/
-RUN pip install --no-cache-dir /sr-skills/
-
-# Copy requirements and install remaining dependencies
+# Copy requirements and install public dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install sr-skills from private GitHub repo (token passed as build arg)
+ARG GH_TOKEN
+RUN pip install --no-cache-dir "sr-skills @ git+https://${GH_TOKEN}@github.com/shaitamam-80/sr-skills.git@main"
 
 # Copy application code
 COPY . .

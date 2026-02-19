@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MedAI Hub** is an AI-powered research question formulation platform for medical researchers. It helps researchers define and refine research questions using structured frameworks (PICO, PEO, SPIDER, etc.) with AI assistance.
+**MedAI Hub** is an AI-powered systematic literature review platform for medical researchers. It supports the full SR workflow — from research question formulation through protocol building, screening, data extraction, risk of bias assessment, meta-analysis, GRADE assessment, and manuscript generation — using LangGraph orchestration and 12 specialized AI skill modules.
 
 ### Tech Stack
 
-- **Backend**: FastAPI (Python 3.11) + Google Gemini AI (via LangChain)
-- **Frontend**: Next.js 15 (TypeScript) + Tailwind CSS + Shadcn UI
+- **Backend**: FastAPI (Python 3.11) + Google Gemini AI (via LangChain) + LangGraph
+- **Frontend**: Next.js 16 (TypeScript) + Tailwind CSS 4 + Shadcn/UI + Zustand
 - **Database**: Supabase PostgreSQL
 - **Auth**: Supabase Auth (JWT)
+- **SR Methodology**: sr-skills (private editable package)
 - **Deployment**: Railway (backend) + Vercel (frontend)
 
 ### Live URLs
@@ -28,10 +29,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 cd backend
-.\venv\Scripts\Activate.ps1  # Windows
-# source venv/bin/activate   # Mac/Linux
+.\.venv\Scripts\Activate.ps1  # Windows
+# source .venv/bin/activate   # Mac/Linux
 
 pip install -r requirements.txt
+pip install -e "C:/Users/shait/OneDrive/Desktop/Systematic Review Hub/sr-skills"  # One-time
 python main.py               # Runs on http://localhost:8000
 pytest                       # Run tests
 ```
@@ -41,7 +43,7 @@ pytest                       # Run tests
 ```bash
 cd frontend
 npm install
-npm run dev                  # Runs on http://localhost:3000
+npm run dev                  # Runs on http://localhost:3000 (Turbopack)
 npm run build               # Production build
 npx tsc --noEmit            # Type check
 ```
@@ -56,195 +58,53 @@ npx tsc --noEmit            # Type check
 
 ## Architecture
 
+### LangGraph Systematic Review Workflow
+
+The core of MedAI Hub is a **LangGraph state machine** that orchestrates 7 sequential stages:
+
+```text
+START → orchestrator → [route_by_stage] → stage_node → END
+```
+
+**Stages:**
+
+1. `research_question` — Framework selection + component extraction (PICO, CoCoPop, SPIDER, etc.)
+2. `protocol` — PROSPERO-ready protocol building
+3. `search` — PubMed query construction
+4. `screening` — Abstract/full-text screening
+5. `extraction` — Data extraction from papers
+6. `synthesis` — Meta-analysis + GRADE assessment
+7. `reporting` — Manuscript generation
+
+**State** is managed via `ReviewState` TypedDict with message accumulation, artifact storage per stage, error tracking, and persistent checkpointing (PostgreSQL or in-memory fallback).
+
+### Skills System
+
+12 modular skill directories under `backend/app/core/skills/`, each containing specialized prompts loaded dynamically by `skill_loader.py`:
+
+```text
+article-appraisal, data-extraction, find-journal, grade-assessment,
+manuscript-writer, meta-analysis, protocol-builder, pubmed-query,
+pubmed-screening, research-question, risk-of-bias, systematic-review
+```
+
 ### Define Tool
 
 The **Define Tool** (`/define`) helps researchers formulate research questions using AI chat:
 
-- Supports 20+ research frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, etc.)
+- Supports 17+ research frameworks (PICO, CoCoPop, PEO, SPIDER, SPICE, ECLIPSE, etc.)
 - AI extracts framework components from natural conversation
 - FINER assessment evaluates question quality (Feasible, Interesting, Novel, Ethical, Relevant)
-
-### Define Tool v3.0 - Wizard Architecture
-
-**Status**: In development (replacing chat-based interface)
-
-Define Tool v3.0 introduces a **wizard-based** interface with split-screen live preview, replacing the free-form chat approach.
-
-#### Key Features
-
-- **Wizard Pattern**: Progressive disclosure through 6 structured steps
-- **Split-Screen Layout**: Input panel (left) + Live Preview panel (right, 40% width)
-- **All 17+ Frameworks**: Production-ready support from launch (no MVP)
-- **Clarification-Based Detection**: Interactive questions instead of keyword matching
-- **Qualitative FINER**: High/medium/low scores with reasoning (no artificial numeric scores)
-- **Three Question Types**: Narrow (PubMed-ready), Broad (exploratory), Clinical (practical)
-
-#### Wizard Steps
-
-1. **Welcome** - Language selection (EN/HE) and introduction
-2. **Framework** - Clarification-based framework selection
-3. **Components** - Extract framework components with real-time validation
-4. **FINER** - Qualitative assessment with improvement suggestions
-5. **Questions** - Generate three question formulations
-6. **Review** - Final review and save to project
-
-#### Framework Detection Strategy
-
-```typescript
-// v3.0 Approach: Clarification-based (NO keyword matching)
-// 1. Ask user INTENT questions
-// 2. Present framework options based on answers
-// 3. If ambiguous → ASK, don't guess
-// 4. No default to PICO
-```
-
-**Example Flow:**
-
-```
-AI: "What type of research question are you exploring?"
-   → Therapy/treatment effectiveness
-   → Risk factors or causes
-   → Patient experiences
-   → Prevalence/frequency
-   → Prognosis/outcomes
-
-User selects: "Risk factors"
-AI: → Suggests PECO (exposure-based)
-```
-
-#### FINER Assessment Philosophy
-
-**Qualitative Only** - No numeric scores, no formulas:
-
-```typescript
-interface FinerDimension {
-  score: "high" | "medium" | "low";  // Qualitative level
-  reason: string;                     // 2-3 sentence explanation
-}
-
-// Recommendation based on holistic judgment, NOT arithmetic
-recommendation: "proceed" | "revise" | "reconsider"
-```
-
-**Why qualitative?**
-
-- Removes false precision (100/66/33 points are arbitrary)
-- Focuses on reasoning over scoring
-- Aligns with actual research review processes
-
-#### Split-Screen Layout
-
-```
-┌─────────────────────────────────┬──────────────────────┐
-│ Input Panel (60%)               │ Preview Panel (40%)  │
-├─────────────────────────────────┼──────────────────────┤
-│ Step Progress Indicator         │ Framework Summary    │
-│                                 │                      │
-│ [Active Step Content]           │ Components Preview   │
-│ - Framework selection           │ ✓ P: ...             │
-│ - Component inputs              │ ✓ I: ...             │
-│ - FINER review                  │ ○ C: (optional)      │
-│                                 │ ✓ O: ...             │
-│ [Navigation: Back | Next]       │                      │
-│                                 │ FINER Assessment     │
-│                                 │ F: High - ...        │
-│                                 │                      │
-│                                 │ Generated Questions  │
-│                                 │ (shown in step 5)    │
-└─────────────────────────────────┴──────────────────────┘
-```
-
-#### Type System
-
-All types defined in `frontend/lib/types/wizard.types.ts`:
-
-- **WizardState** - Complete wizard state machine
-- **FrameworkComponent** - Dynamic component with validation
-- **FinerAssessment** - Qualitative FINER with reasoning
-- **GeneratedQuestions** - Three question formulations
-- **WizardAction** - Reducer actions for state management
-
-#### Supported Frameworks (17+)
-
-**PICO Family (5)**: PICO, PICOT, PICOS, PICOC, PICOTS
-**JBI Standards (7)**: CoCoPop, PEO, PECO, PFO, PIRD, PCC, PICo
-**Qualitative (2)**: SPIDER, SPICE
-**Policy/Complex (2)**: ECLIPSE, CIMO
-**Specialized (4)**: BeHEMoTh, PerSPEcTiF, PICOT-D, PICOTS-ComTeC
-
-#### Design System
-
-Tailwind configuration with Clinical Blue palette:
-
-```typescript
-// Wizard-specific colors
-wizard: {
-  primary: "hsl(210, 100%, 50%)",        // Clinical Blue
-  step: {
-    active: "hsl(210, 100%, 50%)",       // Current step
-    complete: "hsl(142, 71%, 45%)",      // Completed
-    pending: "hsl(0, 0%, 70%)",          // Pending
-  }
-}
-
-// Wizard spacing
-spacing: {
-  "wizard-panel": "40%",          // Preview panel width
-  "wizard-gap": "1.5rem",         // Gap between panels
-  "step-indicator": "2.5rem",     // Progress indicator
-}
-```
-
-#### API Changes (v3.0)
-
-New endpoints for wizard flow:
-
-```
-POST /api/v1/define/detect-framework    # Clarification-based detection
-POST /api/v1/define/extract-components  # Extract from conversation
-POST /api/v1/define/generate-questions  # Generate 3 formulations
-POST /api/v1/define/validate-component  # Real-time validation
-```
-
-#### Migration Strategy
-
-- Build v3.0 on feature branch
-- In-place replacement of `/define` route (NOT parallel routes)
-- Migrate existing projects via data migration script
-- Feature flag for gradual rollout
-
-#### Key Differences from v2.0
-
-| Aspect | v2.0 (Current) | v3.0 (Wizard) |
-| -------- | --------------- | --------------- |
-| **Interface** | Free-form chat | Structured wizard |
-| **Framework Detection** | Keyword matching | Clarification questions |
-| **FINER Scoring** | Numeric (100/66/33) | Qualitative (high/med/low) |
-| **Preview** | Final step only | Real-time split-screen |
-| **Navigation** | Linear chat | Step-based with back/next |
-| **Question Output** | Single version | Three formulations |
-
-#### File References (v3.0)
-
-| Purpose | File |
-|---------|------|
-| Wizard Types | `frontend/lib/types/wizard.types.ts` |
-| Wizard Component | `frontend/components/define/wizard.tsx` |
-| Step Components | `frontend/components/define/steps/*.tsx` |
-| Preview Panel | `frontend/components/define/preview-panel.tsx` |
-| Design Tokens | `frontend/tailwind.config.ts` |
-| Framework Configs | `docs/FRAMEWORK_CONFIGS.md` |
-| Implementation Plan | `docs/define-tool-v3-implementation-plan.md` |
-| Detection Prompts | `backend/app/core/prompts/define_v3_detect.py` |
-| Generation Prompts | `backend/app/core/prompts/define_v3_generate.py` |
 
 ---
 
 ### Backend Structure
 
-```
+```text
 backend/
-├── main.py                     # FastAPI app, CORS, routes
+├── main.py                     # FastAPI app, CORS, middleware, routes
+├── requirements.txt
+├── Dockerfile
 ├── app/
 │   ├── api/
 │   │   ├── models/
@@ -252,39 +112,122 @@ backend/
 │   │   │   └── frameworks.py   # Typed framework models (PICO, PEO, etc.)
 │   │   └── routes/
 │   │       ├── projects.py     # CRUD for projects
-│   │       └── define.py       # Chat + framework extraction
+│   │       ├── define.py       # Define Tool v2 (chat + framework extraction)
+│   │       ├── define_v3.py    # Define Tool v3 (wizard - migration in progress)
+│   │       ├── review.py       # LangGraph SR orchestrator
+│   │       ├── chat.py         # SSE streaming chat (skill-based)
+│   │       └── fulltext.py     # Full-text OA checker (PMC, Unpaywall, CORE, S2)
 │   ├── core/
 │   │   ├── config.py           # Settings from .env
 │   │   ├── auth.py             # Supabase JWT validation
-│   │   └── prompts/
-│   │       ├── shared.py       # Framework schemas
-│   │       └── define.py       # AI prompts for Define tool
-│   └── services/
-│       ├── ai_service.py       # Gemini AI (singleton)
-│       └── database.py         # Supabase client (singleton)
+│   │   ├── exceptions.py       # Custom exceptions
+│   │   ├── logging_config.py   # Structured JSON logging
+│   │   └── skills/             # 12 skill prompt directories
+│   │       ├── research-question/
+│   │       ├── protocol-builder/
+│   │       ├── pubmed-query/
+│   │       ├── pubmed-screening/
+│   │       ├── data-extraction/
+│   │       ├── risk-of-bias/
+│   │       ├── meta-analysis/
+│   │       ├── grade-assessment/
+│   │       ├── manuscript-writer/
+│   │       ├── article-appraisal/
+│   │       ├── find-journal/
+│   │       └── systematic-review/
+│   ├── services/
+│   │   ├── database.py         # Supabase CRUD operations
+│   │   ├── checkpointer.py     # LangGraph state persistence (PG/memory)
+│   │   └── skill_loader.py     # Dynamic skill loading
+│   └── graph/                  # LangGraph workflow engine
+│       ├── state.py            # ReviewState TypedDict + artifact types
+│       ├── workflow.py         # Graph builder + routing logic
+│       └── nodes/              # Stage node implementations
+│           ├── research_question.py
+│           ├── protocol.py
+│           ├── search.py
+│           ├── screening.py
+│           ├── extraction.py
+│           ├── synthesis.py
+│           ├── risk_of_bias.py
+│           └── reporting.py
 ```
 
 ### Frontend Structure
 
-```
+```text
 frontend/
-├── app/
-│   ├── page.tsx               # Home page
-│   ├── layout.tsx             # Root layout with sidebar
-│   ├── define/page.tsx        # Define tool (chat + form)
-│   ├── projects/page.tsx      # Project management
-│   └── auth/
-│       ├── login/page.tsx     # Login form
-│       └── callback/route.ts  # OAuth callback
-├── components/
-│   ├── sidebar/               # Navigation sidebar
-│   └── ui/                    # Shadcn components
-├── contexts/
-│   └── auth-context.tsx       # Auth state provider
-└── lib/
-    ├── api/                   # API client modules
-    ├── supabase.ts            # Supabase client (singleton)
-    └── utils.ts               # Tailwind cn() utility
+├── package.json               # sr-portal (Next.js 16 + React 19)
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── layout.tsx         # Root layout
+│   │   ├── globals.css        # Global styles (Tailwind 4)
+│   │   ├── landing/           # Public landing page
+│   │   │   ├── page.tsx
+│   │   │   └── LandingNav.tsx
+│   │   ├── (auth)/            # Grouped auth routes
+│   │   │   ├── layout.tsx
+│   │   │   ├── login/page.tsx
+│   │   │   └── register/page.tsx
+│   │   ├── auth/
+│   │   │   └── callback/route.ts  # OAuth callback
+│   │   └── (dashboard)/       # Protected dashboard
+│   │       ├── layout.tsx     # Dashboard layout with sidebar
+│   │       ├── page.tsx       # Dashboard home
+│   │       ├── settings/page.tsx
+│   │       ├── projects/
+│   │       │   ├── [projectId]/
+│   │       │   │   ├── layout.tsx
+│   │       │   │   ├── page.tsx
+│   │       │   │   └── stages/[stageSlug]/page.tsx
+│   │       │   └── new/page.tsx
+│   │       └── tools/
+│   │           └── [toolSlug]/page.tsx  # Dynamic tool pages
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── AppSidebar.tsx     # Main navigation sidebar
+│   │   │   ├── TopBar.tsx
+│   │   │   └── LanguageToggle.tsx
+│   │   ├── chat/
+│   │   │   ├── ChatInterface.tsx  # Main chat component
+│   │   │   ├── ChatMessage.tsx
+│   │   │   ├── ChatInput.tsx
+│   │   │   ├── StreamingMessage.tsx  # SSE streaming
+│   │   │   └── ArtifactCard.tsx
+│   │   ├── dashboard/
+│   │   │   ├── ProjectCard.tsx
+│   │   │   └── StageProgress.tsx
+│   │   ├── project/
+│   │   │   └── ProjectSidebar.tsx
+│   │   ├── stages/            # SR stage visualizations
+│   │   │   ├── ExtractionTable.tsx
+│   │   │   ├── GradeBadge.tsx
+│   │   │   ├── ManuscriptSection.tsx
+│   │   │   ├── PrismaFlowDiagram.tsx
+│   │   │   ├── RobSummaryTable.tsx
+│   │   │   ├── RobTrafficLight.tsx
+│   │   │   └── SummaryOfFindings.tsx
+│   │   ├── tools/
+│   │   │   ├── ToolCard.tsx
+│   │   │   ├── ToolRow.tsx
+│   │   │   └── ToolPageHeader.tsx
+│   │   ├── shared/
+│   │   │   └── EmptyState.tsx
+│   │   └── ui/                # Shadcn/UI (60+ components)
+│   ├── lib/
+│   │   ├── api/
+│   │   │   └── backend-client.ts  # API client wrapper
+│   │   ├── supabase/
+│   │   │   ├── client.ts     # Client-side Supabase
+│   │   │   ├── server.ts     # Server-side Supabase
+│   │   │   └── middleware.ts  # Auth middleware
+│   │   ├── utils/
+│   │   │   ├── cn.ts         # Tailwind class merger
+│   │   │   └── stage-config.ts
+│   │   └── utils.ts
+│   ├── hooks/
+│   │   └── use-mobile.ts
+│   └── middleware.ts          # Next.js middleware (auth guard)
 ```
 
 ---
@@ -294,21 +237,31 @@ frontend/
 ### Authentication Flow
 
 1. User logs in via Supabase Auth (email/password or OAuth)
-2. Frontend stores JWT in Supabase session
-3. API client interceptor adds `Authorization: Bearer {token}` to all requests
+2. Frontend stores JWT in Supabase session (SSR-compatible via `@supabase/ssr`)
+3. API client adds `Authorization: Bearer {token}` to all requests
 4. Backend `auth.py` validates JWT with Supabase `/auth/v1/user` endpoint
 5. Protected routes use `Depends(get_current_user)`
 
 ### Service Layer Pattern
 
-- `ai_service` (singleton): All Gemini AI calls
-- `db_service` (singleton): All Supabase operations
-- Routes never access DB/AI directly
+- `database.py` (singleton): All Supabase CRUD operations
+- `checkpointer.py`: LangGraph state persistence (PostgreSQL with in-memory fallback)
+- `skill_loader.py`: Dynamic loading of skill prompts from `core/skills/`
+- Routes never access DB/AI directly — always through services
+
+### LangGraph Workflow Pattern
+
+```python
+# Graph: START → orchestrator → route_by_stage → [stage_node] → END
+# State: ReviewState TypedDict with message accumulation
+# Persistence: PostgreSQL checkpointer (or MemorySaver fallback)
+# Routing: Conditional edges based on current_stage
+```
 
 ### Dynamic Framework System
 
 ```python
-# Backend defines schemas in app/core/prompts/shared.py
+# Backend defines schemas in app/api/models/schemas.py
 FRAMEWORK_SCHEMAS = {
     "PICO": {"components": ["P","I","C","O"], "labels": {...}},
     ...
@@ -324,14 +277,26 @@ FRAMEWORK_SCHEMAS = {
 
 All `/api/v1/*` endpoints require JWT token:
 
-```
+```text
 Authorization: Bearer <token>
 ```
+
+### Route Groups
+
+| Tag | Prefix | Description |
+| --- | ------ | ----------- |
+| projects | `/api/v1/projects` | Project CRUD |
+| define | `/api/v1/define` | Research question chat (v2) |
+| define-v3 | `/api/v1/define` | Wizard-based formulation (v3, migration in progress) |
+| review | `/api/v1/review` | LangGraph SR orchestrator |
+| chat | `/api/v1/chat` | SSE streaming chat (skill-based) |
+| fulltext | `/api/v1/fulltext` | Open Access full-text checker |
+| health | `/`, `/health`, `/ready` | Health checks |
 
 ### Projects
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+| ------ | -------- | ----------- |
 | POST | `/api/v1/projects` | Create project |
 | GET | `/api/v1/projects` | List user's projects |
 | GET | `/api/v1/projects/{id}` | Get project |
@@ -341,46 +306,12 @@ Authorization: Bearer <token>
 ### Define Tool
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+| ------ | -------- | ----------- |
 | GET | `/api/v1/define/frameworks` | Get framework schemas |
 | POST | `/api/v1/define/chat` | Chat with AI |
 | GET | `/api/v1/define/conversation/{id}` | Get chat history |
 | DELETE | `/api/v1/define/conversation/{id}` | Clear chat history |
 | POST | `/api/v1/define/finer-assessment` | Evaluate research question |
-
-**Chat Request:**
-
-```json
-{
-  "project_id": "uuid",
-  "message": "I want to study exercise for depression in elderly",
-  "framework_type": "PICO",
-  "language": "en"
-}
-```
-
-**Chat Response:**
-
-```json
-{
-  "message": "I understand you want to study...",
-  "framework_data": {
-    "P": "Elderly patients with depression",
-    "I": "Exercise",
-    "C": "Standard care",
-    "O": "Depression symptoms"
-  },
-  "finer_assessment": {
-    "F": {"score": "high", "reason": "..."},
-    "I": {"score": "high", "reason": "..."},
-    "N": {"score": "medium", "reason": "..."},
-    "E": {"score": "high", "reason": "..."},
-    "R": {"score": "high", "reason": "..."},
-    "overall": "proceed",
-    "suggestions": ["Consider specifying exercise type"]
-  }
-}
-```
 
 ### Error Responses
 
@@ -391,7 +322,7 @@ Authorization: Bearer <token>
 ```
 
 | Code | Description |
-|------|-------------|
+| ---- | ----------- |
 | 400 | Bad Request |
 | 401 | Unauthorized |
 | 403 | Forbidden |
@@ -408,24 +339,26 @@ Authorization: Bearer <token>
 #### projects
 
 | Column | Type | Description |
-|--------|------|-------------|
+| ------ | ---- | ----------- |
 | id | UUID | Primary key |
 | name | VARCHAR(255) | Project name |
 | description | TEXT | Optional |
 | framework_type | VARCHAR(50) | PICO, CoCoPop, PEO, etc. |
 | framework_data | JSONB | Dynamic fields |
 | user_id | UUID | Owner |
+| current_step | VARCHAR(50) | Workflow step (default: DEFINE) |
 | created_at | TIMESTAMPTZ | Auto |
 | updated_at | TIMESTAMPTZ | Auto-trigger |
 
 #### chat_messages
 
 | Column | Type | Description |
-|--------|------|-------------|
+| ------ | ---- | ----------- |
 | id | UUID | Primary key |
 | project_id | UUID | FK → projects |
 | role | VARCHAR(20) | user/assistant/system |
 | content | TEXT | Message |
+| metadata | JSONB | Optional metadata |
 | created_at | TIMESTAMPTZ | Auto |
 
 ### Indexes
@@ -438,7 +371,7 @@ CREATE INDEX idx_chat_messages_project_id ON chat_messages(project_id);
 
 ### Cascade Deletes
 
-All FK use `ON DELETE CASCADE` - deleting project removes all related data.
+All FK use `ON DELETE CASCADE` — deleting project removes all related data.
 
 ---
 
@@ -451,6 +384,11 @@ GOOGLE_API_KEY=your_key           # From aistudio.google.com
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_KEY=eyJ...               # Anon key
 SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Service role (bypasses RLS)
+DATABASE_URL=postgresql://...     # Optional: direct PG for checkpointer
+NCBI_API_KEY=your_key             # Optional: PubMed (10 req/sec vs 3)
+PUBMED_EMAIL=your_email           # Optional: Unpaywall + NCBI E-utils
+CORE_API_KEY=your_key             # Optional: CORE.ac.uk full-text
+EZPROXY_PREFIX=https://...        # Optional: institutional proxy
 DEBUG=True                        # Enable /api/docs
 ```
 
@@ -466,30 +404,37 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 
 ## Common Tasks
 
-### Add New Framework
+### Add New Skill
 
-1. Add to `FRAMEWORK_SCHEMAS` in `backend/app/core/prompts/shared.py`
-2. Frontend auto-renders (no changes needed)
+1. Create directory under `backend/app/core/skills/your-skill/`
+2. Add prompt files (system prompt, templates)
+3. `skill_loader.py` auto-discovers it on startup
 
 ### Add API Endpoint
 
 1. Create route in `backend/app/api/routes/`
 2. Add Pydantic models in `schemas.py`
-3. Register in `main.py`
-4. Add method in `frontend/lib/api/`
+3. Register in `main.py` (`app.include_router(...)`)
+4. Add method in `frontend/src/lib/api/`
 
 ### Add UI Component
 
 ```bash
-npx shadcn-ui@latest add [component]
+cd frontend
+npx shadcn@latest add [component]
 ```
+
+### Add LangGraph Stage Node
+
+1. Create node in `backend/app/graph/nodes/`
+2. Add stage to `ReviewStage` in `state.py`
+3. Register routing in `workflow.py`
 
 ### Reset Database
 
 ```sql
 DROP TABLE IF EXISTS chat_messages CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
-
 -- Then run docs/schema.sql
 ```
 
@@ -502,6 +447,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 - Auto-deploys from `develop` branch
 - Uses `Dockerfile` in `/backend` directory
 - Environment variables in Railway dashboard
+- sr-skills bundled in Docker image
 
 ### Vercel (Frontend)
 
@@ -517,7 +463,7 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 1. Check Railway logs for actual error
 2. Verify `SUPABASE_SERVICE_ROLE_KEY` has no extra spaces
-3. Test connection: `GET /health`
+3. Test connection: `GET /health?detailed=true`
 
 ### Auth Issues
 
@@ -528,28 +474,47 @@ DROP TABLE IF EXISTS projects CASCADE;
 ### AI Not Responding
 
 1. Check `GOOGLE_API_KEY` quota
-2. Gemini may return malformed JSON - check logs
+2. Gemini model: `gemini-2.5-flash` (configured in `config.py`)
 3. Rate limiting may kick in on heavy usage
+
+### LangGraph Checkpointer Fails
+
+1. Check `DATABASE_URL` env var (needs direct PostgreSQL connection)
+2. Falls back to in-memory `MemorySaver` automatically
+3. Check startup logs for checkpointer status
 
 ---
 
 ## File Reference
 
 | Purpose | File |
-|---------|------|
+| ------- | ---- |
 | Main entry | `backend/main.py` |
 | Settings | `backend/app/core/config.py` |
 | Auth | `backend/app/core/auth.py` |
-| AI Service | `backend/app/services/ai_service.py` |
 | DB Service | `backend/app/services/database.py` |
+| Skill Loader | `backend/app/services/skill_loader.py` |
+| Checkpointer | `backend/app/services/checkpointer.py` |
+| Graph State | `backend/app/graph/state.py` |
+| Graph Workflow | `backend/app/graph/workflow.py` |
+| Graph Nodes | `backend/app/graph/nodes/` |
+| Skills | `backend/app/core/skills/` |
 | Schemas | `backend/app/api/models/schemas.py` |
 | Framework Models | `backend/app/api/models/frameworks.py` |
-| Framework prompts | `backend/app/core/prompts/shared.py` |
-| Define prompts | `backend/app/core/prompts/define.py` |
+| Define Routes | `backend/app/api/routes/define.py` |
+| Review Routes | `backend/app/api/routes/review.py` |
+| Chat Routes | `backend/app/api/routes/chat.py` |
+| Fulltext Routes | `backend/app/api/routes/fulltext.py` |
 | Dockerfile | `backend/Dockerfile` |
-| API Client | `frontend/lib/api/` |
-| Supabase Client | `frontend/lib/supabase.ts` |
-| Auth Context | `frontend/contexts/auth-context.tsx` |
-| Define Page | `frontend/app/define/page.tsx` |
+| API Client | `frontend/src/lib/api/backend-client.ts` |
+| Supabase Client | `frontend/src/lib/supabase/client.ts` |
+| Supabase Server | `frontend/src/lib/supabase/server.ts` |
+| Auth Middleware | `frontend/src/lib/supabase/middleware.ts` |
+| Dashboard | `frontend/src/app/(dashboard)/page.tsx` |
+| Landing Page | `frontend/src/app/landing/page.tsx` |
+| Chat Interface | `frontend/src/components/chat/ChatInterface.tsx` |
+| App Sidebar | `frontend/src/components/layout/AppSidebar.tsx` |
+| Stage Components | `frontend/src/components/stages/` |
 | DB Schema | `docs/schema.sql` |
 | RLS Policies | `docs/rls_policies.sql` |
+| Framework Configs | `docs/FRAMEWORK_CONFIGS.md` |

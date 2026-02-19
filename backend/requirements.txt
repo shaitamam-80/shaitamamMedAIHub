@@ -45,9 +45,9 @@ slowapi>=0.1.9
 redis>=5.0.0  # Optional: Install for distributed caching with REDIS_URL
 
 # Systematic Review methodology (private package)
-# Local: pip install -e "../Systematic Review Hub/sr-skills"
-# Docker: COPY sr-skills/ /sr-skills/ && pip install /sr-skills/
-sr-skills
+# Local dev:  pip install -e "C:/Users/shait/OneDrive/Desktop/Systematic Review Hub/sr-skills"
+# Docker:     installed via GH_TOKEN build arg (see Dockerfile)
+# sr-skills is NOT listed here — it's installed separately in Docker via git+https
 
 # Testing (optional but recommended)
 pytest>=8.3.0
