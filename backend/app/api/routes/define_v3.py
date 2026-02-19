@@ -59,7 +59,7 @@ async def detect_framework(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    if project.get("user_id") != current_user["id"]:
+    if project.get("owner_id") != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this project"
@@ -93,7 +93,7 @@ async def clarify_framework(
     """
     # Verify project access
     project = await db_service.get_project(str(request.project_id))
-    if not project or project.get("user_id") != current_user["id"]:
+    if not project or project.get("owner_id") != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"
@@ -133,7 +133,7 @@ async def generate_questions(
     """
     # Verify project access
     project = await db_service.get_project(str(request.project_id))
-    if not project or project.get("user_id") != current_user["id"]:
+    if not project or project.get("owner_id") != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"

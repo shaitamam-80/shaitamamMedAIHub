@@ -122,7 +122,7 @@ async def send_message(
                 detail="Project not found"
             )
 
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
@@ -227,7 +227,7 @@ async def get_state(
                 detail="Project not found"
             )
 
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
@@ -298,7 +298,7 @@ async def reset_workflow(
                 detail="Project not found"
             )
 
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"

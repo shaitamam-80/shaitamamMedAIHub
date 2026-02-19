@@ -41,7 +41,7 @@ async def create_project(
     """Create a new research project. Auto-generates slug and triggers 10 stage creation."""
     try:
         project_data = project.model_dump()
-        project_data["user_id"] = current_user.id
+        project_data["owner_id"] = current_user.id
         project_data["slug"] = slugify(project_data["title"])
 
         created_project = await db_service.create_project(project_data)
@@ -95,7 +95,7 @@ async def get_project(
             )
 
         # Verify ownership
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -125,7 +125,7 @@ async def get_project_stages(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -156,7 +156,7 @@ async def update_project(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
-        if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
+        if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -196,7 +196,7 @@ async def delete_project(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
-        if existing_project.get("user_id") and existing_project["user_id"] != current_user.id:
+        if existing_project.get("owner_id") and existing_project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -242,7 +242,7 @@ async def get_stage_messages(
         project = await db_service.get_project(str(project_id))
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Find the active conversation for this stage
@@ -282,7 +282,7 @@ async def update_stage_status(
         project = await db_service.get_project(str(project_id))
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         # Get the stage
@@ -344,7 +344,7 @@ async def get_project_artifacts(
         project = await db_service.get_project(str(project_id))
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         artifacts = await db_service.get_project_artifacts(str(project_id), stage_name)
@@ -371,7 +371,7 @@ async def get_artifact(
         project = await db_service.get_project(str(project_id))
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-        if project.get("user_id") and project["user_id"] != current_user.id:
+        if project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
         artifact = await db_service.get_artifact(str(artifact_id))

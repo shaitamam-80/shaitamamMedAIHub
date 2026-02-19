@@ -105,7 +105,7 @@ class DatabaseService:
         query = self.client.table("projects").select("*")
 
         if owner_id:
-            query = query.eq("user_id", owner_id)
+            query = query.eq("owner_id", owner_id)
         if status:
             query = query.eq("status", status)
 

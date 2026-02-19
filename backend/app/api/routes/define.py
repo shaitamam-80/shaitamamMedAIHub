@@ -61,7 +61,7 @@ async def get_conversation(
     try:
         # Verify project ownership
         project = await db_service.get_project(project_id)
-        if project and project.get("user_id") and project["user_id"] != current_user.id:
+        if project and project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -87,7 +87,7 @@ async def clear_conversation(
     try:
         # Verify project ownership
         project = await db_service.get_project(project_id)
-        if project and project.get("user_id") and project["user_id"] != current_user.id:
+        if project and project.get("owner_id") and project["owner_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )

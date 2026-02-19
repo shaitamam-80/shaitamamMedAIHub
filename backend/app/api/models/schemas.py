@@ -98,7 +98,7 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(BaseModel):
     """Project response matching Supabase projects table."""
     id: str
-    user_id: Optional[str] = None
+    owner_id: Optional[str] = None
     title: str
     slug: str
     description: Optional[str] = None
