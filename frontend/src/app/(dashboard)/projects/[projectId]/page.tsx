@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { use, useState, useEffect } from 'react';
-import { ArrowLeft, FileText, CheckCircle2, Clock, AlertCircle, Loader2, BarChart3 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, CheckCircle2, Clock, AlertCircle, Loader2, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import StageProgress from '@/components/dashboard/StageProgress';
 import { getProject, getProjectStages, type Project, type ProjectStage } from '@/lib/api/backend-client';
@@ -232,7 +232,7 @@ export default function ProjectOverviewPage({
             className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <span>{LABELS.continueBtn[lang]}</span>
-            <ArrowLeft className="w-5 h-5" />
+            {lang === 'he' ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
           </Link>
         </div>
       </div>
