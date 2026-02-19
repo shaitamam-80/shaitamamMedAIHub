@@ -61,17 +61,17 @@ class FrameworkData(BaseModel):
 # ============================================================================
 
 class ProjectCreate(BaseModel):
-    """Create a new project. Fields match Supabase projects table columns."""
+    """Create a new project. Only title is required; review_type and framework are set later."""
     title: str = Field(..., min_length=1, max_length=255, examples=["Exercise Interventions for Depression in Elderly"])
     description: Optional[str] = Field(None, examples=["A systematic review investigating exercise interventions for elderly patients with depression"])
     review_type: str = Field(
-        ...,
-        description="Review type: systematic_intervention, systematic_prevalence, systematic_prognosis, systematic_diagnostic, systematic_qualitative, scoping",
+        default="systematic_intervention",
+        description="Review type (can be updated later during workflow)",
         examples=["systematic_intervention"]
     )
     framework: str = Field(
         default="PICO",
-        description="Research framework: PICO, PICOT, PICOS, CoCoPop, PFO, PEO, PECO, PIRD, PICo, SPIDER, PCC, SPICE, ECLIPSE, CMO, PerSPEcTiF, BeHEMoTh",
+        description="Research framework (determined during question formulation stage)",
         examples=["PICO"]
     )
 
@@ -79,9 +79,7 @@ class ProjectCreate(BaseModel):
         json_schema_extra = {
             "example": {
                 "title": "Exercise Interventions for Depression in Elderly",
-                "description": "Investigating the effectiveness of exercise programs in treating depression in elderly populations",
-                "review_type": "systematic_intervention",
-                "framework": "PICO"
+                "description": "Investigating the effectiveness of exercise programs"
             }
         }
 

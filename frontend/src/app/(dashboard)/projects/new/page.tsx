@@ -2,262 +2,120 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Check, Search, FileText, Target, Layers, BookOpen, Brain, Loader2 } from 'lucide-react';
-import { REVIEW_TYPES, ReviewType } from '@/lib/utils/stage-config';
+import Link from 'next/link';
+import { ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { createProject } from '@/lib/api/backend-client';
-
-const reviewTypeIcons: Record<ReviewType, any> = {
-  systematic_intervention: Search,
-  systematic_prevalence: Target,
-  systematic_prognosis: Layers,
-  systematic_diagnostic: Search,
-  systematic_qualitative: Brain,
-  scoping: BookOpen,
-};
-
-// Map review types to their default research framework
-const REVIEW_TYPE_FRAMEWORKS: Record<string, string> = {
-  'systematic_intervention': 'PICO',
-  'systematic_prevalence': 'CoCoPop',
-  'systematic_prognosis': 'PFO',
-  'systematic_diagnostic': 'PIRD',
-  'systematic_qualitative': 'SPIDER',
-  'scoping': 'PCC',
-};
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    topic: '',
-    reviewType: '',
-    framework: '',
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-  };
-
-  const handleSubmit = async () => {
     setIsSubmitting(true);
-    setSubmitError(null);
+    setError(null);
 
     try {
-      const framework = REVIEW_TYPE_FRAMEWORKS[formData.reviewType] || 'PICO';
       const project = await createProject({
-        title: formData.topic,
-        review_type: formData.reviewType,
-        framework: framework,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        review_type: 'systematic_intervention',
+        framework: 'PICO',
       });
-      // Redirect to the newly created project
       router.push(`/projects/${project.id}`);
-    } catch (error) {
-      console.error('Failed to create project:', error);
-      setSubmitError('שגיאה ביצירת הפרויקט. נסה שוב.');
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      setError('Failed to create project. Please try again.');
       setIsSubmitting(false);
     }
   };
 
-  const canProceed = () => {
-    if (step === 1) return formData.topic.trim().length > 0;
-    if (step === 2) return formData.reviewType.length > 0;
-    return true;
-  };
-
   return (
-    <div className="min-h-full flex items-center justify-center p-8">
-      <div className="w-full max-w-4xl">
-        {/* Progress Indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center gap-4">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${
-                    s < step
-                      ? 'bg-green-500 text-white'
-                      : s === step
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-[#e2e8f0] text-[#94a3b8]'
-                  }`}
-                >
-                  {s < step ? <Check className="w-5 h-5" /> : s}
-                </div>
-                {s < 3 && (
-                  <div
-                    className={`w-20 h-1 mx-2 transition-all ${
-                      s < step ? 'bg-green-500' : 'bg-[#e2e8f0]'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-center gap-32 mt-4">
-            <span className={`text-sm ${step === 1 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>נושא</span>
-            <span className={`text-sm ${step === 2 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>סוג סקירה</span>
-            <span className={`text-sm ${step === 3 ? 'text-blue-500' : 'text-[#94a3b8]'}`}>אישור</span>
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <div className="bg-white border border-[#e2e8f0] shadow-sm rounded-2xl p-8 min-h-[400px]">
-          {/* Step 1: Topic */}
-          {step === 1 && (
-            <div>
-              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">מה נושא המחקר שלך?</h2>
-              <p className="text-[#475569] mb-6">תאר בקצרה את נושא הסקירה השיטתית</p>
-
-              <div>
-                <label htmlFor="topic" className="block text-sm font-medium text-[#0f172a] mb-2">
-                  נושא המחקר
-                </label>
-                <textarea
-                  id="topic"
-                  value={formData.topic}
-                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                  rows={6}
-                  className="w-full px-4 py-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-lg text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                  placeholder="לדוגמה: השפעת הבינה המלאכותית על שיטות הוראה בחינוך הגבוה - סקירה שיטתית של מחקרים שפורסמו בין 2020-2024"
-                />
-                <p className="text-xs text-[#94a3b8] mt-2">
-                  טיפ: כלול את הנושא, האוכלוסיה, וההקשר המחקרי
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Review Type */}
-          {step === 2 && (
-            <div>
-              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">בחר סוג סקירה</h2>
-              <p className="text-[#475569] mb-6">בחר את סוג הסקירה המתאימה למטרות המחקר שלך</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(REVIEW_TYPES).map(([reviewTypeKey, reviewTypeData]) => {
-                  const Icon = reviewTypeIcons[reviewTypeKey as ReviewType] || FileText;
-                  const isSelected = formData.reviewType === reviewTypeKey;
-
-                  return (
-                    <button
-                      key={reviewTypeKey}
-                      onClick={() => setFormData({ ...formData, reviewType: reviewTypeKey })}
-                      className={`p-6 rounded-xl border-2 text-right transition-all relative ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-[#e2e8f0] bg-[#f8fafc] hover:border-blue-500/50'
-                      }`}
-                    >
-                      <Icon className={`w-8 h-8 mb-3 ${isSelected ? 'text-blue-500' : 'text-[#475569]'}`} />
-                      <h3 className={`font-semibold mb-1 ${isSelected ? 'text-blue-500' : 'text-[#0f172a]'}`}>
-                        {reviewTypeData.he}
-                      </h3>
-                      {isSelected && (
-                        <div className="mt-2 text-xs text-blue-400">
-                          Framework: {REVIEW_TYPE_FRAMEWORKS[reviewTypeKey] || 'PICO'}
-                        </div>
-                      )}
-                      {isSelected && (
-                        <Check className="w-5 h-5 text-blue-500 absolute top-4 left-4" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Confirmation */}
-          {step === 3 && (
-            <div>
-              <h2 className="text-2xl font-bold text-[#0f172a] mb-2">אישור פרטי הפרויקט</h2>
-              <p className="text-[#475569] mb-6">בדוק את הפרטים לפני יצירת הפרויקט</p>
-
-              <div className="space-y-6">
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-[#475569] mb-2">נושא המחקר</h3>
-                  <p className="text-[#0f172a]">{formData.topic}</p>
-                </div>
-
-                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-[#475569] mb-2">סוג הסקירה</h3>
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const Icon = reviewTypeIcons[formData.reviewType as ReviewType] || FileText;
-                      return <Icon className="w-5 h-5 text-blue-500" />;
-                    })()}
-                    <span className="text-[#0f172a] font-medium">
-                      {formData.reviewType ? REVIEW_TYPES[formData.reviewType as ReviewType]?.he : ''}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-[#94a3b8]">
-                    Framework: {REVIEW_TYPE_FRAMEWORKS[formData.reviewType] || 'PICO'}
-                  </div>
-                </div>
-
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6">
-                  <p className="text-blue-400 text-sm">
-                    ✓ הפרויקט יכלול 10 שלבים מותאמים לסוג הסקירה שבחרת
-                  </p>
-                </div>
-
-                {submitError && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                    <p className="text-red-400 text-sm">{submitError}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-6">
-          <button
-            onClick={handleBack}
-            disabled={step === 1}
-            className="px-6 py-3 bg-[#e2e8f0] text-[#0f172a] font-medium rounded-lg hover:bg-[#f8fafc] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            <ArrowRight className="w-5 h-5" />
-            <span>חזרה</span>
-          </button>
-
-          {step < 3 ? (
-            <button
-              onClick={handleNext}
-              disabled={!canProceed()}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-            >
-              <span>המשך</span>
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 transition-all flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>יוצר פרויקט...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-5 h-5" />
-                  <span>צור פרויקט</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+    <div className="max-w-2xl mx-auto py-8">
+      <div className="mb-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/">
+            <ArrowLeft className="size-4 me-1" />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Create New Project</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Start a new systematic review project. The review type and framework
+            will be determined during the research question stage.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Project Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Exercise Interventions for Depression in Elderly"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">
+                Description <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description of your research topic and goals"
+                rows={3}
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" type="button" asChild>
+                <Link href="/">Cancel</Link>
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !title.trim()}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 me-1 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="size-4 me-1" />
+                    Create Project
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
