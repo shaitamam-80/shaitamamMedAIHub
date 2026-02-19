@@ -82,6 +82,7 @@ app = FastAPI(
     openapi_tags=tags_metadata,
     docs_url="/api/docs" if settings.DEBUG else None,
     redoc_url="/api/redoc" if settings.DEBUG else None,
+    redirect_slashes=False,
 )
 
 # Attach rate limiter to app state
