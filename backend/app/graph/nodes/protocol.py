@@ -29,7 +29,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.prompts.protocol import (
+from sr_skills.prompts.protocol import (
     PROTOCOL_BUILDER_SYSTEM_PROMPT,
     PROTOCOL_SECTIONS,
     ROB_TOOLS,

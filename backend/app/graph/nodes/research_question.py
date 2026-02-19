@@ -29,7 +29,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.prompts.research_question import (
+from sr_skills.prompts.research_question import (
     RESEARCH_QUESTION_SYSTEM_PROMPT,
     FRAMEWORK_DEFINITIONS,
     FINER_CRITERIA,

@@ -44,6 +44,11 @@ slowapi>=0.1.9
 # Caching (Redis is optional - uses in-memory cache by default)
 redis>=5.0.0  # Optional: Install for distributed caching with REDIS_URL
 
+# Systematic Review methodology (private package)
+# Local: pip install -e "../Systematic Review Hub/sr-skills"
+# Docker: COPY sr-skills/ /sr-skills/ && pip install /sr-skills/
+sr-skills
+
 # Testing (optional but recommended)
 pytest>=8.3.0
 pytest-asyncio>=0.24.0

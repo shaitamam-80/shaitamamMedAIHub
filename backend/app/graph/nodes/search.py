@@ -29,7 +29,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.prompts.search import (
+from sr_skills.prompts.search import (
     SEARCH_SYSTEM_PROMPT,
     CLINICAL_FILTERS,
     STRATEGY_DEFINITIONS,

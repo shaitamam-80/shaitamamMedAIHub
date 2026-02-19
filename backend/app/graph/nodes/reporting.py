@@ -27,7 +27,7 @@ from app.graph.state import (
     ReportingArtifact,
     get_stage_display_name,
 )
-from app.core.prompts.reporting import (
+from sr_skills.prompts.reporting import (
     REPORTING_SYSTEM_PROMPT,
     get_reporting_context,
     WRITING_ORDER,

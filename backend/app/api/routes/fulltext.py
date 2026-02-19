@@ -10,7 +10,16 @@ from fastapi import APIRouter, HTTPException, Query, status, Depends
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user, UserPayload
-from app.services.fulltext_service import fulltext_service
+from app.core.config import settings
+from sr_skills.fulltext import FullTextService
+
+# Create service instance wired to app config
+fulltext_service = FullTextService(
+    ncbi_api_key=settings.NCBI_API_KEY,
+    pubmed_email=settings.PUBMED_EMAIL,
+    core_api_key=settings.CORE_API_KEY,
+    ezproxy_prefix=settings.EZPROXY_PREFIX,
+)
 
 logger = logging.getLogger(__name__)
 

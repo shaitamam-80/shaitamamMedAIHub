@@ -5,7 +5,11 @@ WORKDIR /app
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy requirements first for better caching
+# Install sr-skills private package first (for better caching)
+COPY sr-skills/ /sr-skills/
+RUN pip install --no-cache-dir /sr-skills/
+
+# Copy requirements and install remaining dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

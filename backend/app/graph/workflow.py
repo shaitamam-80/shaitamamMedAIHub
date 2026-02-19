@@ -31,7 +31,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.prompts.orchestrator import (
+from sr_skills.prompts.orchestrator import (
     ORCHESTRATOR_SYSTEM_PROMPT,
     get_stage_instructions,
 )

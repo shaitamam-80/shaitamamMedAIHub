@@ -218,7 +218,7 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown event handler"""
     logger.info("MedAI Hub Backend shutting down...")
-    from app.services.fulltext_service import fulltext_service
+    from app.api.routes.fulltext import fulltext_service
     await fulltext_service.close()
 
 

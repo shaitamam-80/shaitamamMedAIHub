@@ -26,7 +26,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.prompts.screening import (
+from sr_skills.prompts.screening import (
     SCREENING_SYSTEM_PROMPT,
     RULE_ENGINE_EXCLUSIONS,
     FRAMEWORK_CRITERIA_MAP,

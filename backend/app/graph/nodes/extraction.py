@@ -30,18 +30,18 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.constants.study_designs import (
+from sr_skills.constants.study_designs import (
     detect_study_design,
     DESIGN_TO_TEMPLATE,
     DESIGN_DISPLAY_NAMES,
 )
-from app.core.constants.extraction_templates import (
+from sr_skills.constants.extraction_templates import (
     get_template,
     get_template_for_design,
     get_required_fields,
     TEMPLATES,
 )
-from app.core.prompts.extraction import (
+from sr_skills.prompts.extraction import (
     EXTRACTION_SYSTEM_PROMPT,
     get_extraction_context,
     EXTRACTION_PITFALLS,

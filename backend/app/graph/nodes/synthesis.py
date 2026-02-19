@@ -30,20 +30,20 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.constants.meta_analysis import (
+from sr_skills.constants.meta_analysis import (
     can_pool,
     interpret_i_squared,
     OUTCOME_TYPE_DEFAULT_MEASURE,
     STANDARD_SENSITIVITY_ANALYSES,
 )
-from app.core.constants.grade import (
+from sr_skills.constants.grade import (
     compute_grade_certainty,
     get_plain_language,
     STARTING_CERTAINTY,
     CERTAINTY_DEFINITIONS,
     DOWNGRADE_DOMAINS,
 )
-from app.core.prompts.synthesis import (
+from sr_skills.prompts.synthesis import (
     SYNTHESIS_SYSTEM_PROMPT,
     get_synthesis_context,
 )

@@ -29,7 +29,7 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from app.core.constants.rob_tools import (
+from sr_skills.constants.rob_tools import (
     select_rob_tool,
     get_domains_for_tool,
     rob2_overall_judgment,
@@ -41,7 +41,7 @@ from app.core.constants.rob_tools import (
     TOOL_NOS_CASE_CONTROL,
     TOOL_DISPLAY_NAMES,
 )
-from app.core.prompts.risk_of_bias import (
+from sr_skills.prompts.risk_of_bias import (
     ROB_SYSTEM_PROMPT,
     get_rob_context,
 )
