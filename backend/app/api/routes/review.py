@@ -153,7 +153,8 @@ async def stream_message(
     config = {"configurable": {"thread_id": thread_id}}
 
     current_stage, stored_language = _get_current_state(graph, config)
-    language = stored_language if stored_language != "en" else (request.language or "en")
+    # Always respect the current request language; fall back to stored, then "en"
+    language = request.language or stored_language or "en"
 
     input_state = {
         "messages": [HumanMessage(content=request.message)],
@@ -246,7 +247,8 @@ async def send_message(
         config = {"configurable": {"thread_id": thread_id}}
 
         current_stage, stored_language = _get_current_state(graph, config)
-        language = stored_language if stored_language != "en" else (request.language or "en")
+        # Always respect the current request language; fall back to stored, then "en"
+    language = request.language or stored_language or "en"
 
         input_state = {
             "messages": [HumanMessage(content=request.message)],

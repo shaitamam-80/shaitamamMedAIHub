@@ -48,6 +48,15 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Scalable language name mapping for prompt injection
+LANGUAGE_NAMES = {
+    "en": "English",
+    "he": "Hebrew",
+    "ar": "Arabic",
+    "es": "Spanish",
+    "fr": "French",
+}
+
 
 # ============================================================================
 # Pydantic Models for Structured Extraction
@@ -437,12 +446,21 @@ async def protocol_builder_node(state: ReviewState) -> Dict[str, Any]:
         if review_type and "scoping" in review_type.lower():
             scoping_addendum = f"\n\n{SCOPING_REVIEW_GUIDANCE}"
 
+        # Build language instruction (generic, scalable)
+        lang_name = LANGUAGE_NAMES.get(language, "English")
+        lang_instruction = (
+            f"\n\n[LANGUAGE]\n"
+            f"Respond strictly in {lang_name}. "
+            f"All questions, explanations, and markdown content must be in {lang_name}."
+        )
+
         full_system_prompt = (
             f"{PROTOCOL_BUILDER_SYSTEM_PROMPT}"
             f"{idea_context}"
             f"{rq_context}"
             f"{progress_context}"
             f"{scoping_addendum}"
+            f"{lang_instruction}"
         )
 
         # Build message list for LLM

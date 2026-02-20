@@ -57,6 +57,7 @@ class IdeaArtifact(TypedDict, total=False):
     review_type: str                   # systematic_intervention, scoping, etc.
     population_sketch: str             # Initial population description
     intervention_sketch: str           # Intervention/exposure/concept
+    comparison_sketch: str             # Comparison group or condition (the C in PICO)
     outcome_sketch: str                # Expected outcomes or context
     study_designs: List[str]           # Study designs to include (RCT, cohort, etc.)
     existing_reviews_checked: bool     # Did user check PROSPERO/Cochrane?

@@ -42,6 +42,15 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Scalable language name mapping for prompt injection
+LANGUAGE_NAMES = {
+    "en": "English",
+    "he": "Hebrew",
+    "ar": "Arabic",
+    "es": "Spanish",
+    "fr": "French",
+}
+
 
 # ============================================================================
 # Pydantic Models for Structured Extraction
@@ -64,6 +73,10 @@ class IdeaExtraction(BaseModel):
     intervention_sketch: Optional[str] = Field(
         default=None,
         description="Intervention, exposure, or concept being studied. null if not discussed."
+    )
+    comparison_sketch: Optional[str] = Field(
+        default=None,
+        description="Comparison group or condition (e.g., 'standard physiotherapy', 'no intervention'). null if not discussed."
     )
     outcome_sketch: Optional[str] = Field(
         default=None,
@@ -292,12 +305,27 @@ async def idea_node(state: ReviewState) -> Dict[str, Any]:
                 context_section += f"Population: {idea_artifact['population_sketch']}\n"
             if idea_artifact.get("intervention_sketch"):
                 context_section += f"Intervention/Concept: {idea_artifact['intervention_sketch']}\n"
+            if idea_artifact.get("comparison_sketch"):
+                context_section += f"Comparison: {idea_artifact['comparison_sketch']}\n"
             if idea_artifact.get("existing_reviews_checked"):
                 context_section += "Existing reviews: Checked\n"
             if idea_artifact.get("timeline"):
                 context_section += f"Timeline: {idea_artifact['timeline']}\n"
 
-        full_system_prompt = f"{IDEA_SYSTEM_PROMPT}{context_section}"
+        # Build language instruction (generic, scalable)
+        lang_name = LANGUAGE_NAMES.get(language, "English")
+        lang_instruction = (
+            f"[LANGUAGE]\n"
+            f"Respond strictly in {lang_name}. "
+            f"All questions, explanations, and markdown content must be in {lang_name}."
+        )
+
+        # Safe string replacement (avoids KeyError on stray curly braces)
+        full_system_prompt = (
+            IDEA_SYSTEM_PROMPT
+            .replace("{context_section}", context_section)
+            .replace("{lang_instruction}", lang_instruction)
+        )
 
         # Build message list for LLM
         llm_messages = [SystemMessage(content=full_system_prompt)]
@@ -331,6 +359,7 @@ async def idea_node(state: ReviewState) -> Dict[str, Any]:
             "review_type": idea_artifact.get("review_type", ""),
             "population_sketch": idea_artifact.get("population_sketch", ""),
             "intervention_sketch": idea_artifact.get("intervention_sketch", ""),
+            "comparison_sketch": idea_artifact.get("comparison_sketch", ""),
             "outcome_sketch": idea_artifact.get("outcome_sketch", ""),
             "study_designs": idea_artifact.get("study_designs", []),
             "existing_reviews_checked": idea_artifact.get("existing_reviews_checked", False),
@@ -349,6 +378,8 @@ async def idea_node(state: ReviewState) -> Dict[str, Any]:
                 updated_artifact["population_sketch"] = extraction.population_sketch
             if extraction.intervention_sketch:
                 updated_artifact["intervention_sketch"] = extraction.intervention_sketch
+            if extraction.comparison_sketch:
+                updated_artifact["comparison_sketch"] = extraction.comparison_sketch
             if extraction.outcome_sketch:
                 updated_artifact["outcome_sketch"] = extraction.outcome_sketch
             if extraction.study_designs:

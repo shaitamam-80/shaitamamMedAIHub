@@ -39,6 +39,15 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Scalable language name mapping for prompt injection
+LANGUAGE_NAMES = {
+    "en": "English",
+    "he": "Hebrew",
+    "ar": "Arabic",
+    "es": "Spanish",
+    "fr": "French",
+}
+
 
 # ============================================================================
 # Pydantic Models for Structured Extraction
@@ -340,7 +349,15 @@ async def research_question_node(state: ReviewState) -> Dict[str, Any]:
             if rq_artifact.get("question_broad"):
                 rq_context += f"Broad question: {rq_artifact['question_broad']}\n"
 
-        full_system_prompt = f"{RESEARCH_QUESTION_SYSTEM_PROMPT}{idea_context}{rq_context}"
+        # Build language instruction (generic, scalable)
+        lang_name = LANGUAGE_NAMES.get(language, "English")
+        lang_instruction = (
+            f"\n\n[LANGUAGE]\n"
+            f"Respond strictly in {lang_name}. "
+            f"All questions, explanations, and markdown content must be in {lang_name}."
+        )
+
+        full_system_prompt = f"{RESEARCH_QUESTION_SYSTEM_PROMPT}{idea_context}{rq_context}{lang_instruction}"
 
         # Build message list for LLM
         llm_messages = [SystemMessage(content=full_system_prompt)]

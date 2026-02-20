@@ -10,6 +10,7 @@ import {
   type ChatRequestPayload,
   type ReviewStreamPayload,
 } from '@/lib/api/backend-client';
+import { useLanguage } from '@/hooks/use-language';
 import { CheckCircle2, WifiOff, Loader2, Lock } from 'lucide-react';
 import {
   Tooltip,
@@ -99,6 +100,7 @@ export default function ChatInterface({
   onStateUpdate,
   canCompleteStage,
 }: ChatInterfaceProps) {
+  const lang = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -142,8 +144,12 @@ export default function ChatInterface({
         id: 'greeting',
         role: 'assistant',
         content: projectContext
-          ? `Hello! I'm here to help you with the "${projectContext.stageName}" stage. How can I assist?`
-          : `Hello! I'm here to help you with ${skillName}. How can I assist?`,
+          ? lang === 'he'
+            ? `שלום! אני כאן כדי לעזור לך בשלב "${projectContext.stageName}". איך אוכל לסייע?`
+            : `Hello! I'm here to help you with the "${projectContext.stageName}" stage. How can I assist?`
+          : lang === 'he'
+            ? `שלום! אני כאן כדי לעזור לך עם ${skillName}. איך אוכל לסייע?`
+            : `Hello! I'm here to help you with ${skillName}. How can I assist?`,
         timestamp: new Date(),
       };
       setMessages([greetingMessage]);
@@ -172,7 +178,7 @@ export default function ChatInterface({
         const payload: ReviewStreamPayload = {
           project_id: projectContext.projectId,
           message: content.trim(),
-          language: 'he',
+          language: lang,
         };
         response = await reviewStream(payload);
       } else {
@@ -186,7 +192,7 @@ export default function ChatInterface({
             })),
           skillName,
           projectContext,
-          language: 'he',
+          language: lang,
         };
         response = await chatStream(payload);
       }
