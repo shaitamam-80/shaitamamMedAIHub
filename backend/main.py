@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, define_v3, review, chat, fulltext
+from app.api.routes import projects, review, chat, fulltext
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -47,14 +47,6 @@ tags_metadata = [
     {
         "name": "projects",
         "description": "Project management operations. Create, read, update, and delete research projects.",
-    },
-    {
-        "name": "define",
-        "description": "Research question definition with AI chat. Formulate research questions using frameworks like PICO, CoCoPop, PEO, SPIDER, etc.",
-    },
-    {
-        "name": "define-v3",
-        "description": "Define Tool v3.0 - Wizard-based research question formulation. Clarification-based framework detection, three question formulations (narrow/broad/clinical), and qualitative FINER assessment.",
     },
     {
         "name": "review",
@@ -127,8 +119,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
-app.include_router(define.router, prefix=settings.API_V1_PREFIX)
-app.include_router(define_v3.router, prefix=settings.API_V1_PREFIX)  # Define Tool v3.0
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)  # LangGraph Orchestrator
 app.include_router(chat.router, prefix=settings.API_V1_PREFIX)  # SSE Chat (SR-Portal)
 app.include_router(fulltext.router, prefix=settings.API_V1_PREFIX)  # Full-text OA check
