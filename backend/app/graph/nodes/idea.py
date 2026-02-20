@@ -328,19 +328,19 @@ async def idea_node(state: ReviewState) -> Dict[str, Any]:
         )
 
         # Build message list for LLM
+        # Skip any AI messages that appear before the first HumanMessage
+        # (defensive: old checkpointed states may contain orphan orchestrator
+        # responses that would pollute the conversational context)
         llm_messages = [SystemMessage(content=full_system_prompt)]
 
         history_messages = messages[-10:] if len(messages) > 10 else messages
+        seen_human = False
         for msg in history_messages:
-            if isinstance(msg, HumanMessage):
-                llm_messages.append(msg)
-            elif isinstance(msg, AIMessage):
-                llm_messages.append(msg)
-            elif hasattr(msg, 'type'):
-                if msg.type == "human":
-                    llm_messages.append(HumanMessage(content=msg.content))
-                elif msg.type == "ai":
-                    llm_messages.append(AIMessage(content=msg.content))
+            if isinstance(msg, HumanMessage) or (hasattr(msg, 'type') and msg.type == "human"):
+                seen_human = True
+                llm_messages.append(msg if isinstance(msg, HumanMessage) else HumanMessage(content=msg.content))
+            elif seen_human and (isinstance(msg, AIMessage) or (hasattr(msg, 'type') and msg.type == "ai")):
+                llm_messages.append(msg if isinstance(msg, AIMessage) else AIMessage(content=msg.content))
 
         llm = get_conversational_llm()
         response = await llm.ainvoke(llm_messages)

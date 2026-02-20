@@ -22,8 +22,6 @@ from typing import Literal, Dict, Any
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.graph.state import (
     ReviewState,
@@ -31,11 +29,6 @@ from app.graph.state import (
     get_next_stage,
     get_stage_display_name,
 )
-from sr_skills.prompts.orchestrator import (
-    ORCHESTRATOR_SYSTEM_PROMPT,
-    get_stage_instructions,
-)
-from app.core.config import settings
 
 # Import modular node implementations
 from app.graph.nodes import (
@@ -53,97 +46,22 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# AI Model Initialization
-# ============================================================================
-
-def get_llm() -> ChatGoogleGenerativeAI:
-    """Get the Gemini LLM instance for orchestration (uses Flash for speed)."""
-    return ChatGoogleGenerativeAI(
-        model=settings.GEMINI_FLASH_MODEL,
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.5,
-        max_tokens=2048,
-    )
-
-
-# ============================================================================
 # Node Definitions
 # ============================================================================
 
 async def orchestrator_node(state: ReviewState) -> Dict[str, Any]:
     """
-    Main orchestrator node that analyzes input and decides what to do.
+    Pure router — validates state and sets defaults.
 
-    This node:
-    1. Gets the current stage from state
-    2. Builds context-aware prompt
-    3. Calls LLM for response
-    4. Returns updated state with AI response
-
-    Args:
-        state: Current workflow state
-
-    Returns:
-        State updates including AI message
+    No LLM call. Routing to the correct stage node happens via
+    the route_by_stage conditional edges. Each stage node has its
+    own system prompt and conversational LLM call.
     """
     current_stage = state.get("current_stage", "idea")
-    language = state.get("language", "en")
-    messages = state.get("messages", [])
-
-    logger.info(f"Orchestrator processing stage: {current_stage}")
-
-    # Build system prompt with stage-specific instructions
-    system_prompt = get_stage_instructions(current_stage)
-
-    # Add stage context to system prompt
-    stage_display = get_stage_display_name(current_stage, language)
-    context_header = f"\n\n[CURRENT STAGE: {stage_display}]\n"
-    full_system_prompt = system_prompt + context_header
-
-    # Get artifacts summary if any exist
-    artifacts = state.get("artifacts", {})
-    if artifacts:
-        artifacts_summary = "\n\n[COMPLETED ARTIFACTS]:\n"
-        for stage_name, artifact in artifacts.items():
-            artifacts_summary += f"- {stage_name}: Completed\n"
-        full_system_prompt += artifacts_summary
-
-    try:
-        # Build LangChain message list
-        llm_messages = [SystemMessage(content=full_system_prompt)]
-
-        # Add conversation history
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                llm_messages.append(msg)
-            elif isinstance(msg, AIMessage):
-                llm_messages.append(msg)
-            elif hasattr(msg, 'type'):
-                # Handle dict-like messages
-                if msg.type == "human":
-                    llm_messages.append(HumanMessage(content=msg.content))
-                elif msg.type == "ai":
-                    llm_messages.append(AIMessage(content=msg.content))
-
-        # Call LLM
-        llm = get_llm()
-        response = await llm.ainvoke(llm_messages)
-
-        # Return state update with new AI message
-        return {
-            "messages": [AIMessage(content=response.content)],
-            "status": "waiting_for_user",
-        }
-
-    except Exception as e:
-        logger.error(f"Orchestrator error: {e}")
-        error_msg = f"I encountered an error: {str(e)}. Please try again."
-        return {
-            "messages": [AIMessage(content=error_msg)],
-            "status": "error",
-            "last_error": str(e),
-            "errors": [str(e)],
-        }
+    logger.info(f"Orchestrator routing to stage: {current_stage}")
+    return {
+        "status": "active",
+    }
 
 
 # All stage nodes are imported from app.graph.nodes
