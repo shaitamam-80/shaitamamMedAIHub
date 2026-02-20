@@ -52,6 +52,8 @@ export interface ToolConfig {
   knowledgeBases?: string[];
   acceptsUploads?: string[];
   expectedArtifacts?: string[];
+  /** When true, uses the LangGraph review/stream endpoint instead of chat */
+  useLangGraph?: boolean;
 }
 
 /** Backward-compatible type alias */
@@ -72,11 +74,12 @@ export const STAGES: Record<StageName, ToolConfig> = {
     },
     icon: 'Lightbulb',
     skillName: 'systematic-review',
-    geminiModel: 'gemini-2.0-flash',
+    geminiModel: 'gemini-2.0-pro',
     order: 0,
     category: 'pipeline',
     expectedArtifacts: ['idea.md'],
     slug: 'idea',
+    useLangGraph: true,
   },
   question: {
     name: { he: 'שאלת מחקר', en: 'Research Question' },
@@ -96,6 +99,7 @@ export const STAGES: Record<StageName, ToolConfig> = {
     category: 'pipeline',
     expectedArtifacts: ['research-question.md'],
     slug: 'question',
+    useLangGraph: true,
   },
   protocol: {
     name: { he: 'פרוטוקול', en: 'Protocol' },
@@ -115,6 +119,7 @@ export const STAGES: Record<StageName, ToolConfig> = {
     category: 'pipeline',
     expectedArtifacts: ['protocol.md', 'prisma-p-checklist.md', 'prospero-fields.txt'],
     slug: 'protocol',
+    useLangGraph: true,
   },
   search: {
     name: { he: 'חיפוש PubMed', en: 'PubMed Search' },

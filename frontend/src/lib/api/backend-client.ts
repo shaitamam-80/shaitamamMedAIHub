@@ -109,6 +109,42 @@ export async function chatStream(payload: ChatRequestPayload): Promise<Response>
 }
 
 // ============================================================================
+// Review Workflow Streaming API (LangGraph)
+// ============================================================================
+
+export interface ReviewStreamPayload {
+  project_id: string;
+  message: string;
+  language?: 'en' | 'he';
+}
+
+/**
+ * Send a message to the LangGraph review workflow with SSE streaming.
+ *
+ * Used for stages that have been migrated to LangGraph (e.g., research_question).
+ * SSE format:
+ *   data: {"content": "token"}           — streamed text chunks
+ *   data: {"type": "state_update", ...}  — final state with artifacts
+ *   data: [DONE]
+ */
+export async function reviewStream(payload: ReviewStreamPayload): Promise<Response> {
+  const headers = await getHeaders();
+
+  const response = await fetch(apiUrl('/review/stream'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Review stream error (${response.status}): ${errorBody}`);
+  }
+
+  return response;
+}
+
+// ============================================================================
 // Projects API
 // ============================================================================
 

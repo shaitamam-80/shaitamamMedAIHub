@@ -4,8 +4,19 @@ import { useState, useRef, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import StreamingMessage from './StreamingMessage';
-import { chatStream, type ChatRequestPayload } from '@/lib/api/backend-client';
-import { CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
+import {
+  chatStream,
+  reviewStream,
+  type ChatRequestPayload,
+  type ReviewStreamPayload,
+} from '@/lib/api/backend-client';
+import { CheckCircle2, WifiOff, Loader2, Lock } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface Message {
   id: string;
@@ -17,6 +28,15 @@ interface Message {
     content: string;
   }>;
   timestamp: Date;
+}
+
+export interface ReviewStateUpdate {
+  type: 'state_update';
+  current_stage: string;
+  stage_display_name: string;
+  status: string;
+  artifacts: Record<string, unknown>;
+  next_action?: string;
 }
 
 interface ChatInterfaceProps {
@@ -34,6 +54,12 @@ interface ChatInterfaceProps {
   }>;
   onStageComplete?: () => void;
   stageStatus?: string;
+  /** When true, uses LangGraph /review/stream endpoint instead of /chat */
+  useLangGraph?: boolean;
+  /** Called when a state_update event arrives from LangGraph */
+  onStateUpdate?: (state: ReviewStateUpdate) => void;
+  /** External signal: are LangGraph stage completion criteria met? undefined = no gating (legacy stages) */
+  canCompleteStage?: boolean;
 }
 
 // Contextual quick-action suggestions per skill/stage
@@ -69,6 +95,9 @@ export default function ChatInterface({
   initialMessages,
   onStageComplete,
   stageStatus,
+  useLangGraph,
+  onStateUpdate,
+  canCompleteStage,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,21 +165,31 @@ export default function ChatInterface({
     setStreamingContent('');
 
     try {
-      // Build payload - filter out greeting from history sent to backend
-      const payload: ChatRequestPayload = {
-        messages: [...messages, userMessage]
-          .filter(m => m.id !== 'greeting')
-          .map(m => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          })),
-        skillName,
-        projectContext,
-        language: 'he',
-      };
+      let response: Response;
 
-      // Call the MedAI Hub backend (SSE streaming)
-      const response = await chatStream(payload);
+      if (useLangGraph && projectContext?.projectId) {
+        // LangGraph review/stream endpoint
+        const payload: ReviewStreamPayload = {
+          project_id: projectContext.projectId,
+          message: content.trim(),
+          language: 'he',
+        };
+        response = await reviewStream(payload);
+      } else {
+        // Legacy chat endpoint
+        const payload: ChatRequestPayload = {
+          messages: [...messages, userMessage]
+            .filter(m => m.id !== 'greeting')
+            .map(m => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+          skillName,
+          projectContext,
+          language: 'he',
+        };
+        response = await chatStream(payload);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -179,6 +218,12 @@ export default function ChatInterface({
 
             try {
               const parsed = JSON.parse(data);
+
+              // Handle LangGraph state_update event
+              if (parsed.type === 'state_update') {
+                onStateUpdate?.(parsed as ReviewStateUpdate);
+                continue;
+              }
 
               if (parsed.content) {
                 accumulatedContent += parsed.content;
@@ -314,21 +359,37 @@ export default function ChatInterface({
         </div>
       )}
 
-      {projectContext && stageStatus !== 'completed' && onStageComplete && (
-        <div className="px-4 py-3 border-t border-border bg-card flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            Done working on this stage?
-          </span>
+      {projectContext && stageStatus !== 'completed' && onStageComplete && (() => {
+        const isBlocked = isLoading || !hasUserMessages || canCompleteStage === false;
+        const blockedByArtifacts = canCompleteStage === false && hasUserMessages && !isLoading;
+        const button = (
           <button
             onClick={onStageComplete}
-            disabled={isLoading || !hasUserMessages}
+            disabled={isBlocked}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            {blockedByArtifacts ? <Lock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
             Complete Stage
           </button>
-        </div>
-      )}
+        );
+        return (
+          <div className="px-4 py-3 border-t border-border bg-card flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Done working on this stage?
+            </span>
+            {blockedByArtifacts ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>{button}</TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[260px] text-center">
+                    <p>Continue the conversation until all required components are extracted by the AI.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : button}
+          </div>
+        );
+      })()}
 
       <div className="border-t border-border bg-card">
         <ChatInput
