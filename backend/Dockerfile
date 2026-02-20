@@ -13,7 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 # Install sr-skills from private GitHub repo (token passed as build arg)
+# Bump SRSKILLS_VERSION to bust Docker cache when sr-skills is updated
 ARG GH_TOKEN
+ARG SRSKILLS_VERSION=3bff086
 RUN pip install --no-cache-dir "sr-skills @ git+https://${GH_TOKEN}@github.com/shaitamam-80/sr-skills.git@main"
 
 # Copy application code (from backend/ since Docker context is repo root)
