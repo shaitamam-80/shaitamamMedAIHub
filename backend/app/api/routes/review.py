@@ -6,16 +6,20 @@ API endpoints for the LangGraph-powered systematic review workflow.
 Manages the orchestrated multi-stage review process.
 
 Endpoints:
-    POST /api/v1/review/message - Send a message to the review workflow
-    GET /api/v1/review/state/{project_id} - Get current workflow state
+    POST /api/v1/review/stream   - SSE streaming message (primary - used by frontend)
+    POST /api/v1/review/message  - Sync message (fallback)
+    GET  /api/v1/review/state/{project_id} - Get current workflow state
     POST /api/v1/review/reset/{project_id} - Reset workflow to initial state
+    GET  /api/v1/review/stages   - Get workflow stage definitions
 """
 
+import json
 import logging
 from typing import Dict, Any, Optional, List
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -54,25 +58,13 @@ class ReviewMessageRequest(BaseModel):
 
 
 class ReviewMessageResponse(BaseModel):
-    """Response from the review workflow."""
+    """Response from the review workflow (sync endpoint)."""
     message: str = Field(..., description="AI response text")
     current_stage: str = Field(..., description="Current workflow stage")
     stage_display_name: str = Field(..., description="Human-readable stage name")
-    status: str = Field(..., description="Workflow status (active, waiting_for_user, completed)")
+    status: str = Field(..., description="Workflow status")
     artifacts: Dict[str, Any] = Field(default_factory=dict, description="Completed artifacts")
-    next_action: Optional[str] = Field(None, description="Suggested next action for user")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "message": "[STAGE: Research Question]\n\nGreat! Let's formulate your research question...",
-                "current_stage": "research_question",
-                "stage_display_name": "Research Question",
-                "status": "waiting_for_user",
-                "artifacts": {},
-                "next_action": "Describe your research topic or question"
-            }
-        }
+    next_action: Optional[str] = Field(None, description="Suggested next action")
 
 
 class ReviewStateResponse(BaseModel):
@@ -94,68 +86,170 @@ class ReviewResetResponse(BaseModel):
 
 
 # ============================================================================
-# API Endpoints
+# Helpers
+# ============================================================================
+
+async def _validate_project_access(
+    project_id: str, user_id: str
+) -> Dict[str, Any]:
+    """Validate project exists and user has access. Returns project dict."""
+    project = await db_service.get_project(project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+    if project.get("owner_id") and project["owner_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    return project
+
+
+def _get_current_state(graph, config) -> tuple[str, str]:
+    """Get current stage and language from graph state, with defaults."""
+    try:
+        existing = graph.get_state(config)
+        if existing.values:
+            return (
+                existing.values.get("current_stage", "idea"),
+                existing.values.get("language", "en"),
+            )
+    except Exception:
+        pass
+    return "idea", "en"
+
+
+# ============================================================================
+# SSE Streaming Endpoint (Primary)
+# ============================================================================
+
+@router.post("/stream")
+async def stream_message(
+    request: ReviewMessageRequest,
+    current_user: UserPayload = Depends(get_current_user),
+):
+    """
+    Send a message to the review workflow with SSE streaming response.
+
+    Streams AI response tokens in real-time as they're generated,
+    then sends a final state_update event with artifacts and stage info.
+
+    SSE format (compatible with frontend ChatInterface):
+        data: {"content": "token"}     — streamed text chunks
+        data: {"type": "state_update", "current_stage": "...", "artifacts": {...}}
+        data: [DONE]
+
+    Uses astream_events to capture token-level events from the LangGraph
+    execution. Filters to only stream tokens from the stage node's
+    conversational LLM call (skips orchestrator and extraction calls).
+    """
+    # Validate before entering the generator
+    await _validate_project_access(str(request.project_id), current_user.id)
+
+    graph = get_graph()
+    thread_id = str(request.project_id)
+    config = {"configurable": {"thread_id": thread_id}}
+
+    current_stage, stored_language = _get_current_state(graph, config)
+    language = stored_language if stored_language != "en" else (request.language or "en")
+
+    input_state = {
+        "messages": [HumanMessage(content=request.message)],
+        "project_id": thread_id,
+        "user_id": current_user.id,
+        "language": language,
+        "current_stage": current_stage,
+        "status": "active",
+    }
+
+    async def event_generator():
+        # Track model calls per node to distinguish conversational vs extraction
+        node_model_calls: Dict[str, int] = {}
+
+        try:
+            async for event in graph.astream_events(
+                input_state, config=config, version="v2"
+            ):
+                kind = event["event"]
+                node = event.get("metadata", {}).get("langgraph_node", "")
+
+                # Count model calls per node
+                if kind == "on_chat_model_start":
+                    node_model_calls[node] = node_model_calls.get(node, 0) + 1
+
+                # Stream tokens from the stage node's FIRST model call only
+                # (First call = conversational response, second = structured extraction)
+                if kind == "on_chat_model_stream":
+                    if node != "orchestrator" and node_model_calls.get(node, 0) == 1:
+                        chunk = event["data"].get("chunk")
+                        if chunk and hasattr(chunk, "content") and chunk.content:
+                            payload = json.dumps({"content": chunk.content})
+                            yield f"data: {payload}\n\n"
+
+            # After graph execution completes, send final state update
+            try:
+                final_snapshot = graph.get_state(config)
+                if final_snapshot.values:
+                    state = final_snapshot.values
+                    stage = state.get("current_stage", current_stage)
+                    state_update = {
+                        "type": "state_update",
+                        "current_stage": stage,
+                        "stage_display_name": get_stage_display_name(stage, language),
+                        "status": state.get("status", "waiting_for_user"),
+                        "artifacts": state.get("artifacts", {}),
+                        "next_action": state.get("next_action", ""),
+                    }
+                    yield f"data: {json.dumps(state_update)}\n\n"
+            except Exception as e:
+                logger.warning(f"Failed to get final state: {e}")
+
+        except Exception as e:
+            logger.exception(f"Streaming error for project {thread_id}: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ============================================================================
+# Sync Message Endpoint (Fallback)
 # ============================================================================
 
 @router.post("/message", response_model=ReviewMessageResponse)
 async def send_message(
     request: ReviewMessageRequest,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
     """
-    Send a message to the systematic review workflow.
+    Send a message to the review workflow (synchronous, non-streaming).
 
-    This endpoint:
-    1. Validates project ownership
-    2. Initializes or retrieves workflow state
-    3. Invokes the LangGraph with user message
-    4. Returns AI response and updated state
-
-    The workflow uses the project_id as the thread ID for state persistence.
+    Returns the full AI response after graph execution completes.
+    Use /stream for real-time token streaming.
     """
     try:
-        # Verify project exists and user has access
-        project = await db_service.get_project(str(request.project_id))
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+        await _validate_project_access(str(request.project_id), current_user.id)
 
-        if project.get("owner_id") and project["owner_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Get the compiled graph
         graph = get_graph()
-
-        # Thread ID for state persistence (use project_id)
         thread_id = str(request.project_id)
         config = {"configurable": {"thread_id": thread_id}}
 
-        # Get existing state or create initial state
-        try:
-            existing_state = graph.get_state(config)
-            if existing_state.values:
-                # State exists, use it
-                current_stage = existing_state.values.get("current_stage", "research_question")
-                language = existing_state.values.get("language", request.language)
-            else:
-                # Initialize new state
-                current_stage = "research_question"
-                language = request.language
-        except Exception:
-            # No existing state, will be initialized on first invoke
-            current_stage = "research_question"
-            language = request.language
-
-        # Create input with user message
-        user_message = HumanMessage(content=request.message)
+        current_stage, stored_language = _get_current_state(graph, config)
+        language = stored_language if stored_language != "en" else (request.language or "en")
 
         input_state = {
-            "messages": [user_message],
+            "messages": [HumanMessage(content=request.message)],
             "project_id": thread_id,
             "user_id": current_user.id,
             "language": language,
@@ -163,39 +257,31 @@ async def send_message(
             "status": "active",
         }
 
-        # Invoke the graph
         logger.info(f"Invoking graph for project {thread_id}, stage: {current_stage}")
         result = await graph.ainvoke(input_state, config=config)
 
-        # Extract response
+        # Extract last AI message
         messages = result.get("messages", [])
         ai_response = ""
-
-        # Get the last AI message
         for msg in reversed(messages):
             if isinstance(msg, AIMessage):
                 ai_response = msg.content
                 break
-            elif hasattr(msg, 'type') and msg.type == "ai":
+            elif hasattr(msg, "type") and msg.type == "ai":
                 ai_response = msg.content
                 break
 
         if not ai_response:
             ai_response = "I'm processing your request. Please continue."
 
-        # Get updated state info
         updated_stage = result.get("current_stage", current_stage)
-        updated_status = result.get("status", "waiting_for_user")
-        artifacts = result.get("artifacts", {})
-        next_action = result.get("next_action", "Continue describing your research topic")
-
         return ReviewMessageResponse(
             message=ai_response,
             current_stage=updated_stage,
             stage_display_name=get_stage_display_name(updated_stage, language),
-            status=updated_status,
-            artifacts=artifacts,
-            next_action=next_action
+            status=result.get("status", "waiting_for_user"),
+            artifacts=result.get("artifacts", {}),
+            next_action=result.get("next_action"),
         )
 
     except HTTPException:
@@ -204,36 +290,23 @@ async def send_message(
         logger.exception(f"Error in review message for project {request.project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while processing your message: {str(e)}"
+            detail=f"An error occurred while processing your message: {str(e)}",
         )
 
+
+# ============================================================================
+# State & Management Endpoints
+# ============================================================================
 
 @router.get("/state/{project_id}", response_model=ReviewStateResponse)
 async def get_state(
     project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
-    """
-    Get the current workflow state for a project.
-
-    Returns the current stage, status, artifacts, and message count.
-    """
+    """Get the current workflow state for a project."""
     try:
-        # Verify project exists and user has access
-        project = await db_service.get_project(str(project_id))
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+        await _validate_project_access(str(project_id), current_user.id)
 
-        if project.get("owner_id") and project["owner_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Get the graph and check state
         graph = get_graph()
         thread_id = str(project_id)
         config = {"configurable": {"thread_id": thread_id}}
@@ -242,30 +315,29 @@ async def get_state(
             state_snapshot = graph.get_state(config)
             if state_snapshot.values:
                 state = state_snapshot.values
+                stage = state.get("current_stage", "idea")
                 return ReviewStateResponse(
                     project_id=thread_id,
-                    current_stage=state.get("current_stage", "research_question"),
+                    current_stage=stage,
                     stage_display_name=get_stage_display_name(
-                        state.get("current_stage", "research_question"),
-                        state.get("language", "en")
+                        stage, state.get("language", "en")
                     ),
                     status=state.get("status", "active"),
                     artifacts=state.get("artifacts", {}),
                     message_count=len(state.get("messages", [])),
-                    errors=state.get("errors", [])
+                    errors=state.get("errors", []),
                 )
         except Exception:
             pass
 
-        # No state exists yet
         return ReviewStateResponse(
             project_id=thread_id,
-            current_stage="research_question",
-            stage_display_name="Research Question",
+            current_stage="idea",
+            stage_display_name="Research Idea",
             status="not_started",
             artifacts={},
             message_count=0,
-            errors=[]
+            errors=[],
         )
 
     except HTTPException:
@@ -274,57 +346,34 @@ async def get_state(
         logger.exception(f"Error getting state for project {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while retrieving the workflow state."
+            detail="An error occurred while retrieving the workflow state.",
         )
 
 
 @router.post("/reset/{project_id}", response_model=ReviewResetResponse)
 async def reset_workflow(
     project_id: UUID,
-    current_user: UserPayload = Depends(get_current_user)
+    current_user: UserPayload = Depends(get_current_user),
 ):
-    """
-    Reset the workflow state for a project.
-
-    This clears all conversation history and artifacts,
-    starting fresh from the research_question stage.
-    """
+    """Reset the workflow state for a project back to initial state."""
     try:
-        # Verify project exists and user has access
-        project = await db_service.get_project(str(project_id))
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
-            )
+        await _validate_project_access(str(project_id), current_user.id)
 
-        if project.get("owner_id") and project["owner_id"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        # Get the graph
         graph = get_graph()
         thread_id = str(project_id)
         config = {"configurable": {"thread_id": thread_id}}
 
-        # Reset by invoking with initial state
-        # Note: MemorySaver doesn't have a delete method, so we overwrite
         initial_state = get_initial_state(
             project_id=thread_id,
             user_id=current_user.id,
-            language="en"
+            language="en",
         )
-
-        # Update state by invoking with empty message
-        # This effectively resets the conversation
         await graph.ainvoke(initial_state, config=config)
 
         return ReviewResetResponse(
             project_id=thread_id,
             status="reset",
-            message="Workflow has been reset to initial state. Ready to start a new systematic review."
+            message="Workflow has been reset to initial state.",
         )
 
     except HTTPException:
@@ -333,31 +382,25 @@ async def reset_workflow(
         logger.exception(f"Error resetting workflow for project {project_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while resetting the workflow."
+            detail="An error occurred while resetting the workflow.",
         )
 
 
 @router.get("/stages", response_model=Dict[str, Any])
 async def get_stages():
-    """
-    Get information about all workflow stages.
-
-    Returns stage names, display names, and order.
-    """
+    """Get information about all workflow stages."""
     from app.graph.state import get_stage_order, STAGE_DISPLAY_NAMES
 
     stages = get_stage_order()
-    result = {
-        "stages": [],
-        "total_stages": len(stages)
+    return {
+        "stages": [
+            {
+                "id": stage,
+                "order": idx,
+                "display_name_en": STAGE_DISPLAY_NAMES.get(stage, {}).get("en", stage),
+                "display_name_he": STAGE_DISPLAY_NAMES.get(stage, {}).get("he", stage),
+            }
+            for idx, stage in enumerate(stages, 1)
+        ],
+        "total_stages": len(stages),
     }
-
-    for idx, stage in enumerate(stages, 1):
-        result["stages"].append({
-            "id": stage,
-            "order": idx,
-            "display_name_en": STAGE_DISPLAY_NAMES.get(stage, {}).get("en", stage),
-            "display_name_he": STAGE_DISPLAY_NAMES.get(stage, {}).get("he", stage),
-        })
-
-    return result

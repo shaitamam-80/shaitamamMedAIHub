@@ -6,6 +6,7 @@ Core state types for the LangGraph state machine architecture.
 Manages the lifecycle of Systematic Reviews through sequential stages.
 
 Stages:
+    0. idea - Refine research idea, check existing reviews, determine review type
     1. research_question - Formulate research question using PICO/etc frameworks
     2. protocol - Build PROSPERO-ready protocol
     3. search - Create and execute PubMed search queries
@@ -27,6 +28,7 @@ from langchain_core.messages import AnyMessage
 
 # Valid stages in the systematic review workflow
 ReviewStage = Literal[
+    "idea",
     "research_question",
     "protocol",
     "search",
@@ -49,6 +51,21 @@ WorkflowStatus = Literal[
 # Artifact Types (Outputs from each stage)
 # ============================================================================
 
+class IdeaArtifact(TypedDict, total=False):
+    """Output from idea stage — expert librarian consultation"""
+    clinical_problem: str              # The core clinical/research problem
+    review_type: str                   # systematic_intervention, scoping, etc.
+    population_sketch: str             # Initial population description
+    intervention_sketch: str           # Intervention/exposure/concept
+    outcome_sketch: str                # Expected outcomes or context
+    study_designs: List[str]           # Study designs to include (RCT, cohort, etc.)
+    existing_reviews_checked: bool     # Did user check PROSPERO/Cochrane?
+    existing_reviews_notes: str        # Notes on existing reviews found
+    timeline: str                      # User's deadline or timeline
+    feasibility_notes: str             # Notes on feasibility, scope concerns
+    recommendation: str                # proceed / refine / pivot
+
+
 class ResearchQuestionArtifact(TypedDict, total=False):
     """Output from research_question stage"""
     framework_type: str           # PICO, CoCoPop, etc.
@@ -61,10 +78,20 @@ class ResearchQuestionArtifact(TypedDict, total=False):
 
 class ProtocolArtifact(TypedDict, total=False):
     """Output from protocol stage"""
-    protocol_text: str            # Full protocol document
-    prospero_fields: Dict[str, Any]  # PROSPERO registration fields
-    eligibility_criteria: Dict[str, List[str]]  # Inclusion/exclusion
-    search_strategy_draft: str    # Initial search strategy
+    protocol_text: str                     # Full protocol document (accumulated)
+    review_type: str                       # Inherited from idea or detected
+    registration_platform: str             # PROSPERO, OSF, INPLASY
+    eligibility_criteria: Dict[str, Any]   # Structured eligibility (nested)
+    information_sources: List[str]         # Databases to search
+    search_strategy_draft: str             # Initial search strategy
+    rob_tool: str                          # Selected RoB tool name
+    rob_domains: List[str]                 # RoB domains to assess
+    synthesis_method: str                  # meta-analysis, narrative, etc.
+    effect_measure: str                    # RR, OR, MD, SMD, HR
+    completed_sections: List[str]          # Sections substantively addressed
+    approved_tools: List[str]              # Researcher-approved MedAI Hub tools
+    tool_declarations: Dict[str, str]      # tool_key → academic protocol_text
+    prospero_fields: Dict[str, Any]        # Backward compat
 
 
 class SearchArtifact(TypedDict, total=False):
@@ -152,6 +179,7 @@ class ReviewState(TypedDict, total=False):
     artifacts: Dict[str, Any]
     # Structure:
     # {
+    #   "idea": IdeaArtifact,
     #   "research_question": ResearchQuestionArtifact,
     #   "protocol": ProtocolArtifact,
     #   "search": SearchArtifact,
@@ -193,9 +221,9 @@ def get_initial_state(project_id: str, user_id: str, language: str = "en") -> Re
         project_id=project_id,
         user_id=user_id,
         language=language,
-        current_stage="research_question",
+        current_stage="idea",
         status="active",
-        next_action="Describe your research question or topic",
+        next_action="Describe your research idea or topic",
         messages=[],
         artifacts={},
         completed_stages=[],
@@ -207,6 +235,7 @@ def get_initial_state(project_id: str, user_id: str, language: str = "en") -> Re
 def get_stage_order() -> List[ReviewStage]:
     """Get the ordered list of stages in the workflow."""
     return [
+        "idea",
         "research_question",
         "protocol",
         "search",
@@ -251,6 +280,10 @@ def is_stage_complete(state: ReviewState, stage: ReviewStage) -> bool:
 # ============================================================================
 
 STAGE_DISPLAY_NAMES: Dict[ReviewStage, Dict[str, str]] = {
+    "idea": {
+        "en": "Research Idea",
+        "he": "רעיון מחקרי"
+    },
     "research_question": {
         "en": "Research Question",
         "he": "שאלת מחקר"

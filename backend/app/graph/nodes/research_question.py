@@ -3,23 +3,23 @@ MedAI Hub - Research Question Node
 ==================================
 
 LangGraph node for the Research Question stage of systematic reviews.
-This node helps researchers formulate precise, searchable research questions
-using appropriate frameworks (PICO, CoCoPop, PEO, SPIDER, etc.).
+Uses a two-call architecture:
+  1. Conversational call (Gemini Pro) → user-facing markdown response
+  2. Extraction call (Gemini Flash, structured output) → framework + FINER JSON
 
 Responsibilities:
-    1. Analyze user input to identify question type
-    2. Select and apply appropriate framework
-    3. Extract framework components
-    4. Generate 3 question formulations (narrow, broad, alternative)
-    5. Conduct FINER assessment
-    6. Manage stage completion and advancement
+    1. Guide the user to formulate a precise, searchable research question
+    2. Select and apply appropriate framework (PICO, CoCoPop, PEO, SPIDER, etc.)
+    3. Extract framework components via structured LLM output
+    4. Generate 3 question formulations (narrow, broad, clinical)
+    5. Conduct real FINER assessment via LLM
+    6. Manage stage completion and advancement to protocol
 """
 
 import logging
-import json
-import re
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
+from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -41,126 +41,113 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
+# Pydantic Models for Structured Extraction
+# ============================================================================
+
+class FINERScore(BaseModel):
+    """Assessment score for a single FINER criterion."""
+    score: Literal["high", "medium", "low"] = Field(
+        description="Quality score for this criterion"
+    )
+    reason: str = Field(
+        description="Brief justification for the score (1-2 sentences)"
+    )
+
+
+class FINERAssessment(BaseModel):
+    """Full FINER quality assessment of a research question."""
+    F: FINERScore = Field(description="Feasible: Can this review be completed with available resources?")
+    I: FINERScore = Field(description="Interesting: Is this clinically or scientifically relevant?")
+    N: FINERScore = Field(description="Novel: Does this address a genuine knowledge gap?")
+    E: FINERScore = Field(description="Ethical: Are there ethical concerns with this research?")
+    R: FINERScore = Field(description="Relevant: Will findings impact clinical practice or policy?")
+    overall: Literal["proceed", "revise", "reconsider"] = Field(
+        description="Overall recommendation: proceed (all high/medium), revise (some low), reconsider (multiple low)"
+    )
+    suggestions: List[str] = Field(
+        default_factory=list,
+        description="Specific, actionable suggestions to improve the research question (max 3)"
+    )
+
+
+class ResearchQuestionExtraction(BaseModel):
+    """Structured extraction of research question components from conversation."""
+    framework_type: Optional[str] = Field(
+        default=None,
+        description="Selected framework (PICO, CoCoPop, SPIDER, PFO, PEO, PIRD, PCC, etc.) or null if not yet determined"
+    )
+    framework_components: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Extracted framework components as key-value pairs (e.g. {'P': 'elderly patients', 'I': 'exercise therapy', 'C': 'usual care', 'O': 'depression scores'}) or null"
+    )
+    question_narrow: Optional[str] = Field(
+        default=None,
+        description="Focused/narrow PubMed-ready research question or null if not yet formulated"
+    )
+    question_broad: Optional[str] = Field(
+        default=None,
+        description="Broad/exploratory research question formulation or null"
+    )
+    question_clinical: Optional[str] = Field(
+        default=None,
+        description="Clinical/practical question formulation or null"
+    )
+    finer_assessment: Optional[FINERAssessment] = Field(
+        default=None,
+        description="FINER quality assessment. Only provide if a complete research question with framework components has been formulated. null otherwise."
+    )
+    stage_ready_to_complete: bool = Field(
+        default=False,
+        description="True ONLY if ALL of: framework selected, components extracted, at least one question formulated, and FINER assessed"
+    )
+
+
+# ============================================================================
+# Extraction Prompt
+# ============================================================================
+
+EXTRACTION_SYSTEM_PROMPT = """You are a systematic review methodology expert performing structured data extraction.
+
+Analyze the conversation between a researcher and an AI assistant about formulating a systematic review research question. Extract ONLY information that has been explicitly discussed and confirmed.
+
+CRITICAL RULES:
+- Only extract data that appears in the conversation. Do NOT hallucinate or infer.
+- framework_type: Only set if the assistant has explicitly recommended or the user confirmed a framework.
+- framework_components: Only include components explicitly identified in the conversation.
+- question formulations: Only include if the assistant generated explicit question formulations.
+- finer_assessment: ONLY assess if a complete research question has been formulated with framework components. For FINER, provide genuine assessment based on the specific question - do NOT give generic scores.
+- stage_ready_to_complete: True ONLY when framework + components + at least one question + FINER are ALL present and valid.
+
+If the conversation is still in early stages (user just described a topic, no framework selected yet), return mostly null values."""
+
+
+# ============================================================================
 # AI Model Initialization
 # ============================================================================
 
-def get_llm() -> ChatGoogleGenerativeAI:
-    """Get the Gemini LLM instance for research question formulation."""
+def get_conversational_llm() -> ChatGoogleGenerativeAI:
+    """Get Gemini Pro for conversational responses (high quality)."""
     return ChatGoogleGenerativeAI(
-        model=settings.GEMINI_FLASH_MODEL,
+        model=settings.GEMINI_PRO_MODEL,
         google_api_key=settings.GOOGLE_API_KEY,
         temperature=0.7,
         max_tokens=4096,
     )
 
 
+def get_extraction_llm() -> ChatGoogleGenerativeAI:
+    """Get Gemini Flash for structured extraction (fast, cheap)."""
+    return ChatGoogleGenerativeAI(
+        model=settings.GEMINI_FLASH_MODEL,
+        google_api_key=settings.GOOGLE_API_KEY,
+        temperature=0.1,  # Low temperature for reliable extraction
+        max_tokens=2048,
+    )
+
+
 # ============================================================================
-# Framework Detection Logic
+# Stage Completion Check
 # ============================================================================
-
-QUESTION_TYPE_TRIGGERS = {
-    "effectiveness": {
-        "triggers": ["does it work", "comparison", "more effective", "better than", "efficacy", "treatment", "therapy"],
-        "framework": "PICO"
-    },
-    "prevalence": {
-        "triggers": ["how many", "what percentage", "prevalence", "incidence", "rate", "frequency", "proportion"],
-        "framework": "CoCoPop"
-    },
-    "prognosis": {
-        "triggers": ["predicts", "prognostic factor", "recovery", "course of illness", "outcome", "prognosis"],
-        "framework": "PFO"
-    },
-    "etiology": {
-        "triggers": ["causes", "risk factor", "exposure", "associated with", "leads to", "etiology"],
-        "framework": "PEO"
-    },
-    "diagnostic": {
-        "triggers": ["accuracy", "sensitivity", "specificity", "diagnostic", "test", "screening"],
-        "framework": "PIRD"
-    },
-    "qualitative": {
-        "triggers": ["experience", "perception", "feels like", "lived experience", "meaning", "perspective"],
-        "framework": "SPIDER"
-    },
-    "scoping": {
-        "triggers": ["map out", "what exists", "broad overview", "scope", "mapping"],
-        "framework": "PCC"
-    }
-}
-
-
-def detect_question_type(user_input: str) -> tuple[str, str]:
-    """
-    Detect question type from user input using trigger words.
-
-    Args:
-        user_input: The user's research question or topic description
-
-    Returns:
-        Tuple of (question_type, recommended_framework)
-    """
-    user_lower = user_input.lower()
-
-    for question_type, config in QUESTION_TYPE_TRIGGERS.items():
-        for trigger in config["triggers"]:
-            if trigger in user_lower:
-                return question_type, config["framework"]
-
-    # Default to PICO for intervention questions
-    return "effectiveness", "PICO"
-
-
-def extract_framework_components(
-    user_input: str,
-    framework: str,
-    llm_response: str
-) -> Dict[str, str]:
-    """
-    Extract framework components from the AI response.
-
-    This is a simplified extraction - in production, we'd use
-    structured output from the LLM.
-    """
-    framework_def = get_framework_definition(framework)
-    if not framework_def:
-        return {}
-
-    components = {}
-    labels = framework_def.get("labels", {})
-
-    # Try to extract components from LLM response
-    for key, label in labels.items():
-        # Look for patterns like "**P (Population):** elderly patients"
-        pattern = rf"\*\*{key}[^:]*:\*\*\s*([^\n*]+)"
-        match = re.search(pattern, llm_response, re.IGNORECASE)
-        if match:
-            components[key] = match.group(1).strip()
-
-    return components
-
-
-def assess_finer(framework_data: Dict[str, str], question: str) -> Dict[str, Any]:
-    """
-    Perform qualitative FINER assessment.
-
-    Returns qualitative scores (high/medium/low) with reasoning.
-    """
-    # This is a simplified assessment - in production, the LLM would provide this
-    finer = {
-        "F": {"score": "high", "reason": "Systematic review methodology is well-established and feasible."},
-        "I": {"score": "high", "reason": "Topic is of current interest to researchers and clinicians."},
-        "N": {"score": "medium", "reason": "Should check for recent systematic reviews on this topic."},
-        "E": {"score": "high", "reason": "Secondary research using published studies raises no ethical concerns."},
-        "R": {"score": "high", "reason": "Findings could inform clinical practice and policy."},
-        "overall": "proceed",
-        "suggestions": [
-            "Verify no recent systematic reviews exist on this exact topic",
-            "Consider adding specific timeframe for outcomes"
-        ]
-    }
-    return finer
-
 
 def check_stage_completion(state: ReviewState) -> bool:
     """
@@ -168,20 +155,85 @@ def check_stage_completion(state: ReviewState) -> bool:
 
     Criteria:
     1. Framework is selected
-    2. All required components are filled
+    2. Framework components are filled
     3. At least one question formulation exists
     4. FINER assessment is complete
     """
     artifacts = state.get("artifacts", {})
     rq_artifact = artifacts.get("research_question", {})
 
-    # Check required elements
     has_framework = bool(rq_artifact.get("framework_type"))
     has_components = bool(rq_artifact.get("framework_data"))
     has_question = bool(rq_artifact.get("question_narrow") or rq_artifact.get("question_broad"))
     has_finer = bool(rq_artifact.get("finer_assessment"))
 
     return all([has_framework, has_components, has_question, has_finer])
+
+
+# ============================================================================
+# Structured Extraction
+# ============================================================================
+
+async def extract_structured_data(
+    messages: List,
+    existing_artifact: Dict[str, Any],
+) -> Optional[ResearchQuestionExtraction]:
+    """
+    Extract structured research question data from the conversation.
+
+    Uses Gemini Flash with structured output for reliable JSON extraction.
+    Only runs when there are at least 2 messages (1 user + 1 assistant).
+    """
+    # Count meaningful messages (skip system messages)
+    meaningful_count = sum(
+        1 for msg in messages
+        if isinstance(msg, (HumanMessage, AIMessage))
+        or (hasattr(msg, 'type') and msg.type in ("human", "ai"))
+    )
+
+    if meaningful_count < 2:
+        return None
+
+    try:
+        # Build conversation text for extraction
+        conversation_parts = []
+        for msg in messages[-20:]:  # Last 20 messages max
+            if isinstance(msg, HumanMessage) or (hasattr(msg, 'type') and msg.type == "human"):
+                conversation_parts.append(f"RESEARCHER: {msg.content}")
+            elif isinstance(msg, AIMessage) or (hasattr(msg, 'type') and msg.type == "ai"):
+                conversation_parts.append(f"ASSISTANT: {msg.content}")
+
+        conversation_text = "\n\n".join(conversation_parts)
+
+        # Add existing artifact context
+        context = ""
+        if existing_artifact:
+            context = f"\n\nPreviously extracted data (update if conversation has progressed):\n"
+            if existing_artifact.get("framework_type"):
+                context += f"- Framework: {existing_artifact['framework_type']}\n"
+            if existing_artifact.get("framework_data"):
+                context += f"- Components: {existing_artifact['framework_data']}\n"
+
+        system_instructions = f"{EXTRACTION_SYSTEM_PROMPT}{context}"
+
+        user_request = f"""--- CONVERSATION ---
+{conversation_text}
+--- END CONVERSATION ---
+
+Extract the structured data from this conversation."""
+
+        llm = get_extraction_llm()
+        structured_llm = llm.with_structured_output(ResearchQuestionExtraction)
+        result = await structured_llm.ainvoke([
+            SystemMessage(content=system_instructions),
+            HumanMessage(content=user_request),
+        ])
+
+        return result
+
+    except Exception as e:
+        logger.warning(f"Structured extraction failed (non-fatal): {e}")
+        return None
 
 
 # ============================================================================
@@ -192,23 +244,21 @@ async def research_question_node(state: ReviewState) -> Dict[str, Any]:
     """
     Research Question stage node.
 
-    This node:
-    1. Analyzes user input to detect question type and framework
-    2. Guides framework component extraction
-    3. Generates 3 question formulations
-    4. Conducts FINER assessment
-    5. Manages stage completion and transition
+    Two-call architecture:
+    1. Conversational call (Gemini Pro) → markdown response for the user
+    2. Extraction call (Gemini Flash) → structured JSON for artifacts
 
     Args:
         state: Current workflow state
 
     Returns:
-        State updates with AI response and artifacts
+        State updates with AI response and structured artifacts
     """
     language = state.get("language", "en")
     messages = state.get("messages", [])
     current_artifacts = state.get("artifacts", {})
     rq_artifact = current_artifacts.get("research_question", {})
+    idea_artifact = current_artifacts.get("idea", {})
 
     logger.info("Research Question node processing...")
 
@@ -223,44 +273,74 @@ async def research_question_node(state: ReviewState) -> Dict[str, Any]:
             break
 
     if not user_message:
+        # Provide context-aware welcome based on whether Idea stage was completed
+        if idea_artifact and idea_artifact.get("clinical_problem"):
+            welcome = (
+                f"Based on your refined idea about **{idea_artifact['clinical_problem']}**, "
+                f"let's now formulate a precise research question using the appropriate methodology framework. "
+                f"Tell me more about the specific aspects you'd like to investigate."
+            )
+        else:
+            welcome = "Let's formulate your research question. Please describe what you'd like to investigate."
         return {
-            "messages": [AIMessage(content="Please describe your research question or topic.")],
+            "messages": [AIMessage(content=welcome)],
             "status": "waiting_for_user",
-            "next_action": "Describe your research topic or question"
+            "next_action": "Provide details for research question formulation"
         }
 
     # Check for stage advancement request
-    advance_keywords = ["yes", "proceed", "next", "continue", "ready", "כן", "המשך"]
+    advance_keywords = ["yes", "proceed", "next", "continue", "ready", "כן", "המשך", "הבא"]
     if any(kw in user_message.lower() for kw in advance_keywords) and check_stage_completion(state):
         next_stage = get_next_stage("research_question")
         if next_stage:
             return {
                 "current_stage": next_stage,
                 "status": "active",
-                "messages": [AIMessage(content=f"[STAGE: {get_stage_display_name(next_stage, language)}]\n\nExcellent! Let's move on to building your systematic review protocol.")],
+                "messages": [AIMessage(
+                    content=f"[STAGE: {get_stage_display_name(next_stage, language)}]\n\n"
+                    f"Excellent! Your research question is finalized. Let's move on to building your systematic review protocol."
+                )],
                 "next_action": "Provide details for your protocol"
             }
 
-    # Detect question type and framework
-    detected_type, detected_framework = detect_question_type(user_message)
-
-    # Use existing framework if already selected, otherwise use detected
-    framework = rq_artifact.get("framework_type", detected_framework)
-
     try:
-        # Build context-aware system prompt
+        # ── Call 1: Conversational Response (Gemini Pro) ──
         stage_display = get_stage_display_name("research_question", language)
 
-        # Add existing artifact context if available
-        context_section = ""
-        if rq_artifact:
-            context_section = f"\n\n[CURRENT PROGRESS]\nFramework: {rq_artifact.get('framework_type', 'Not selected')}\n"
-            if rq_artifact.get("framework_data"):
-                context_section += "Components extracted:\n"
-                for key, value in rq_artifact["framework_data"].items():
-                    context_section += f"- {key}: {value}\n"
+        # Build context from Idea stage artifact (handoff from previous stage)
+        idea_context = ""
+        if idea_artifact:
+            idea_context = "\n\n[CONTEXT FROM IDEA STAGE — DO NOT RE-ASK THESE]\n"
+            if idea_artifact.get("clinical_problem"):
+                idea_context += f"Clinical problem: {idea_artifact['clinical_problem']}\n"
+            if idea_artifact.get("review_type"):
+                idea_context += f"Review type determined: {idea_artifact['review_type']}\n"
+            if idea_artifact.get("population_sketch"):
+                idea_context += f"Population (rough sketch): {idea_artifact['population_sketch']}\n"
+            if idea_artifact.get("intervention_sketch"):
+                idea_context += f"Intervention/Exposure (rough sketch): {idea_artifact['intervention_sketch']}\n"
+            if idea_artifact.get("outcome_sketch"):
+                idea_context += f"Outcomes (rough sketch): {idea_artifact['outcome_sketch']}\n"
+            if idea_artifact.get("study_designs"):
+                idea_context += f"Study designs to consider: {', '.join(idea_artifact['study_designs'])}\n"
+            if idea_artifact.get("existing_reviews_notes"):
+                idea_context += f"Existing reviews notes: {idea_artifact['existing_reviews_notes']}\n"
+            idea_context += "\nUse this context to select the appropriate framework and refine components. Do NOT re-ask about the research topic, review type, or population — build on what is already established.\n"
 
-        full_system_prompt = f"{RESEARCH_QUESTION_SYSTEM_PROMPT}{context_section}"
+        # Build context from existing RQ artifact (current stage progress)
+        rq_context = ""
+        if rq_artifact:
+            rq_context = f"\n\n[CURRENT PROGRESS]\nFramework: {rq_artifact.get('framework_type', 'Not selected')}\n"
+            if rq_artifact.get("framework_data"):
+                rq_context += "Components extracted:\n"
+                for key, value in rq_artifact["framework_data"].items():
+                    rq_context += f"- {key}: {value}\n"
+            if rq_artifact.get("question_narrow"):
+                rq_context += f"Narrow question: {rq_artifact['question_narrow']}\n"
+            if rq_artifact.get("question_broad"):
+                rq_context += f"Broad question: {rq_artifact['question_broad']}\n"
+
+        full_system_prompt = f"{RESEARCH_QUESTION_SYSTEM_PROMPT}{idea_context}{rq_context}"
 
         # Build message list for LLM
         llm_messages = [SystemMessage(content=full_system_prompt)]
@@ -278,47 +358,42 @@ async def research_question_node(state: ReviewState) -> Dict[str, Any]:
                 elif msg.type == "ai":
                     llm_messages.append(AIMessage(content=msg.content))
 
-        # Call LLM
-        llm = get_llm()
+        llm = get_conversational_llm()
         response = await llm.ainvoke(llm_messages)
         ai_response = response.content
 
-        # Extract framework components from response
-        extracted_components = extract_framework_components(user_message, framework, ai_response)
+        # ── Call 2: Structured Extraction (Gemini Flash) ──
+        # Include the new AI response in messages for extraction
+        all_messages_for_extraction = list(messages) + [
+            HumanMessage(content=user_message),
+            AIMessage(content=ai_response),
+        ]
+        extraction = await extract_structured_data(all_messages_for_extraction, rq_artifact)
 
-        # Merge with existing components
-        existing_components = rq_artifact.get("framework_data", {})
-        merged_components = {**existing_components, **extracted_components}
-
-        # Extract question formulations from response if present
-        question_narrow = rq_artifact.get("question_narrow", "")
-        question_broad = rq_artifact.get("question_broad", "")
-        question_clinical = rq_artifact.get("question_clinical", "")
-
-        # Simple extraction of formulations from response
-        if "Focused Formulation" in ai_response and not question_narrow:
-            match = re.search(r"Focused Formulation[^:]*:\s*([^\n]+)", ai_response)
-            if match:
-                question_narrow = match.group(1).strip()
-
-        if "Broad Formulation" in ai_response and not question_broad:
-            match = re.search(r"Broad Formulation[^:]*:\s*([^\n]+)", ai_response)
-            if match:
-                question_broad = match.group(1).strip()
-
-        # Build updated artifact
+        # ── Merge extraction into artifacts ──
         updated_artifact: ResearchQuestionArtifact = {
-            "framework_type": framework,
-            "framework_data": merged_components,
-            "question_narrow": question_narrow,
-            "question_broad": question_broad,
-            "question_clinical": question_clinical,
+            "framework_type": rq_artifact.get("framework_type", ""),
+            "framework_data": rq_artifact.get("framework_data", {}),
+            "question_narrow": rq_artifact.get("question_narrow", ""),
+            "question_broad": rq_artifact.get("question_broad", ""),
+            "question_clinical": rq_artifact.get("question_clinical", ""),
         }
 
-        # Perform FINER if we have enough data
-        if merged_components and (question_narrow or question_broad):
-            finer = assess_finer(merged_components, question_narrow or question_broad)
-            updated_artifact["finer_assessment"] = finer
+        if extraction:
+            if extraction.framework_type:
+                updated_artifact["framework_type"] = extraction.framework_type
+            if extraction.framework_components:
+                # Merge: new values override old ones
+                existing = updated_artifact.get("framework_data", {})
+                updated_artifact["framework_data"] = {**existing, **extraction.framework_components}
+            if extraction.question_narrow:
+                updated_artifact["question_narrow"] = extraction.question_narrow
+            if extraction.question_broad:
+                updated_artifact["question_broad"] = extraction.question_broad
+            if extraction.question_clinical:
+                updated_artifact["question_clinical"] = extraction.question_clinical
+            if extraction.finer_assessment:
+                updated_artifact["finer_assessment"] = extraction.finer_assessment.model_dump()
 
         # Update artifacts in state
         updated_artifacts = {**current_artifacts, "research_question": updated_artifact}
@@ -327,22 +402,30 @@ async def research_question_node(state: ReviewState) -> Dict[str, Any]:
         is_complete = check_stage_completion({**state, "artifacts": updated_artifacts})
 
         if is_complete:
-            completion_msg = "\n\n---\n\n✅ **Stage Complete!** Your research question is formulated.\n\nAre you ready to proceed to the **Protocol** stage? (Type 'yes' or 'proceed')"
+            completion_msg = (
+                "\n\n---\n\n"
+                "**Stage Complete!** Your research question is formulated.\n\n"
+                "Are you ready to proceed to the **Protocol** stage? (Type 'yes' or 'proceed')"
+            )
             ai_response += completion_msg
 
         return {
             "messages": [AIMessage(content=f"[STAGE: {stage_display}]\n\n{ai_response}")],
             "status": "waiting_for_user",
             "artifacts": updated_artifacts,
-            "next_action": "Refine your research question or proceed to the next stage" if is_complete else "Continue describing your research topic"
+            "next_action": (
+                "Refine your research question or proceed to the next stage"
+                if is_complete
+                else "Continue describing your research topic"
+            ),
         }
 
     except Exception as e:
-        logger.error(f"Research Question node error: {e}")
+        logger.error(f"Research Question node error: {e}", exc_info=True)
         error_msg = f"I encountered an error while processing your research question: {str(e)}. Please try again."
         return {
             "messages": [AIMessage(content=error_msg)],
             "status": "error",
             "last_error": str(e),
-            "errors": [str(e)]
+            "errors": [str(e)],
         }

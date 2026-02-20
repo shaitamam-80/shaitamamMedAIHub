@@ -7,6 +7,7 @@ LangGraph state machine. Each stage has its own node module
 with specialized AI logic.
 
 Nodes:
+    - idea: Research idea refinement (expert librarian consultation)
     - research_question: Research question formulation with framework detection
     - protocol: PROSPERO-ready protocol building
     - search: PubMed query construction with MeSH enrichment
@@ -17,6 +18,7 @@ Nodes:
     - reporting: PRISMA 2020 manuscript writing with journal formatting
 """
 
+from .idea import idea_node
 from .research_question import research_question_node
 from .protocol import protocol_builder_node
 from .search import search_node
@@ -27,6 +29,7 @@ from .synthesis import synthesis_node
 from .reporting import reporting_node
 
 __all__ = [
+    "idea_node",
     "research_question_node",
     "protocol_builder_node",
     "search_node",

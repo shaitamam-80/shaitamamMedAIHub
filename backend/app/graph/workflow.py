@@ -9,7 +9,7 @@ Architecture:
     START -> orchestrator -> [stage_node] -> END
                                    ^
                                    |
-    Stage nodes: research_question, protocol, search, screening,
+    Stage nodes: idea, research_question, protocol, search, screening,
                  extraction, synthesis, reporting
 
 The orchestrator analyzes user input and current_stage to route
@@ -39,6 +39,7 @@ from app.core.config import settings
 
 # Import modular node implementations
 from app.graph.nodes import (
+    idea_node,
     research_question_node,
     protocol_builder_node,
     search_node,
@@ -56,12 +57,12 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 def get_llm() -> ChatGoogleGenerativeAI:
-    """Get the Gemini LLM instance for orchestration."""
+    """Get the Gemini LLM instance for orchestration (uses Flash for speed)."""
     return ChatGoogleGenerativeAI(
         model=settings.GEMINI_FLASH_MODEL,
         google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.7,
-        max_tokens=4096,
+        temperature=0.5,
+        max_tokens=2048,
     )
 
 
@@ -85,7 +86,7 @@ async def orchestrator_node(state: ReviewState) -> Dict[str, Any]:
     Returns:
         State updates including AI message
     """
-    current_stage = state.get("current_stage", "research_question")
+    current_stage = state.get("current_stage", "idea")
     language = state.get("language", "en")
     messages = state.get("messages", [])
 
@@ -162,10 +163,11 @@ def route_by_stage(state: ReviewState) -> str:
     Returns:
         Name of the next node to execute
     """
-    current_stage = state.get("current_stage", "research_question")
+    current_stage = state.get("current_stage", "idea")
 
     # Map stages to node names
     stage_to_node = {
+        "idea": "idea_node",
         "research_question": "research_question_node",
         "protocol": "protocol_builder_node",
         "search": "search_node",
@@ -195,7 +197,7 @@ def should_continue(state: ReviewState) -> Literal["continue", "end"]:
         "continue" or "end"
     """
     status = state.get("status", "active")
-    current_stage = state.get("current_stage", "research_question")
+    current_stage = state.get("current_stage", "idea")
 
     # End if completed at final stage
     if status == "completed" and current_stage == "reporting":
@@ -227,6 +229,7 @@ def build_review_graph() -> StateGraph:
 
     # Add nodes
     graph.add_node("orchestrator", orchestrator_node)
+    graph.add_node("idea_node", idea_node)
     graph.add_node("research_question_node", research_question_node)
     graph.add_node("protocol_builder_node", protocol_builder_node)
     graph.add_node("search_node", search_node)
@@ -243,6 +246,7 @@ def build_review_graph() -> StateGraph:
         "orchestrator",
         route_by_stage,
         {
+            "idea_node": "idea_node",
             "research_question_node": "research_question_node",
             "protocol_builder_node": "protocol_builder_node",
             "search_node": "search_node",
@@ -256,6 +260,7 @@ def build_review_graph() -> StateGraph:
 
     # Connect stage nodes back to END (for now)
     # In a more complex setup, they could route back to orchestrator
+    graph.add_edge("idea_node", END)
     graph.add_edge("research_question_node", END)
     graph.add_edge("protocol_builder_node", END)
     graph.add_edge("search_node", END)

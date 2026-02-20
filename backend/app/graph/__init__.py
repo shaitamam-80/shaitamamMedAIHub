@@ -17,6 +17,7 @@ from .state import (
     ReviewStage,
     WorkflowStatus,
     # Artifact types
+    IdeaArtifact,
     ResearchQuestionArtifact,
     ProtocolArtifact,
     SearchArtifact,
@@ -41,6 +42,7 @@ from .workflow import (
 )
 
 from .nodes import (
+    idea_node,
     research_question_node,
     protocol_builder_node,
     search_node,
@@ -57,6 +59,7 @@ __all__ = [
     "ReviewStage",
     "WorkflowStatus",
     # Artifact types
+    "IdeaArtifact",
     "ResearchQuestionArtifact",
     "ProtocolArtifact",
     "SearchArtifact",
@@ -77,6 +80,7 @@ __all__ = [
     "get_compiled_graph",
     "get_graph",
     # Nodes
+    "idea_node",
     "research_question_node",
     "protocol_builder_node",
     "search_node",
