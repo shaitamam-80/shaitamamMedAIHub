@@ -248,7 +248,7 @@ async def send_message(
 
         current_stage, stored_language = _get_current_state(graph, config)
         # Always respect the current request language; fall back to stored, then "en"
-    language = request.language or stored_language or "en"
+        language = request.language or stored_language or "en"
 
         input_state = {
             "messages": [HumanMessage(content=request.message)],
