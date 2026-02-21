@@ -38,6 +38,25 @@ router = APIRouter(prefix="/review", tags=["review"])
 
 
 # ============================================================================
+# LangGraph ↔ DB Stage Name Mapping
+# ============================================================================
+
+# LangGraph uses its own stage names (state.py ReviewStage), but the DB
+# project_stages table uses different names (from 001_initial_schema.sql).
+# This map converts LangGraph names → DB names for conversation persistence.
+LANGGRAPH_TO_DB_STAGE: Dict[str, str] = {
+    "idea": "idea",
+    "research_question": "question",
+    "protocol": "protocol",
+    "search": "search",
+    "screening": "screening",
+    "extraction": "extraction",
+    "synthesis": "synthesis",
+    "reporting": "manuscript",
+}
+
+
+# ============================================================================
 # Request/Response Models
 # ============================================================================
 
@@ -121,6 +140,64 @@ def _get_current_state(graph, config) -> tuple[str, str]:
     return "idea", "en"
 
 
+async def _find_or_create_conversation(
+    project_id: str, langgraph_stage: str, user_id: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Find an existing conversation or create one for this project+stage+user.
+    Converts LangGraph stage name to DB stage name automatically.
+    """
+    db_stage = LANGGRAPH_TO_DB_STAGE.get(langgraph_stage, langgraph_stage)
+
+    try:
+        conversation = await db_service.get_stage_conversation(
+            project_id=project_id,
+            stage_name=db_stage,
+            user_id=user_id,
+        )
+        if conversation:
+            return conversation
+
+        # No existing conversation — create one
+        stage = await db_service.get_stage(project_id, db_stage)
+        stage_id = stage["id"] if stage else None
+
+        conversation = await db_service.create_conversation({
+            "project_id": project_id,
+            "stage_id": stage_id,
+            "user_id": user_id,
+            "title": f"Review - {db_stage}",
+            "status": "active",
+        })
+        if conversation:
+            logger.info(
+                f"Created conversation {conversation['id']} "
+                f"for project={project_id}, stage={db_stage}"
+            )
+        return conversation
+
+    except Exception as e:
+        logger.warning(f"Failed to find/create conversation: {e}")
+        return None
+
+
+async def _save_message(
+    conversation_id: str, role: str, content: str, model_used: Optional[str] = None
+) -> None:
+    """Save a single message to the DB. Fails silently on error."""
+    try:
+        data: Dict[str, Any] = {
+            "conversation_id": conversation_id,
+            "role": role,
+            "content": content,
+        }
+        if model_used:
+            data["model_used"] = model_used
+        await db_service.save_message(data)
+    except Exception as e:
+        logger.warning(f"Failed to save {role} message: {e}")
+
+
 # ============================================================================
 # SSE Streaming Endpoint (Primary)
 # ============================================================================
@@ -165,9 +242,17 @@ async def stream_message(
         "status": "active",
     }
 
+    # --- Persist user message to Supabase ---
+    conversation = await _find_or_create_conversation(
+        thread_id, current_stage, current_user.id
+    )
+    if conversation:
+        await _save_message(conversation["id"], "user", request.message)
+
     async def event_generator():
         # Track model calls per node to distinguish conversational vs extraction
         node_model_calls: Dict[str, int] = {}
+        accumulated_response = ""
 
         try:
             async for event in graph.astream_events(
@@ -186,6 +271,7 @@ async def stream_message(
                     if node != "orchestrator" and node_model_calls.get(node, 0) == 1:
                         chunk = event["data"].get("chunk")
                         if chunk and hasattr(chunk, "content") and chunk.content:
+                            accumulated_response += chunk.content
                             payload = json.dumps({"content": chunk.content})
                             yield f"data: {payload}\n\n"
 
@@ -206,6 +292,13 @@ async def stream_message(
                     yield f"data: {json.dumps(state_update)}\n\n"
             except Exception as e:
                 logger.warning(f"Failed to get final state: {e}")
+
+            # --- Persist AI response to Supabase ---
+            if conversation and accumulated_response.strip():
+                await _save_message(
+                    conversation["id"], "assistant", accumulated_response,
+                    model_used="gemini-2.5-flash",
+                )
 
         except Exception as e:
             logger.exception(f"Streaming error for project {thread_id}: {e}")
@@ -259,6 +352,13 @@ async def send_message(
             "status": "active",
         }
 
+        # --- Persist user message ---
+        conversation = await _find_or_create_conversation(
+            thread_id, current_stage, current_user.id
+        )
+        if conversation:
+            await _save_message(conversation["id"], "user", request.message)
+
         logger.info(f"Invoking graph for project {thread_id}, stage: {current_stage}")
         result = await graph.ainvoke(input_state, config=config)
 
@@ -275,6 +375,13 @@ async def send_message(
 
         if not ai_response:
             ai_response = "I'm processing your request. Please continue."
+
+        # --- Persist AI response ---
+        if conversation and ai_response.strip():
+            await _save_message(
+                conversation["id"], "assistant", ai_response,
+                model_used="gemini-2.5-flash",
+            )
 
         updated_stage = result.get("current_stage", current_stage)
         return ReviewMessageResponse(
