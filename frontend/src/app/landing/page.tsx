@@ -78,8 +78,8 @@ const FEATURES = [
 
 /* ── Stats ── */
 const STATS = [
-  { value: '13', label: 'Specialized Tools' },
-  { value: '10', label: 'Pipeline Stages' },
+  { value: '12', label: 'Specialized Tools' },
+  { value: '8', label: 'Pipeline Stages' },
   { value: '6+', label: 'RoB Instruments' },
   { value: 'PRISMA', label: '2020 Compliant' },
 ];
@@ -154,7 +154,7 @@ export default function LandingPage() {
 
           {/* Sub-headline */}
           <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-lg">
-            From research idea to publication-ready manuscript. 13 specialized
+            From research idea to publication-ready manuscript. 12 specialized
             tools guide every stage of your systematic review.
           </p>
 
@@ -188,7 +188,7 @@ export default function LandingPage() {
               </div>
               <div className="flex-1 flex justify-center">
                 <div className="px-4 py-1 bg-background rounded-md text-xs text-muted-foreground border border-border">
-                  app.medaihub.com
+                  shaitamam.com
                 </div>
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function LandingPage() {
             Everything You Need
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            13 specialized tools designed for modern academic excellence and
+            12 specialized tools designed for modern academic excellence and
             rigorous scientific standards.
           </p>
         </div>
@@ -413,8 +413,8 @@ export default function LandingPage() {
                 at Tel Aviv University, his career has been defined by one
                 mission: making rigorous research methodology accessible. MedAI
                 Hub is the culmination of that experience &mdash; every tool
-                reflects real workflows refined across dozens of published
-                reviews.
+                reflects real workflows refined through years of hands-on SR
+                methodology.
               </p>
 
               {/* Achievement stats */}
@@ -488,8 +488,8 @@ export default function LandingPage() {
             Ready to Accelerate Your Research?
           </h2>
           <p className="text-muted-foreground">
-            Join researchers who are using AI to produce higher quality
-            systematic reviews in less time.
+            Use AI to produce higher quality systematic reviews in less
+            time.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
@@ -559,7 +559,7 @@ export default function LandingPage() {
             </p>
             <div className="flex items-center gap-2 text-xs opacity-40">
               <Shield className="size-3" />
-              <span>End-to-End Encrypted & Secure</span>
+              <span>Secure & Private</span>
             </div>
           </div>
         </div>
