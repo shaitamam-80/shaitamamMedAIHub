@@ -12,6 +12,11 @@ import {
   Zap,
   ChevronRight,
   GraduationCap,
+  Award,
+  BookOpen,
+  Briefcase,
+  ExternalLink,
+  Linkedin,
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 
@@ -77,6 +82,46 @@ const STATS = [
   { value: '10', label: 'Pipeline Stages' },
   { value: '6+', label: 'RoB Instruments' },
   { value: 'PRISMA', label: '2020 Compliant' },
+];
+
+/* ── Creator publications ── */
+const PUBLICATIONS = [
+  {
+    doi: '10.3389/fendo.2023.1135768',
+    title:
+      'GH treatment in pediatric Down syndrome: a systematic review and mini meta-analysis',
+    journal: 'Front Endocrinol',
+    year: '2023',
+  },
+  {
+    doi: '10.3389/fped.2023.1132296',
+    title:
+      'GHRH-GH-IGF1 axis in pediatric Down syndrome: a systematic review and mini meta-analysis',
+    journal: 'Front Pediatr',
+    year: '2023',
+  },
+  {
+    doi: '10.1002/ijgo.14290',
+    title:
+      'The association between overactive bladder and fibromyalgia: a systematic review and meta-analysis',
+    journal: 'Int J Gynaecol Obstet',
+    year: '2022',
+  },
+  {
+    doi: '10.1002/ijgo.13769',
+    title:
+      'A systematic review of stem cell therapy treatment for women suffering from stress urinary incontinence',
+    journal: 'Int J Gynaecol Obstet',
+    year: '2021',
+  },
+];
+
+/* ── Creator achievement stats ── */
+const CREATOR_STATS = [
+  { icon: Award, value: '10+', label: 'Years in Evidence-Based Medicine' },
+  { icon: BookOpen, value: '4', label: 'Peer-Reviewed Publications' },
+  { icon: GraduationCap, value: '3', label: 'Academic Degrees' },
+  { icon: Briefcase, value: 'Founder', label: 'SR Service at BGU' },
 ];
 
 export default function LandingPage() {
@@ -322,6 +367,142 @@ export default function LandingPage() {
             <span className="text-xs text-muted-foreground">
               Clinical Pharmacology Department
             </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ About the Creator ═══ */}
+      <section id="creator" className="px-6 py-20 bg-card border-y border-border">
+        <div className="max-w-4xl mx-auto">
+          {/* Section header */}
+          <div className="flex flex-col gap-3 mb-12 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-wide uppercase mx-auto">
+              <GraduationCap className="size-3.5" />
+              Built by a Domain Expert
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Meet the Creator
+            </h2>
+            <p className="text-muted-foreground max-w-lg mx-auto">
+              MedAI Hub was designed by a systematic reviews expert with over a
+              decade of experience guiding clinical research teams.
+            </p>
+          </div>
+
+          {/* Profile area */}
+          <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-center md:items-start">
+            {/* Left column: Avatar + social links */}
+            <div className="shrink-0 flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="absolute -inset-1 rounded-full bg-linear-to-br from-sky-500 via-blue-500 to-cyan-500 opacity-20 blur-sm" />
+                <div className="relative size-32 md:size-40 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+                  <div className="flex items-center justify-center size-full bg-linear-to-br from-primary/10 to-cyan-500/10 text-primary text-3xl md:text-4xl font-bold">
+                    ST
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://www.linkedin.com/in/shai-tamam/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border hover:bg-primary/5 hover:border-primary/20 transition-colors"
+                >
+                  <Linkedin className="size-3.5" />
+                  LinkedIn
+                </a>
+                <a
+                  href="https://pubmed.ncbi.nlm.nih.gov/?term=Tamam+S%5BAuthor%5D"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border hover:bg-primary/5 hover:border-primary/20 transition-colors"
+                >
+                  <BookOpen className="size-3.5" />
+                  PubMed
+                </a>
+              </div>
+            </div>
+
+            {/* Right column: Bio + achievements */}
+            <div className="flex-1 flex flex-col gap-6 text-center md:text-left">
+              <div>
+                <h3 className="text-2xl font-bold">Shai Tamam</h3>
+                <p className="text-primary font-medium text-sm mt-1">
+                  Senior Information Specialist &amp; Systematic Reviews Expert
+                </p>
+              </div>
+
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                With over a decade in evidence-based medicine, Shai has served as
+                the methodological backbone of systematic reviews across clinical
+                disciplines. From establishing a dedicated SR service at
+                Ben-Gurion University to leading information specialist training
+                at Tel Aviv University, his career has been defined by one
+                mission: making rigorous research methodology accessible. MedAI
+                Hub is the culmination of that experience &mdash; every tool
+                reflects real workflows refined across dozens of published
+                reviews.
+              </p>
+
+              {/* Achievement stats */}
+              <div className="grid grid-cols-2 gap-4">
+                {CREATOR_STATS.map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div
+                      key={stat.label}
+                      className="flex items-start gap-3 p-3 rounded-xl bg-background border border-border"
+                    >
+                      <div className="shrink-0 size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                        <Icon className="size-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-foreground">
+                          {stat.value}
+                        </span>
+                        <span className="text-xs text-muted-foreground leading-tight">
+                          {stat.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Publications */}
+          <div className="mt-12 pt-8 border-t border-border">
+            <div className="flex items-center gap-2 mb-6">
+              <FileText className="size-4 text-primary" />
+              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                Selected Publications
+              </h4>
+            </div>
+            <div className="grid gap-3">
+              {PUBLICATIONS.map((pub) => (
+                <a
+                  key={pub.doi}
+                  href={`https://doi.org/${pub.doi}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-3 p-4 rounded-xl border border-border bg-background hover:border-primary/20 hover:shadow-sm transition-all duration-300"
+                >
+                  <div className="shrink-0 mt-0.5">
+                    <BookOpen className="size-4 text-primary/60 group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                      {pub.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {pub.journal} ({pub.year})
+                    </p>
+                  </div>
+                  <ExternalLink className="size-3.5 text-muted-foreground/40 group-hover:text-primary shrink-0 mt-1 transition-colors" />
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </section>
