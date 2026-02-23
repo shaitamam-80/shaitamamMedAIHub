@@ -344,33 +344,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ Social Proof / Trust ═══ */}
-      <section className="px-6 py-20 max-w-4xl mx-auto text-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className="size-5 text-yellow-500 fill-yellow-500"
-              />
-            ))}
-          </div>
-          <blockquote className="text-xl md:text-2xl font-medium leading-relaxed text-foreground max-w-2xl italic">
-            &ldquo;MedAI Hub transformed our review process. What used to take
-            months now takes weeks, with better methodological rigor.&rdquo;
-          </blockquote>
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="size-4 text-primary" />
-              <span className="font-semibold text-sm">Research Team</span>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Clinical Pharmacology Department
-            </span>
-          </div>
-        </div>
-      </section>
-
       {/* ═══ About the Creator ═══ */}
       <section id="creator" className="px-6 py-20 bg-card border-y border-border">
         <div className="max-w-4xl mx-auto">
