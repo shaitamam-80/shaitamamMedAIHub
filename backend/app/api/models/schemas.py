@@ -74,6 +74,12 @@ class ProjectCreate(BaseModel):
         description="Research framework: PICO, PICOT, PICOS, CoCoPop, PFO, PEO, PECO, PIRD, PICo, SPIDER, PCC, SPICE, ECLIPSE, CMO, PerSPEcTiF, BeHEMoTh",
         examples=["PICO"]
     )
+    search_source: str = Field(
+        default="pubmed",
+        description="Search engine: 'pubmed' for biomedical/life sciences, 'openalex' for all academic disciplines",
+        pattern="^(pubmed|openalex)$",
+        examples=["pubmed"]
+    )
 
     class Config:
         json_schema_extra = {
@@ -81,7 +87,8 @@ class ProjectCreate(BaseModel):
                 "title": "Exercise Interventions for Depression in Elderly",
                 "description": "Investigating the effectiveness of exercise programs in treating depression in elderly populations",
                 "review_type": "systematic_intervention",
-                "framework": "PICO"
+                "framework": "PICO",
+                "search_source": "pubmed"
             }
         }
 
@@ -104,6 +111,7 @@ class ProjectResponse(BaseModel):
     description: Optional[str] = None
     review_type: str
     framework: str
+    search_source: str = Field(default="pubmed", description="Search engine: pubmed or openalex")
     current_stage: str = Field(default="idea", description="Current workflow stage")
     progress_percentage: int = Field(default=0, description="Overall progress 0-100")
     status: str = Field(default="active", description="Project status")

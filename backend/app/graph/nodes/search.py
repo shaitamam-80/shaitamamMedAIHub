@@ -3,9 +3,13 @@ MedAI Hub - Search Query Node
 ==============================
 
 LangGraph node for the Search Strategy stage of systematic reviews.
-Translates research questions into PubMed Boolean queries with MeSH terms,
+Translates research questions into Boolean queries (PubMed or OpenAlex),
 generates 3 strategy variants (broad/focused/precision), and manages
 query validation and execution.
+
+Supports two search engines based on project.search_source:
+  - 'pubmed' (default): MeSH terms, field tags, clinical filters
+  - 'openalex': Simple Boolean queries, API-level filters
 
 Responsibilities:
     1. Read protocol/research_question artifacts for context
@@ -34,6 +38,9 @@ from sr_skills.prompts.search import (
     CLINICAL_FILTERS,
     STRATEGY_DEFINITIONS,
     get_search_context,
+    OPENALEX_SYSTEM_PROMPT,
+    OPENALEX_FILTERS,
+    get_search_context_openalex,
 )
 from app.core.config import settings
 
@@ -86,16 +93,17 @@ def extract_queries_from_response(ai_response: str) -> Dict[str, str]:
                 queries[label] = query
                 continue
 
-        # Try to extract raw query (lines containing PubMed syntax)
+        # Try to extract raw query (lines containing PubMed or OpenAlex syntax)
         lines = text_after.split("\n")
         query_lines = []
         capturing = False
         for line in lines:
             stripped = line.strip()
-            # Start capturing at first line with PubMed syntax
+            # Start capturing at first line with search syntax (PubMed or OpenAlex)
             if not capturing and (
                 "[mesh" in stripped.lower() or "[tiab]" in stripped.lower()
                 or stripped.startswith("(") or "AND" in stripped
+                or (stripped.startswith('"') and "OR" in stripped)
             ):
                 capturing = True
             # Stop at next section header
@@ -210,6 +218,10 @@ async def search_node(state: ReviewState) -> Dict[str, Any]:
                 "next_action": "Configure screening criteria",
             }
 
+    # -- Determine search engine from project metadata --
+    project_meta = current_artifacts.get("project_meta", {})
+    search_source = project_meta.get("search_source", "pubmed")
+
     # -- Build context from prior artifacts --
     rq_artifact = current_artifacts.get("research_question", {})
     protocol_artifact = current_artifacts.get("protocol", {})
@@ -219,12 +231,24 @@ async def search_node(state: ReviewState) -> Dict[str, Any]:
     question_narrow = rq_artifact.get("question_narrow", "")
     question_broad = rq_artifact.get("question_broad", "")
 
-    search_context = get_search_context(
-        framework_type=framework_type,
-        framework_data=framework_data,
-        question_narrow=question_narrow,
-        question_broad=question_broad,
-    )
+    # Route to the correct prompt and context builder based on search source
+    if search_source == "openalex":
+        system_prompt_base = OPENALEX_SYSTEM_PROMPT
+        search_context = get_search_context_openalex(
+            framework_type=framework_type,
+            framework_data=framework_data,
+            question_narrow=question_narrow,
+            question_broad=question_broad,
+        )
+    else:
+        # Default: PubMed path (completely unchanged)
+        system_prompt_base = SEARCH_SYSTEM_PROMPT
+        search_context = get_search_context(
+            framework_type=framework_type,
+            framework_data=framework_data,
+            question_narrow=question_narrow,
+            question_broad=question_broad,
+        )
 
     # Add eligibility criteria from protocol if available
     if protocol_artifact.get("eligibility_criteria"):
@@ -246,16 +270,25 @@ async def search_node(state: ReviewState) -> Dict[str, Any]:
 
     # Add question type and available filter
     question_type = detect_question_type_from_artifacts(current_artifacts)
-    available_filter = CLINICAL_FILTERS.get(question_type, {})
-    if available_filter:
-        search_context += f"\n\n[RECOMMENDED FILTER for {question_type}]"
-        search_context += f"\nBroad: {available_filter.get('broad', 'N/A')}"
-        search_context += f"\nNarrow: {available_filter.get('narrow', 'N/A')}"
+    if search_source == "openalex":
+        available_filter = OPENALEX_FILTERS.get(question_type, {})
+        if available_filter:
+            search_context += f"\n\n[RECOMMENDED API FILTERS for {question_type}]"
+            for level, filters in available_filter.items():
+                if filters:
+                    filter_str = ", ".join(f"{k}:{v}" for k, v in filters.items())
+                    search_context += f"\n{level}: {filter_str}"
+    else:
+        available_filter = CLINICAL_FILTERS.get(question_type, {})
+        if available_filter:
+            search_context += f"\n\n[RECOMMENDED FILTER for {question_type}]"
+            search_context += f"\nBroad: {available_filter.get('broad', 'N/A')}"
+            search_context += f"\nNarrow: {available_filter.get('narrow', 'N/A')}"
 
     try:
         # Build full prompt
         stage_display = get_stage_display_name("search", language)
-        full_system_prompt = f"{SEARCH_SYSTEM_PROMPT}{search_context}"
+        full_system_prompt = f"{system_prompt_base}{search_context}"
 
         # Build message list for LLM
         llm_messages = [SystemMessage(content=full_system_prompt)]

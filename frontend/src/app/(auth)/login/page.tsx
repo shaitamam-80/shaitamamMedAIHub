@@ -1,22 +1,14 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { LogIn, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'auth_callback_error'
@@ -24,40 +16,25 @@ function LoginForm() {
       : null
   );
 
+  // Read ?next= param for post-login redirect (with open-redirect protection)
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+
   const supabase = createClient();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(
-        error.message === 'Invalid login credentials'
-          ? 'Invalid email or password'
-          : error.message
-      );
-      setIsLoading(false);
-    } else {
-      router.push('/');
-      router.refresh();
-    }
-  };
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setError(null);
 
     try {
+      const callbackUrl = nextPath !== '/'
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+        : `${window.location.origin}/auth/callback`;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -83,13 +60,18 @@ function LoginForm() {
 
   return (
     <Card className="shadow-xl shadow-primary/5 border-primary/5">
-      <CardContent className="pt-8 pb-6 px-8">
+      <CardContent className="pt-8 pb-8 px-8">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, <span className="gradient-text">Researcher</span>
+          <div className="flex size-14 mx-auto items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-cyan-500 text-white font-bold text-xl shadow-lg shadow-sky-500/20 mb-4">
+            M
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Welcome to <span className="gradient-text">MedAI Hub</span>
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">Access your academic workspace and data</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Sign in to access your research workspace
+          </p>
         </div>
 
         {/* Error */}
@@ -100,12 +82,12 @@ function LoginForm() {
           </div>
         )}
 
-        {/* Google OAuth — first for prominence */}
+        {/* Google OAuth — the only sign-in method */}
         <Button
           variant="outline"
           className="w-full h-12 text-base font-semibold shadow-sm"
           onClick={handleGoogleLogin}
-          disabled={isLoading || isGoogleLoading}
+          disabled={isGoogleLoading}
         >
           {isGoogleLoading ? (
             <Loader2 className="size-4 animate-spin" />
@@ -120,66 +102,10 @@ function LoginForm() {
           Sign in with Google
         </Button>
 
-        {/* Divider */}
-        <div className="relative my-6">
-          <Separator />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="px-2 bg-card text-muted-foreground text-xs uppercase tracking-wider">or</span>
-          </div>
-        </div>
-
-        {/* Email/Password Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <>
-                <LogIn className="size-4 me-2" />
-                Sign In
-              </>
-            )}
-          </Button>
-        </form>
-
-        {/* (Google OAuth moved above the form) */}
-      </CardContent>
-
-      <CardFooter className="justify-center pb-6">
-        <p className="text-muted-foreground text-sm">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/register"
-            className="text-primary hover:underline font-medium"
-          >
-            Sign up
-          </Link>
+        <p className="text-center text-muted-foreground/60 text-xs mt-4">
+          Your account is created automatically on first sign-in
         </p>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

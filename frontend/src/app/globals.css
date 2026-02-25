@@ -184,7 +184,7 @@ h1, h2, h3, h4 {
 /* ===== Custom Utilities ===== */
 @layer utilities {
   .gradient-text {
-    background: linear-gradient(135deg, #0ea5e9, #06b6d4, #2563eb);
+    background: linear-gradient(135deg, #2563eb, #0ea5e9, #06b6d4);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

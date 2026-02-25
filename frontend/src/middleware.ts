@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   // Skip auth entirely when NEXT_PUBLIC_SKIP_AUTH is true
   if (process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
-    // If on login/register page, redirect to dashboard (landing stays accessible)
-    if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') {
+    // If on login page, redirect to dashboard (landing stays accessible)
+    if (request.nextUrl.pathname === '/login') {
       const url = request.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);

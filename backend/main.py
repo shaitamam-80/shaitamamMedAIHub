@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.logging_config import setup_logging
-from app.api.routes import projects, define, define_v3, review, chat, fulltext
+from app.api.routes import projects, define, define_v3, review, chat, fulltext, openalex
 
 # Configure structured JSON logging
 setup_logging(debug=settings.DEBUG)
@@ -67,6 +67,10 @@ tags_metadata = [
     {
         "name": "fulltext",
         "description": "Full-text availability checking. Check Open Access sources (PMC, Unpaywall, CORE, S2, EZproxy) for article PDFs.",
+    },
+    {
+        "name": "openalex",
+        "description": "OpenAlex academic search. Search 260M+ works across all academic disciplines with cursor-based pagination.",
     },
     {
         "name": "health",
@@ -131,6 +135,7 @@ app.include_router(define_v3.router, prefix=settings.API_V1_PREFIX)  # Define To
 app.include_router(review.router, prefix=settings.API_V1_PREFIX)  # LangGraph Orchestrator
 app.include_router(chat.router, prefix=settings.API_V1_PREFIX)  # SSE Chat (SR-Portal)
 app.include_router(fulltext.router, prefix=settings.API_V1_PREFIX)  # Full-text OA check
+app.include_router(openalex.router, prefix=settings.API_V1_PREFIX)  # OpenAlex search
 
 
 @app.get("/", tags=["health"])
@@ -220,6 +225,12 @@ async def shutdown_event():
     logger.info("MedAI Hub Backend shutting down...")
     from app.api.routes.fulltext import fulltext_service
     await fulltext_service.close()
+    # Close OpenAlex HTTP client
+    from app.api.routes.openalex import get_openalex_service
+    try:
+        await get_openalex_service().close()
+    except Exception:
+        pass
 
 
 @app.exception_handler(Exception)

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     NCBI_API_KEY: Optional[str] = None       # 10 req/sec vs 3 without
     PUBMED_EMAIL: Optional[str] = None       # Required for Unpaywall & NCBI E-utilities
 
+    # OpenAlex
+    OPENALEX_API_KEY: Optional[str] = None   # Free key from openalex.org/settings/api
+    OPENALEX_EMAIL: Optional[str] = None     # Polite pool email (10 req/sec vs 1 anon)
+
     # Full-text sources
     CORE_API_KEY: Optional[str] = None       # CORE.ac.uk API key
     EZPROXY_PREFIX: Optional[str] = None     # Institutional proxy URL prefix

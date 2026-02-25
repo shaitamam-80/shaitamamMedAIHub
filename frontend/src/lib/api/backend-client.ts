@@ -119,6 +119,7 @@ export interface Project {
   description?: string;
   review_type: string;
   framework: string;
+  search_source: string; // 'pubmed' | 'openalex'
   current_stage: string;
   progress_percentage: number;
   status: string;
@@ -136,6 +137,51 @@ export interface CreateProjectPayload {
   description?: string;
   review_type: string;
   framework: string;
+  search_source?: 'pubmed' | 'openalex';
+}
+
+// ============================================================================
+// OpenAlex Search API
+// ============================================================================
+
+export interface OpenAlexSearchMeta {
+  count: number;
+  per_page: number;
+  next_cursor: string | null;
+}
+
+export interface OpenAlexSearchResponse {
+  results: Article[];
+  meta: OpenAlexSearchMeta;
+}
+
+/**
+ * Search OpenAlex for academic works.
+ * Returns normalized articles + cursor-based pagination metadata.
+ */
+export async function searchOpenAlex(
+  query: string,
+  filters?: Record<string, string>,
+  cursor: string = '*',
+  perPage: number = 25
+): Promise<OpenAlexSearchResponse> {
+  const headers = await getHeaders();
+  const response = await fetch(apiUrl('/openalex/search'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      query,
+      filters: filters || null,
+      cursor,
+      per_page: perPage,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAlex search failed: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -474,14 +520,18 @@ export interface Article {
   pmid?: string;
   pmcid?: string;
   doi?: string;
+  openalex_id?: string;
+  source?: string; // 'pubmed' | 'openalex' | 'manual'
   title: string;
   abstract_text?: string;
-  authors?: Array<{ name: string; affiliation?: string }>;
+  authors?: Array<{ name: string; affiliation?: string; orcid?: string; institution?: string }>;
   journal?: string;
   publication_year?: number;
   screening_status: string;
   study_design?: string;
   fulltext_available: boolean;
+  cited_by_count?: number;
+  topics?: Array<{ name: string; field?: string; domain?: string }>;
   created_at: string;
 }
 

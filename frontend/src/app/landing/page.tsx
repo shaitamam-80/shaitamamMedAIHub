@@ -1,415 +1,431 @@
+'use client';
+
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Sparkles,
-  Brain,
   Search,
   FileText,
   BarChart3,
   Shield,
   ArrowRight,
-  CheckCircle2,
-  Star,
-  Zap,
   ChevronRight,
-  GraduationCap,
+  Globe,
+  Stethoscope,
+  MessageSquareText,
+  FileSearch,
+  Lock,
+  Zap,
 } from 'lucide-react';
 import LandingNav from './LandingNav';
 
-export const metadata = {
-  title: 'MedAI Hub — AI-Powered Systematic Reviews',
-  description:
-    'Accelerate your systematic reviews with AI. From research question to publication-ready manuscript, MedAI Hub guides every step.',
+/* ══════════════════════════════════════════════════════════
+   Language System
+   ══════════════════════════════════════════════════════════ */
+
+type Lang = 'he' | 'en';
+
+function detectLanguage(paramLang: string | null): Lang {
+  // 1. URL param
+  if (paramLang === 'he' || paramLang === 'en') return paramLang;
+  // 2. localStorage
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('medai-lang');
+    if (stored === 'he' || stored === 'en') return stored;
+    // 3. Browser language
+    if (navigator.language.startsWith('he')) return 'he';
+  }
+  // 4. Default
+  return 'en';
+}
+
+/* ══════════════════════════════════════════════════════════
+   Bilingual Content
+   ══════════════════════════════════════════════════════════ */
+
+const T = {
+  badge: {
+    en: 'Now supporting all academic disciplines',
+    he: 'כעת תומך בכל הדיסציפלינות האקדמיות',
+  },
+  headline1: { en: 'AI-Powered', he: 'סקירות שיטתיות' },
+  headline2: { en: 'Systematic Reviews', he: 'מונעות בינה מלאכותית' },
+  sub: {
+    en: 'From research idea to publication-ready manuscript. Search PubMed and OpenAlex with 13 specialized AI tools.',
+    he: 'מרעיון מחקרי עד כתב יד מוכן לפרסום. חיפוש ב-PubMed ו-OpenAlex עם 13 כלי AI מתמחים.',
+  },
+  getStarted: { en: 'Start Free', he: 'התחילו בחינם' },
+  learnMore: { en: 'Learn More', he: 'למידע נוסף' },
+  signIn: { en: 'Sign In', he: 'התחברות' },
+
+  // Tool cards
+  tools: [
+    {
+      key: 'define',
+      icon: MessageSquareText,
+      title: { en: 'Research Question', he: 'שאלת מחקר' },
+      desc: {
+        en: 'AI chat that helps you formulate a structured research question with 20+ frameworks (PICO, CoCoPop, SPIDER, and more).',
+        he: 'צ\'אט AI שמסייע לנסח שאלת מחקר מובנית עם 20+ מסגרות (PICO, CoCoPop, SPIDER ועוד).',
+      },
+    },
+    {
+      key: 'search',
+      icon: Search,
+      title: { en: 'Literature Search', he: 'חיפוש ספרות' },
+      desc: {
+        en: 'Build precise Boolean queries for PubMed (MeSH terms) or OpenAlex (all disciplines). 3 sensitivity strategies.',
+        he: 'בניית שאילתות בוליאניות מדויקות ל-PubMed (מונחי MeSH) או OpenAlex (כל הדיסציפלינות).',
+      },
+    },
+    {
+      key: 'screen',
+      icon: FileSearch,
+      title: { en: 'Abstract Screening', he: 'סינון תקצירים' },
+      desc: {
+        en: 'Automated abstract screening with AI reasoning, Include/Exclude decisions, and manual override support.',
+        he: 'סינון תקצירים אוטומטי עם נימוקי AI, החלטות Include/Exclude ואפשרות ביקורת ידנית.',
+      },
+    },
+  ],
+  moreTools: {
+    en: '+ 10 more tools in the full pipeline',
+    he: '+ 10 כלים נוספים ב-pipeline המלא',
+  },
+  startTool: { en: 'Start', he: 'התחל' },
+
+  // Tool banner
+  toolBanner: {
+    looking: { en: 'Looking for:', he: 'מחפשים:' },
+    cta: { en: 'Sign in free to start', he: 'התחברו בחינם כדי להתחיל' },
+  },
+
+  // Stats
+  stats: [
+    { value: '260M+', label: { en: 'Academic Works', he: 'עבודות אקדמיות' } },
+    { value: '13', label: { en: 'AI Tools', he: 'כלי AI' } },
+    { value: '10', label: { en: 'Pipeline Stages', he: 'שלבי Pipeline' } },
+    { value: 'PRISMA', label: { en: '2020 Compliant', he: 'תואם 2020' } },
+  ],
+
+  // How it works
+  howTitle: { en: 'How It Works', he: 'איך זה עובד' },
+  howSub: {
+    en: 'A complete pipeline from initial idea to publication.',
+    he: 'Pipeline שלם מרעיון ראשוני ועד פרסום.',
+  },
+  howSteps: [
+    { num: '01', title: { en: 'Define', he: 'הגדרה' }, desc: { en: 'Structure your research question', he: 'מבנה שאלת המחקר' }, icon: Sparkles },
+    { num: '02', title: { en: 'Search', he: 'חיפוש' }, desc: { en: 'PubMed or OpenAlex queries', he: 'שאילתות PubMed או OpenAlex' }, icon: Search },
+    { num: '03', title: { en: 'Screen', he: 'סינון' }, desc: { en: 'AI-powered abstract screening', he: 'סינון תקצירים עם AI' }, icon: FileText },
+    { num: '04', title: { en: 'Synthesize', he: 'סינתזה' }, desc: { en: 'RoB, meta-analysis, GRADE, manuscript', he: 'RoB, מטה-אנליזה, GRADE, כתב יד' }, icon: BarChart3 },
+  ],
+
+  // CTA
+  ctaTitle: { en: 'Ready to Accelerate Your Research?', he: 'מוכנים להאיץ את המחקר?' },
+  ctaSub: {
+    en: 'Join researchers producing higher-quality systematic reviews in less time.',
+    he: 'הצטרפו לחוקרים שמפיקים סקירות שיטתיות איכותיות יותר בפחות זמן.',
+  },
+  startReview: { en: 'Start Your Review', he: 'התחילו סקירה' },
+
+  // Footer
+  footerDesc: {
+    en: 'AI-powered systematic review platform for evidence-based research.',
+    he: 'פלטפורמת סקירות שיטתיות מונעת AI למחקר מבוסס עדויות.',
+  },
+  footerSecure: { en: 'End-to-End Encrypted & Secure', he: 'מוצפן ומאובטח' },
 };
 
-/* ── Pipeline steps shown in "How It Works" ── */
-const PIPELINE_STEPS = [
-  { icon: Sparkles, label: 'Research Idea', step: 1 },
-  { icon: Search, label: 'PubMed Search', step: 2 },
-  { icon: FileText, label: 'Screening', step: 3 },
-  { icon: BarChart3, label: 'Synthesis', step: 4 },
-  { icon: Star, label: 'GRADE', step: 5 },
-  { icon: FileText, label: 'Manuscript', step: 6 },
-];
+/* ══════════════════════════════════════════════════════════
+   Tool Aliases — map ?from= path to tool name
+   ══════════════════════════════════════════════════════════ */
 
-/* ── Feature cards ── */
-const FEATURES = [
-  {
-    icon: Brain,
-    title: 'AI-Powered Analysis',
-    description:
-      'Extract insights automatically from thousands of papers using advanced language models trained on scientific literature.',
-  },
-  {
-    icon: Search,
-    title: 'Smart PubMed Search',
-    description:
-      'Build precise search queries with MeSH terms, field tags, and sensitivity/specificity strategies — validated in real time.',
-  },
-  {
-    icon: Shield,
-    title: 'Risk of Bias Assessment',
-    description:
-      'Automated RoB assessment with RoB 2.0, ROBINS-I, NOS, JBI, QUADAS-2. Includes traffic light plots and summary tables.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Meta-Analysis & Synthesis',
-    description:
-      'Quantitative meta-analysis with Forest plots, heterogeneity testing, subgroup analysis, and publication bias detection.',
-  },
-  {
-    icon: Star,
-    title: 'GRADE Certainty',
-    description:
-      'Full GRADE assessment across all 5 downgrade and 3 upgrade domains. Summary of Findings tables and plain-language statements.',
-  },
-  {
-    icon: FileText,
-    title: 'Manuscript Writer',
-    description:
-      'Generate PRISMA 2020 compliant manuscripts with all sections, checklists, cover letters, and PRISMA Flow diagrams.',
-  },
-];
+const TOOL_FROM_ALIASES: Record<string, { en: string; he: string }> = {
+  '/define': { en: 'Research Question Formulation', he: 'ניסוח שאלת מחקר' },
+  '/query': { en: 'Literature Search & Query Builder', he: 'חיפוש ספרות ובניית שאילתות' },
+  '/review': { en: 'AI Abstract Screening', he: 'סינון תקצירים עם AI' },
+};
 
-/* ── Stats ── */
-const STATS = [
-  { value: '13', label: 'Specialized Tools' },
-  { value: '10', label: 'Pipeline Stages' },
-  { value: '6+', label: 'RoB Instruments' },
-  { value: 'PRISMA', label: '2020 Compliant' },
-];
+/* ══════════════════════════════════════════════════════════
+   Inner component (needs Suspense for useSearchParams)
+   ══════════════════════════════════════════════════════════ */
 
-export default function LandingPage() {
+function LandingInner() {
+  const searchParams = useSearchParams();
+  const [lang, setLang] = useState<Lang>('en');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const detected = detectLanguage(searchParams.get('lang'));
+    setLang(detected);
+    localStorage.setItem('medai-lang', detected);
+    setMounted(true);
+  }, [searchParams]);
+
+  const toggleLang = () => {
+    const newLang: Lang = lang === 'he' ? 'en' : 'he';
+    setLang(newLang);
+    localStorage.setItem('medai-lang', newLang);
+  };
+
+  const isRtl = lang === 'he';
+  const fromPath = searchParams.get('from');
+  const toolBannerInfo = fromPath ? TOOL_FROM_ALIASES[fromPath] : null;
+
+  const t = (obj: { en: string; he: string }) => obj[lang];
+
+  /** Append ?next= to auth links so login/register can redirect back */
+  const authHref = (base: string) =>
+    fromPath ? `${base}?next=${encodeURIComponent(fromPath)}` : base;
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className={`min-h-screen bg-background text-foreground ${isRtl ? 'font-heebo' : 'font-inter'}`}
+      dir={isRtl ? 'rtl' : 'ltr'}
+    >
       {/* ═══ Navbar ═══ */}
-      <LandingNav />
+      <LandingNav lang={lang} onToggleLang={toggleLang} fromPath={fromPath} />
+
+      {/* ═══ Tool Banner (conditional) ═══ */}
+      {toolBannerInfo && (
+        <div className="bg-primary/5 border-b border-primary/10 px-6 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Lock className="size-4 text-primary flex-shrink-0" />
+              <span className="text-muted-foreground">
+                {t(T.toolBanner.looking)}{' '}
+                <strong className="text-foreground">{t(toolBannerInfo)}</strong>
+              </span>
+            </div>
+            <Link
+              href={authHref('/login')}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+            >
+              {t(T.toolBanner.cta)}
+              <ArrowRight className="size-3" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Hero Section ═══ */}
-      <section className="relative px-6 py-20 md:py-28 flex flex-col items-center text-center gap-8 overflow-hidden">
-        {/* Background blobs */}
+      <section className="relative px-6 py-16 md:py-24 flex flex-col items-center text-center gap-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/[0.04] blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-cyan-500/[0.03] blur-3xl" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-3xl">
-          {/* Badge */}
+        <div className="relative z-10 flex flex-col items-center gap-5 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-wide uppercase">
             <Sparkles className="size-3.5" />
-            The Future of Research
+            {t(T.badge)}
           </div>
 
-          {/* Headline */}
-          <h1 className="text-4xl md:text-6xl font-bold leading-[1.12] tracking-tight">
-            Systematic Reviews,{' '}
-            <br className="hidden sm:block" />
-            <span className="gradient-text italic">Powered by AI</span>
+          <h1 className="text-5xl md:text-7xl font-bold leading-[1.08] tracking-tight">
+            <span className="gradient-text">{t(T.headline1)}</span>
+            <br />
+            {t(T.headline2)}
           </h1>
 
-          {/* Sub-headline */}
-          <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-lg">
-            From research idea to publication-ready manuscript. 13 specialized
-            tools guide every stage of your systematic review.
+          <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-xl">
+            {t(T.sub)}
           </p>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-card text-xs font-medium text-muted-foreground">
+              <Stethoscope className="size-3" />
+              PubMed &middot; 37M+
+            </div>
+            <span className="text-muted-foreground/30 text-sm">+</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-card text-xs font-medium text-muted-foreground">
+              <Globe className="size-3" />
+              OpenAlex &middot; 260M+
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 mt-2">
             <Link
-              href="/register"
+              href={authHref('/login')}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground text-lg font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform"
             >
-              Get Started Free
+              {t(T.getStarted)}
               <ArrowRight className="size-5" />
             </Link>
             <Link
-              href="#features"
+              href="#tools"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent border-2 border-primary/20 text-primary text-lg font-bold rounded-xl hover:bg-primary/5 transition-colors"
             >
-              Learn More
+              {t(T.learnMore)}
             </Link>
-          </div>
-        </div>
-
-        {/* Browser Mockup */}
-        <div className="relative z-10 w-full max-w-4xl mt-12">
-          <div className="rounded-2xl overflow-hidden shadow-2xl border border-border bg-card">
-            {/* Browser bar */}
-            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b border-border">
-              <div className="flex gap-1.5">
-                <div className="size-3 rounded-full bg-red-400/60" />
-                <div className="size-3 rounded-full bg-yellow-400/60" />
-                <div className="size-3 rounded-full bg-green-400/60" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="px-4 py-1 bg-background rounded-md text-xs text-muted-foreground border border-border">
-                  app.medaihub.com
-                </div>
-              </div>
-            </div>
-            {/* Content preview */}
-            <div className="p-8 md:p-12 bg-gradient-to-br from-primary/[0.03] to-cyan-500/[0.02]">
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                {PIPELINE_STEPS.map((step) => {
-                  const Icon = step.icon;
-                  return (
-                    <div
-                      key={step.step}
-                      className="flex flex-col items-center gap-2"
-                    >
-                      <div className="flex size-12 md:size-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Icon className="size-6" />
-                      </div>
-                      <span className="text-[10px] md:text-xs text-muted-foreground font-medium text-center leading-tight">
-                        {step.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-8 flex items-center justify-center">
-                <div className="h-2 w-full max-w-md rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-cyan-500"
-                    style={{ width: '65%' }}
-                  />
-                </div>
-              </div>
-              <p className="text-center text-xs text-muted-foreground mt-2">
-                Pipeline Progress
-              </p>
-            </div>
           </div>
         </div>
       </section>
 
+      {/* ═══ Tool Cards ═══ */}
+      <section id="tools" className="px-6 py-16 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6">
+          {T.tools.map((tool) => {
+            const Icon = tool.icon;
+            const isHighlighted =
+              (fromPath === '/define' && tool.key === 'define') ||
+              (fromPath === '/query' && tool.key === 'search') ||
+              (fromPath === '/review' && tool.key === 'screen');
+
+            return (
+              <div
+                key={tool.key}
+                className={`flex flex-col gap-4 p-6 rounded-2xl border bg-card shadow-sm hover:shadow-md transition-all duration-300 ${
+                  isHighlighted
+                    ? 'border-primary/40 ring-2 ring-primary/20 shadow-md'
+                    : 'border-border hover:border-primary/20'
+                }`}
+              >
+                <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Icon className="size-6" />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <h3 className="text-lg font-bold">{t(tool.title)}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t(tool.desc)}
+                  </p>
+                </div>
+                <Link
+                  href={authHref('/login')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary/10 text-primary text-sm font-bold rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  {t(T.startTool)}
+                  <ArrowRight className="size-4" />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          {t(T.moreTools)}
+        </p>
+      </section>
+
       {/* ═══ Stats Bar ═══ */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-10 border-y border-border bg-card">
-        {STATS.map((stat) => (
-          <div key={stat.label} className="flex flex-col items-center gap-1">
+        {T.stats.map((stat) => (
+          <div key={stat.value} className="flex flex-col items-center gap-1">
             <span className="text-3xl md:text-4xl font-bold text-primary">
               {stat.value}
             </span>
             <span className="text-xs text-muted-foreground uppercase font-bold tracking-widest">
-              {stat.label}
+              {t(stat.label)}
             </span>
           </div>
         ))}
       </section>
 
-      {/* ═══ Features ═══ */}
-      <section id="features" className="px-6 py-20 max-w-6xl mx-auto">
-        <div className="flex flex-col gap-3 mb-12 text-center">
+      {/* ═══ How It Works (compact) ═══ */}
+      <section className="px-6 py-16 max-w-4xl mx-auto">
+        <div className="flex flex-col gap-3 mb-10 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Everything You Need
+            {t(T.howTitle)}
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            13 specialized tools designed for modern academic excellence and
-            rigorous scientific standards.
+            {t(T.howSub)}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map((feature) => {
-            const Icon = feature.icon;
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {T.howSteps.map((step) => {
+            const Icon = step.icon;
             return (
               <div
-                key={feature.title}
-                className="flex flex-col gap-4 p-6 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 card-glow"
+                key={step.num}
+                className="flex flex-col items-center gap-3 p-5 rounded-xl border border-border bg-card text-center"
               >
-                <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <Icon className="size-6" />
+                <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs">
+                  {step.num}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-lg font-bold">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
+                <Icon className="size-5 text-primary" />
+                <h3 className="font-bold text-sm">{t(step.title)}</h3>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {t(step.desc)}
+                </p>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* ═══ How It Works ═══ */}
-      <section className="px-6 py-20 bg-card border-y border-border">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col gap-3 mb-12 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              How It Works
-            </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto">
-              A complete pipeline from initial idea to publication-ready manuscript.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-0">
-            {[
-              {
-                step: '01',
-                title: 'Define Your Research Question',
-                desc: 'Start with your idea. Our AI helps you structure it using PICO, CoCoPop, PFO, or other frameworks.',
-                icon: Sparkles,
-              },
-              {
-                step: '02',
-                title: 'Build & Run Your Search',
-                desc: 'Generate precise PubMed queries with MeSH terms and boolean operators. Validate in real time.',
-                icon: Search,
-              },
-              {
-                step: '03',
-                title: 'Screen & Extract Data',
-                desc: 'AI-powered abstract screening against your criteria. Structured data extraction with missing statistics calculation.',
-                icon: FileText,
-              },
-              {
-                step: '04',
-                title: 'Assess & Synthesize',
-                desc: 'Risk of bias assessment, meta-analysis with Forest plots, GRADE certainty evaluation, and manuscript generation.',
-                icon: BarChart3,
-              },
-            ].map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.step} className="flex gap-6 relative">
-                  {/* Timeline line */}
-                  {index < 3 && (
-                    <div className="absolute left-[23px] top-14 bottom-0 w-px bg-border" />
-                  )}
-                  {/* Step number circle */}
-                  <div className="flex-shrink-0 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm z-10">
-                    {item.step}
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 pb-12">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className="size-4 text-primary" />
-                      <h3 className="text-lg font-bold">{item.title}</h3>
-                    </div>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ Social Proof / Trust ═══ */}
-      <section className="px-6 py-20 max-w-4xl mx-auto text-center">
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className="size-5 text-yellow-500 fill-yellow-500"
-              />
-            ))}
-          </div>
-          <blockquote className="text-xl md:text-2xl font-medium leading-relaxed text-foreground max-w-2xl italic">
-            &ldquo;MedAI Hub transformed our review process. What used to take
-            months now takes weeks, with better methodological rigor.&rdquo;
-          </blockquote>
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="size-4 text-primary" />
-              <span className="font-semibold text-sm">Research Team</span>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              Clinical Pharmacology Department
-            </span>
-          </div>
-        </div>
-      </section>
-
       {/* ═══ CTA Section ═══ */}
-      <section className="px-6 py-20 bg-gradient-to-br from-primary/5 to-cyan-500/5 border-y border-border">
+      <section className="px-6 py-16 bg-gradient-to-br from-primary/5 to-cyan-500/5 border-y border-border">
         <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
           <Zap className="size-8 text-primary" />
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Ready to Accelerate Your Research?
+            {t(T.ctaTitle)}
           </h2>
           <p className="text-muted-foreground">
-            Join researchers who are using AI to produce higher quality
-            systematic reviews in less time.
+            {t(T.ctaSub)}
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="/register"
+              href={authHref('/login')}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground text-lg font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform"
             >
-              Start Your Review
+              {t(T.startReview)}
               <ChevronRight className="size-5" />
             </Link>
             <Link
-              href="/login"
+              href={authHref('/login')}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-primary/20 text-primary font-bold rounded-xl hover:bg-primary/5 transition-colors"
             >
-              Sign In
+              {t(T.signIn)}
             </Link>
           </div>
         </div>
       </section>
 
       {/* ═══ Footer ═══ */}
-      <footer className="px-6 py-12 bg-foreground text-background">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10">
-            {/* Brand */}
-            <div className="flex flex-col gap-3 max-w-xs">
-              <div className="flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">
-                  M
-                </div>
-                <span className="text-lg font-bold tracking-tight">
-                  MedAI Hub
-                </span>
+      <footer className="px-6 py-10 bg-foreground text-background">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">
+                M
               </div>
-              <p className="text-sm opacity-60">
-                AI-powered systematic review platform for evidence-based
-                research.
-              </p>
+              <div className="flex flex-col">
+                <span className="text-base font-bold tracking-tight">MedAI Hub</span>
+                <span className="text-xs opacity-50">{t(T.footerDesc)}</span>
+              </div>
             </div>
 
-            {/* Links */}
-            <div className="grid grid-cols-2 gap-8 text-sm">
-              <div className="flex flex-col gap-3">
-                <h4 className="font-bold">Platform</h4>
-                <Link href="#features" className="opacity-60 hover:opacity-100 transition-opacity">
-                  Features
-                </Link>
-                <Link href="/register" className="opacity-60 hover:opacity-100 transition-opacity">
-                  Get Started
-                </Link>
-                <Link href="/login" className="opacity-60 hover:opacity-100 transition-opacity">
-                  Sign In
-                </Link>
-              </div>
-              <div className="flex flex-col gap-3">
-                <h4 className="font-bold">Tools</h4>
-                <span className="opacity-60">Research Question</span>
-                <span className="opacity-60">PubMed Search</span>
-                <span className="opacity-60">Meta-Analysis</span>
-              </div>
+            <div className="flex items-center gap-2 text-xs opacity-40">
+              <Shield className="size-3" />
+              <span>{t(T.footerSecure)}</span>
             </div>
           </div>
 
-          {/* Bottom bar */}
-          <div className="mt-10 pt-6 border-t border-background/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 pt-4 border-t border-background/10 text-center">
             <p className="text-xs opacity-40">
-              &copy; {new Date().getFullYear()} MedAI Hub. All rights reserved.
+              &copy; {new Date().getFullYear()} MedAI Hub
             </p>
-            <div className="flex items-center gap-2 text-xs opacity-40">
-              <Shield className="size-3" />
-              <span>End-to-End Encrypted & Secure</span>
-            </div>
           </div>
         </div>
       </footer>
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   Page export — Suspense wrapper for useSearchParams
+   ══════════════════════════════════════════════════════════ */
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LandingInner />
+    </Suspense>
   );
 }

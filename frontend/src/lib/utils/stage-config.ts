@@ -117,14 +117,14 @@ export const STAGES: Record<StageName, ToolConfig> = {
     slug: 'protocol',
   },
   search: {
-    name: { he: 'חיפוש PubMed', en: 'PubMed Search' },
+    name: { he: 'חיפוש ספרות', en: 'Literature Search' },
     description: {
       he: 'בניית שאילתת חיפוש מדויקת',
       en: 'Build a precise search query',
     },
     longDescription: {
-      he: 'בניית שאילתת חיפוש מדויקת ל-PubMed עם MeSH Terms, Field Tags, ואסטרטגיות רגישות/ספציפיות. כולל בדיקת תקינות אוטומטית וחיפוש MeSH.',
-      en: 'Build a precise PubMed search query with MeSH Terms, Field Tags, and sensitivity/specificity strategies. Includes automatic validation and MeSH lookup.',
+      he: 'בניית שאילתת חיפוש מדויקת עם אסטרטגיות רגישות/ספציפיות. תומך ב-PubMed (MeSH Terms, Field Tags) וב-OpenAlex (כל הדיסציפלינות האקדמיות).',
+      en: 'Build a precise search query with sensitivity/specificity strategies. Supports PubMed (MeSH Terms, Field Tags) and OpenAlex (all academic disciplines, 260M+ works).',
     },
     icon: 'Search',
     skillName: 'pubmed-query',
