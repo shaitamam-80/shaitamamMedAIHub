@@ -21,13 +21,19 @@ This directory contains the complete agent system for AI-assisted development of
 │   ├── db-migration-agent.md # 🗄️ Database changes
 │   ├── docs-agent.md         # 📝 Documentation maintenance
 │   ├── deploy-checker.md     # 🚦 Deployment readiness
-│   └── parallel-work-agent.md # ⚡ Parallel development
+│   ├── parallel-work-agent.md # ⚡ Parallel development
+│   ├── code-reviewer.md      # 🔍 Code review specialist
+│   ├── security-reviewer.md  # 🔒 Security audit specialist
+│   └── debugger.md            # 🐛 Debug & fix specialist
 ├── commands/                 # Custom slash commands
 │   ├── new-feature.md       # /project:new-feature
 │   ├── fix-bug.md           # /project:fix-bug
 │   ├── add-endpoint.md      # /project:add-endpoint
 │   ├── parallel-tasks.md    # /project:parallel-tasks
-│   └── pre-deploy.md        # /project:pre-deploy
+│   ├── pre-deploy.md        # /project:pre-deploy
+│   ├── review-code.md       # /project:review-code
+│   ├── review-security.md   # /project:review-security
+│   └── review-pr.md         # /project:review-pr
 └── logs/                     # Thinking logs and activity logs
     ├── sessions.log         # Session start timestamps
     ├── activity.log         # File modification log
@@ -44,6 +50,9 @@ This directory contains the complete agent system for AI-assisted development of
 /project:add-endpoint POST /api/v1/review/batch for batch screening
 /project:parallel-tasks Backend API + Frontend UI for export feature
 /project:pre-deploy Production deployment check
+/project:review-code Review my recent changes
+/project:review-security Full security audit
+/project:review-pr Review this branch as a PR
 ```
 
 ### Calling Agents Directly
@@ -56,6 +65,17 @@ Call @db-migration-agent to create schema changes
 Call @docs-agent to update documentation
 Call @deploy-checker to verify deployment readiness
 Call @parallel-work-agent to set up parallel development
+```
+
+### Using Review Agents (Natural Language)
+
+```
+Use code-reviewer to review the recent changes
+Use security-reviewer to check this project for vulnerabilities
+Use debugger to fix the build error
+Review the code I changed since the last commit
+Check src/auth/ for security issues
+Run the tests and fix any failures
 ```
 
 ## Core Principles
@@ -115,6 +135,9 @@ Use appropriate depth for the task:
 | @docs-agent | Documentation | After any significant changes |
 | @deploy-checker | Deployment readiness | Before deployments |
 | @parallel-work-agent | Parallel development | Multiple concurrent tasks |
+| @code-reviewer | Code quality review | Review code changes, before merges |
+| @security-reviewer | Security audit | Security checks, vulnerability scanning |
+| @debugger | Bug diagnosis & fixing | Build errors, test failures, runtime bugs |
 
 ### Agent Hierarchy
 
@@ -247,6 +270,15 @@ Detailed thinking logs from agent executions.
 - Consider phased execution instead
 
 ## Version History
+
+- **v3.0** (2026-03-02): Review agents and commands
+  - NEW: @code-reviewer - Code quality and pattern review
+  - NEW: @security-reviewer - Security audit and vulnerability scanning
+  - NEW: @debugger - Bug diagnosis and fix specialist
+  - NEW: /project:review-code - Code review command
+  - NEW: /project:review-security - Security audit command
+  - NEW: /project:review-pr - Comprehensive PR review (3 agents in parallel)
+  - Total: 15 agents, 8 commands
 
 - **v2.0** (2024-12-01): Complete agent system with specialists
   - NEW: @orchestrator - Master coordinator for complex workflows

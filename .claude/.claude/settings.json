@@ -241,6 +241,32 @@
         "Multiple independent tasks requested",
         "Parallel feature development"
       ]
+    },
+    "code-reviewer": {
+      "description": "Reviews code changes for quality, patterns, bugs, and performance",
+      "auto_trigger": [
+        "Code review requests",
+        "Review recent changes",
+        "Before merge to develop or main"
+      ]
+    },
+    "security-reviewer": {
+      "description": "Security audit for vulnerabilities, OWASP top 10, auth issues, and data protection",
+      "auto_trigger": [
+        "Security review requests",
+        "Write(backend/app/core/auth.py)",
+        "Write(backend/app/api/routes/*.py) with auth changes",
+        "Dependency file changes"
+      ]
+    },
+    "debugger": {
+      "description": "Diagnoses and fixes build errors, runtime errors, test failures, and bugs",
+      "auto_trigger": [
+        "Build failure",
+        "Test failure",
+        "Runtime error reported",
+        "User reports a bug"
+      ]
     }
   },
 
