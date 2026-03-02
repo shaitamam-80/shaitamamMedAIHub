@@ -43,15 +43,13 @@ git diff $BASE --name-only 2>/dev/null || git diff HEAD~5 --name-only
 echo "=== Stats ==="
 git diff $BASE --stat 2>/dev/null || git diff HEAD~5 --stat
 
-echo "=== Diff ==="
-git diff $BASE 2>/dev/null | head -500
 ```
 
 ---
 
-## Phase 2: Parallel Review (3 agents)
+## Phase 2: Sequential Review (3 agents)
 
-Run all three reviews concurrently:
+Run all three reviews on the changed files:
 
 ### 2.1 Code Review (@code-reviewer)
 

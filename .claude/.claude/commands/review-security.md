@@ -23,24 +23,11 @@ Default: Full project security audit
 
 ### If no scope (full audit):
 ```bash
-# Identify all security-relevant files
-echo "=== Backend Routes (Auth Check) ==="
-find backend/app/api/routes -name "*.py" -type f 2>/dev/null
-
-echo "=== Config Files ==="
-ls -la backend/app/core/config.py
-
-echo "=== Auth Module ==="
-ls -la backend/app/core/auth.py
-
-echo "=== Docker Configuration ==="
-ls -la backend/Dockerfile
+echo "=== Security-relevant files ==="
+ls backend/app/api/routes/*.py backend/app/core/auth.py backend/app/core/config.py backend/Dockerfile backend/requirements.txt frontend/package.json 2>/dev/null
 
 echo "=== Environment Files (should not exist in git) ==="
 git ls-files | grep -i "\.env" || echo "None tracked (good)"
-
-echo "=== Dependencies ==="
-ls -la backend/requirements.txt frontend/package.json
 ```
 
 ---
@@ -71,28 +58,24 @@ Priority checks:
 
 ## Phase 3: Automated Scans
 
-Run automated security checks:
+Run automated security checks. **Only run full scans when scope is "full audit"; for specific files, limit grep to those files.**
 
 ```bash
-# Check for hardcoded secrets
-echo "=== Scanning for hardcoded secrets ==="
-grep -rn "eyJ" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" 2>/dev/null | head -20
-grep -rn "sk-" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" 2>/dev/null | head -20
-grep -rn "password\s*=" backend/ --include="*.py" 2>/dev/null | grep -v "# " | head -20
+# Secrets + debug mode (backend)
+echo "=== Backend: secrets & debug ==="
+grep -rn -E "eyJ|sk-|password\s*=|DEBUG\s*=\s*True" backend/ --include="*.py" 2>/dev/null | grep -v "# " | head -30
 
-# Check for debug mode
-echo "=== Debug mode check ==="
-grep -rn "DEBUG\s*=\s*True" backend/ --include="*.py" 2>/dev/null | head -10
+# Secrets (frontend)
+echo "=== Frontend: secrets ==="
+grep -rn -E "eyJ|sk-" frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | head -20
 
-# Check .gitignore
+# Dangerous patterns
+echo "=== Dangerous patterns ==="
+grep -rn -E "dangerouslySetInnerHTML|eval\(|shell=True" backend/ frontend/src/ --include="*.py" --include="*.ts" --include="*.tsx" 2>/dev/null | head -20
+
+# .gitignore coverage
 echo "=== .gitignore check ==="
 grep -E "\.env|secret|credential|password" .gitignore 2>/dev/null || echo "WARNING: .gitignore may be incomplete"
-
-# Check for dangerous patterns
-echo "=== Dangerous patterns ==="
-grep -rn "dangerouslySetInnerHTML" frontend/src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -10
-grep -rn "eval(" backend/ --include="*.py" 2>/dev/null | head -10
-grep -rn "shell=True" backend/ --include="*.py" 2>/dev/null | head -10
 ```
 
 ---

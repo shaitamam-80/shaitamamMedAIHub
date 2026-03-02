@@ -108,6 +108,9 @@ ultrathink about this request:
 | @deploy-checker | Deployment readiness | Before deployments |
 | @devops-agent | CI/CD, infrastructure | Deployment, monitoring |
 | @parallel-work-agent | Parallel development | Multiple concurrent tasks |
+| @code-reviewer | Code quality review | Review code changes, before merges |
+| @security-reviewer | Security audit | Security checks, vulnerability scanning |
+| @debugger | Bug diagnosis & fixing | Build errors, test failures, runtime bugs |
 
 ---
 

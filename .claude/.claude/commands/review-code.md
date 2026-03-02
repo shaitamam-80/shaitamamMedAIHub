@@ -2,6 +2,8 @@
 description: Review code changes for quality, patterns, and bugs using the code-reviewer agent
 allowed_tools:
   - Read
+  - Write
+  - Edit
   - Glob
   - Grep
   - Bash
@@ -19,11 +21,8 @@ Default: Review all uncommitted changes
 ## Phase 1: Determine Scope
 
 ```bash
-# Check what has changed
 git status
-git diff --stat
-git diff --staged --stat
-git log --oneline -5
+git diff HEAD --stat
 ```
 
 ### Scope Rules:

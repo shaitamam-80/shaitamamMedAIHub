@@ -243,24 +243,23 @@
       ]
     },
     "code-reviewer": {
-      "description": "Reviews code changes for quality, patterns, bugs, and performance",
+      "description": "Reviews code changes for quality, patterns, bugs, performance issues, and adherence to project standards",
       "auto_trigger": [
         "Code review requests",
-        "Review recent changes",
-        "Before merge to develop or main"
+        "Review recent changes"
       ]
     },
     "security-reviewer": {
-      "description": "Security audit for vulnerabilities, OWASP top 10, auth issues, and data protection",
+      "description": "Reviews code and configuration for security vulnerabilities, OWASP top 10, auth issues, and medical data protection",
       "auto_trigger": [
         "Security review requests",
         "Write(backend/app/core/auth.py)",
-        "Write(backend/app/api/routes/*.py) with auth changes",
-        "Dependency file changes"
+        "Write(backend/requirements.txt)",
+        "Write(frontend/package.json)"
       ]
     },
     "debugger": {
-      "description": "Diagnoses and fixes build errors, runtime errors, test failures, and bugs",
+      "description": "Diagnoses and fixes build errors, runtime errors, test failures, and tricky bugs through systematic analysis",
       "auto_trigger": [
         "Build failure",
         "Test failure",
